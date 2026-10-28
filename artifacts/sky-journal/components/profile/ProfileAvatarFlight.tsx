@@ -66,7 +66,7 @@ export function AvatarFlightOverlay({
       ty: scrollY.interpolate({ ...f.translateY, extrapolateLeft: 'extend', extrapolateRight: 'clamp' }),
       decor: scrollY.interpolate({ ...f.decor, extrapolate: 'clamp' }),
     };
-  }, [anchor, avatarSize, range, topInset, hasLeftAction, scrollY]);
+  }, [anchor, avatarSize, boxSize, range, topInset, hasLeftAction, scrollY]);
 
   if (!anchor || !anim || hidden) return null;
   const avatar = typeof children === 'function' ? children(anim.decor) : children;
@@ -74,6 +74,11 @@ export function AvatarFlightOverlay({
     <Animated.View
       testID="profile-avatar-flight"
       pointerEvents="none"
+      collapsable={false}
+      // The whole avatar is translated/scaled by the native scroll driver.
+      // A small hardware layer avoids repeatedly rasterizing its wing artwork
+      // and animated rings on Android during quick scroll gestures.
+      renderToHardwareTextureAndroid
       style={[
         s.root,
         {

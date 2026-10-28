@@ -889,6 +889,9 @@ export default function UserProfileScreen() {
     <View ref={rootRef} collapsable={false} onLayout={measure} style={[styles.root, { backgroundColor: colors.background }]}>
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
+        // Android clipping can detach transformed overlays and image children
+        // during fast direction changes on this profile screen.
+        removeClippedSubviews={false}
         onScroll={onScroll}
         onLayout={measure}
         scrollEventThrottle={16}

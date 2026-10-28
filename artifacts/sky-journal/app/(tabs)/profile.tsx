@@ -215,6 +215,9 @@ export default function CharacterScreen() {
 
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
+        // Keep profile cosmetics and expo-image tiles attached while the
+        // separately transformed avatar flight crosses the scroll content.
+        removeClippedSubviews={false}
         contentContainerStyle={{ paddingBottom: bottomPad }}
         scrollEventThrottle={16}
         onScroll={onScroll}

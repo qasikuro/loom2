@@ -73,6 +73,7 @@ describe('avatar flight geometry', () => {
       expect(src).toContain('<AvatarFlightOverlay');
       expect(src).toContain('useProfileCollapse');
       expect(src).toContain('avatarSlotOnly={!!anchor}');
+      expect(src).toContain('removeClippedSubviews={false}');
     }
     expect(pub).not.toContain('<AuraBanner');
     expect(tab).toContain('coverImageUri={null}');
@@ -94,5 +95,6 @@ describe('avatar flight geometry', () => {
     const bar = read('components/profile/ProfileCollapseBar.tsx');
     expect(bar).toContain('useNativeDriver: true');
     expect(flight).toContain('zIndex: 48');
+    expect(flight).toContain('renderToHardwareTextureAndroid');
   });
 });
