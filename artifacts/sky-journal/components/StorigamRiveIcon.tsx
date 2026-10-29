@@ -97,16 +97,17 @@ export function StorigamRiveIcon({
       width: size, height: size, flexShrink: 0,
       alignItems: 'center', justifyContent: 'center',
     }, style]}>
+      {active && riveRuntime && <NativeRiveIcon name={name} size={size} />}
       <Image
         source={artwork.source}
         resizeMode="contain"
         accessible={false}
         style={{
+          zIndex: 1,
           width: artwork.width * size * 0.84 / 64,
           height: artwork.height * size * 0.84 / 64,
         }}
       />
-      {active && riveRuntime && <NativeRiveIcon name={name} size={size} />}
     </View>
   );
 }
