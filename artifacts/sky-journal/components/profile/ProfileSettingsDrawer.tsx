@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { SettingsArtworkIcon } from './SettingsArtworkIcon';
 import type { Character } from '@/context/AppContext';
 import { useApp } from '@/context/AppContext';
 import { useSound } from '@/context/SoundContext';
@@ -33,7 +34,7 @@ function SoundToggle() {
       activeOpacity={0.75}
     >
       <View style={s.drawerItemIcon}>
-        <Icon name={soundEnabled ? 'volume-2' : 'volume-x'} size={15} color={colors.mutedForeground} />
+        <SettingsArtworkIcon name="animation_sounds" fallback={soundEnabled ? 'volume-2' : 'volume-x'} color={colors.mutedForeground} />
       </View>
       <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.animationSounds')}</Text>
       <View style={[s.soundPill, soundEnabled ? s.soundPillOn : s.soundPillOff, { backgroundColor: colors.muted, borderColor: colors.border }]}>
@@ -63,7 +64,7 @@ function FloatingChatToggle() {
       activeOpacity={0.75}
     >
       <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}>
-        <Icon name="message-circle" size={15} color={colors.mutedForeground} />
+        <SettingsArtworkIcon name="floating_chat" fallback="message-circle" color={colors.mutedForeground} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('social.floatingChatButton')}</Text>
@@ -103,8 +104,7 @@ function ThemeToggle() {
             onPress={() => { Haptics.selectionAsync(); setThemeMode(opt.mode); }}
             activeOpacity={0.75}
           >
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            <Icon name={opt.icon as any} size={14} color={active ? colors.primary : colors.mutedForeground} />
+            <SettingsArtworkIcon name={opt.mode === 'system' ? 'auto_mode' : opt.mode === 'light' ? 'light_mode' : 'dark_mode'} fallback={opt.icon as 'sun' | 'monitor' | 'moon'} size={18} color={active ? colors.primary : colors.mutedForeground} />
             <Text style={[s.themeOptionText, { color: active ? colors.primary : colors.mutedForeground }]}>
               {opt.label}
             </Text>
@@ -251,7 +251,7 @@ export function ProfileSettingsDrawer({
           <View style={[s.drawerGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <TouchableOpacity style={s.drawerItem} onPress={() => { closeDrawer(); setTimeout(() => router.push('/messages' as any), 260); }} activeOpacity={0.7}>
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="message-circle" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="messages" fallback="message-circle" color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.messages')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
@@ -259,7 +259,7 @@ export function ProfileSettingsDrawer({
             <FloatingChatToggle />
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} onPress={toggleVisibility} activeOpacity={0.7}>
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="lock" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="privacy" fallback="shield" color={colors.mutedForeground} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.privacy')}</Text>
                 <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>
@@ -282,7 +282,7 @@ export function ProfileSettingsDrawer({
               onPress={() => { closeDrawer(); setTimeout(() => router.push('/post-privacy' as any), 260); }}
               activeOpacity={0.7}
             >
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="eye" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="post_privacy" fallback="eye" color={colors.mutedForeground} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>Post privacy</Text>
                 <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>
@@ -293,7 +293,7 @@ export function ProfileSettingsDrawer({
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} onPress={toggleOnlineStatus} activeOpacity={0.7}>
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="radio" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="online_status" fallback="circle" color={colors.mutedForeground} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.onlineStatus')}</Text>
                 <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>
@@ -310,14 +310,14 @@ export function ProfileSettingsDrawer({
             <View style={s.drawerDivider} />
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <TouchableOpacity style={s.drawerItem} onPress={() => { closeDrawer(); setTimeout(() => router.push('/blocked-users' as any), 260); }} activeOpacity={0.7}>
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="slash" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="blocked_users" fallback="slash" color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.blockedUsers')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <TouchableOpacity style={s.drawerItem} onPress={() => { closeDrawer(); setTimeout(() => router.push('/purchase-history' as any), 260); }} activeOpacity={0.7}>
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="shopping-bag" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="purchase_history" fallback="shopping-bag" color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.purchaseHistory')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
@@ -340,18 +340,18 @@ export function ProfileSettingsDrawer({
           <Text style={[s.drawerSectionLabel, { color: colors.mutedForeground }]}>{t('settings.myAccount')}</Text>
           <View style={[s.drawerGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={s.drawerItem}>
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="mail" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="email" fallback="mail" color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]} numberOfLines={1}>{user?.primaryEmailAddress?.emailAddress ?? '—'}</Text>
             </View>
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} activeOpacity={0.7}>
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="mail" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="change_email" fallback="mail" color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.changeEmail')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} activeOpacity={0.7}>
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="lock" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="change_password" fallback="lock" color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.changePassword')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
@@ -366,7 +366,7 @@ export function ProfileSettingsDrawer({
               disabled={deletingAccount}
               activeOpacity={0.7}
             >
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="trash-2" size={15} color={colors.destructive} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="delete_account" fallback="trash-2" color={colors.destructive} /></View>
               <Text style={[s.drawerItemLabel, { flex: 1, color: colors.destructive }]}>{deletingAccount ? 'Deleting…' : t('settings.requestAccountDeletion')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
@@ -376,7 +376,7 @@ export function ProfileSettingsDrawer({
               onPress={handleSignOut}
               activeOpacity={0.7}
             >
-              <View style={s.drawerItemIcon}><Icon name="log-out" size={15} color="#EF4444" /></View>
+              <View style={s.drawerItemIcon}><SettingsArtworkIcon name="sign_out" fallback="log-out" color={colors.destructive} /></View>
               <Text style={[s.drawerItemLabel, { color: '#EF4444' }]}>
                 {confirmingSignOut ? t('settings.confirmSignOut') : t('settings.signOut')}
               </Text>
@@ -392,7 +392,7 @@ export function ProfileSettingsDrawer({
               onPress={() => openSupportPage(HELP_CENTER_URL)}
               activeOpacity={0.7}
             >
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="help-circle" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="help_center" fallback="help-circle" color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.helpCenter')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
@@ -404,7 +404,7 @@ export function ProfileSettingsDrawer({
               onPress={() => openSupportPage(FEEDBACK_URL)}
               activeOpacity={0.7}
             >
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="message-square" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="send_feedback" fallback="edit-2" color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.sendFeedback')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
@@ -416,7 +416,7 @@ export function ProfileSettingsDrawer({
               onPress={() => openSupportPage(ABOUT_URL)}
               activeOpacity={0.7}
             >
-              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="info" size={15} color={colors.mutedForeground} /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><SettingsArtworkIcon name="about" fallback="info" color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.about')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
