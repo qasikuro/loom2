@@ -1,0 +1,4 @@
+name: storigam-ui-icons
+logs:
+  file: build/rive.log
+  problems: build/problems.log

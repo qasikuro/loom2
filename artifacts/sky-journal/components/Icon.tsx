@@ -84,6 +84,7 @@ import {
   type LucideProps,
 } from 'lucide-react-native';
 import React from 'react';
+import { StorigamRiveIcon } from '@/components/StorigamRiveIcon';
 
 const ICON_MAP = {
   'alert-circle':  AlertCircle,
@@ -174,5 +175,15 @@ interface IconProps extends Omit<LucideProps, 'ref'> {
 export function Icon({ name, size = 20, color = '#000', style, ...rest }: IconProps) {
   const Component = ICON_MAP[name as IconName];
   if (!Component) return null;
+  if (name === 'arrow-left' || name === 'settings') {
+    return (
+      <StorigamRiveIcon
+        name={name === 'arrow-left' ? 'back' : 'settings'}
+        size={size}
+        style={style}
+        fallback={<Component size={size} color={color} {...rest} />}
+      />
+    );
+  }
   return <Component size={size} color={color} style={style} {...rest} />;
 }

@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { StorigamRiveIcon } from '@/components/StorigamRiveIcon';
 import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
 import { Images } from '@/assets/images/index';
 import { apiFetch, useApp } from '@/context/AppContext';
@@ -296,7 +297,12 @@ export default function DiscoverScreen() {
           <View style={styles.headerText}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
               <Text style={styles.headerTitle}>{t('discover.title')}</Text>
-              <Icon name="star" size={20} color="#F6C968" />
+              <StorigamRiveIcon
+                name="discover"
+                size={20}
+                active
+                fallback={<Icon name="star" size={20} color="#F6C968" />}
+              />
               {isRefreshing && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(200,184,232,0.12)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
                   <SkyLoadingMark size={14} color="rgba(200,184,232,0.7)" />

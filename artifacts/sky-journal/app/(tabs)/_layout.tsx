@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import { SkyIcon, type SkyIconName } from '@/components/SkyIcon';
+import { StorigamRiveIcon, type StorigamRiveIconName } from '@/components/StorigamRiveIcon';
 import { useSound } from '@/context/SoundContext';
 import { useApp } from '@/context/AppContext';
 import { shouldShowOfflinePill } from '@/utils/accountCache';
@@ -55,6 +56,11 @@ function TabIcon({
   }, [focused]);
 
   const bgOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const riveName: StorigamRiveIconName =
+    name === 'sky-home' ? 'home'
+      : name === 'sky-reels' ? 'reels'
+        : name === 'sky-lantern' ? 'discover'
+          : 'profile';
 
   return (
     <Animated.View
@@ -69,12 +75,19 @@ function TabIcon({
         style={[StyleSheet.absoluteFill, styles.iconGlowBg, { opacity: bgOpacity, backgroundColor: `${primaryColor}2A` }]}
         pointerEvents="none"
       />
-      <SkyIcon
-        name={name}
+      <StorigamRiveIcon
+        name={riveName}
         size={22}
-        color={color}
-        accentColor={focused ? primaryColor : color}
-        strokeWidth={focused ? 1.9 : 1.5}
+        active={focused}
+        fallback={
+          <SkyIcon
+            name={name}
+            size={22}
+            color={color}
+            accentColor={focused ? primaryColor : color}
+            strokeWidth={focused ? 1.9 : 1.5}
+          />
+        }
       />
     </Animated.View>
   );
@@ -148,7 +161,12 @@ function CreateIcon() {
           },
         ]}
       >
-        <SkyIcon name="sky-star" size={26} color="#fff" accentColor="#F8D060" strokeWidth={1.6} />
+        <StorigamRiveIcon
+          name="create"
+          size={26}
+          active={active}
+          fallback={<SkyIcon name="sky-star" size={26} color="#fff" accentColor="#F8D060" strokeWidth={1.6} />}
+        />
       </View>
     </Animated.View>
   );
