@@ -33,6 +33,9 @@ import { WitnessMosaic } from '@/components/WitnessMosaic';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import type { PanelOverlay } from '@/context/AppContext';
+import { getGetStoryQueryKey, useGetStory } from '@workspace/api-client-react';
+import { getApiBase } from '@/utils/apiBase';
+import { toAppStory, type RawStoryResponse } from '@/context/mappers';
 import { useTranslation } from 'react-i18next';
 import { shareStory } from '@/utils/shareContent';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
@@ -333,6 +336,18 @@ export default function StoryScreen() {
   const { id } = useLocalSearchParams<{ id: string; source?: string }>();
   const { stories, discoverPosts, savedStoryIds, toggleSavePost, deleteStory, updateStory,
           showRewardToast, reloadRewards, reloadConstellation, reloadData, isLoading } = useApp();
+  const cachedStory = stories.find(s => s.id === id) ?? null;
+  const cachedPost = discoverPosts.find(p => p.id === id) ?? null;
+  const fallbackStoryQuery = useGetStory(id ?? '', {
+    query: {
+      queryKey: getGetStoryQueryKey(id ?? ''),
+      enabled: !!id && !cachedStory && !cachedPost,
+      retry: false,
+    },
+  });
+  const fetchedStory = fallbackStoryQuery.data?.id === id
+    ? toAppStory(fallbackStoryQuery.data as unknown as RawStoryResponse, getApiBase())
+    : null;
 
   const { width: screenW, height: screenH } = useWindowDimensions();
   const isLandscape = screenW > screenH;
@@ -365,9 +380,11 @@ export default function StoryScreen() {
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 16;
 
-  const story = stories.find(s => s.id === id) ?? null;
-  const post  = discoverPosts.find(p => p.id === id) ?? null;
-  const isOwnStory = !!story;
+  const story = cachedStory ?? fetchedStory;
+  const post  = cachedPost;
+  // A network-fetched fallback may be another user's public story. Only a
+  // story present in the account's own collection can expose creator actions.
+  const isOwnStory = !!cachedStory;
 
   // ── Creator-facing milestone check: show modal for unshown milestones ──────
   const shownKey = `shown_milestones_v1_${id ?? ''}`;
@@ -508,7 +525,7 @@ export default function StoryScreen() {
   const storyCorrupted = (story != null && (!story.chapterTitle || !Array.isArray(story.panels))) ||
                          (post  != null && !post.chapterTitle);
 
-  if (isLoading && storyNotFound) {
+  if ((isLoading || fallbackStoryQuery.isLoading || fallbackStoryQuery.isFetching) && storyNotFound) {
     return <SkyLoadingOverlay message={t('studioReader.openingStory')} />;
   }
 
