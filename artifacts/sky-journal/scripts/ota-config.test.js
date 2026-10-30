@@ -7,6 +7,26 @@ const profiles = require('../eas.json').build;
 const manifest = require('../package.json');
 const { createProductionUpdateCommand } = require('./update-production');
 
+test('Home notification tap handler is declared and its routing helper ships', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../app/(tabs)/index.tsx'), 'utf8');
+  assert.match(source, /onOpenNotification=\{openServerNotification\}/);
+  assert.match(source, /const openServerNotification = useCallback\(/);
+  assert.match(source, /import \{ resolveNotificationRoute \} from '@\/utils\/notificationRouting'/);
+  const routing = fs.readFileSync(path.resolve(__dirname, '../utils/notificationRouting.ts'), 'utf8');
+  assert.match(routing, /export function resolveNotificationRoute/);
+});
+
+test('startup error releases the loading layer above the recovery button', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../app/_layout.tsx'), 'utf8');
+  assert.match(source, /<ErrorBoundary onError=\{handleStartupError\}>/);
+  const handler = source.match(/const handleStartupError = useCallback\(\(\) => \{([\s\S]*?)\}, \[\]\);/);
+  assert.ok(handler, 'root error callback must exist');
+  assert.match(handler[1], /setInitialRouteReady\(true\)/);
+  assert.match(handler[1], /setSplashDone\(true\)/);
+  const loader = fs.readFileSync(path.resolve(__dirname, '../components/SkyLoading.tsx'), 'utf8');
+  assert.match(loader, /pointerEvents=\{transparent \? 'none' : 'auto'\}/);
+});
+
 test('guide screens ship with every API client export they import', () => {
   const root = path.resolve(__dirname, '../../..');
   const client = [

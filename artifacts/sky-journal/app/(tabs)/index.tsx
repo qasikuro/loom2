@@ -21,6 +21,7 @@ import { useAuth, useUser } from '@clerk/expo';
 import { accountCacheKey } from '@/utils/accountCache';
 import { LumiHomeCard } from '@/features/lumi/home/LumiHomeCard';
 import { NotificationsExperience } from '@/components/home/NotificationsExperience';
+import { resolveNotificationRoute } from '@/utils/notificationRouting';
 import {
   useApp, apiFetch, type GuideAvailability, type GuideProfile, type DiscoverPost,
   type ConstellationState, type RewardBalance as RewardBalanceData,
@@ -1180,6 +1181,15 @@ export default function HomeScreen() {
     markServerNotificationsRead();
     markAllUnreadSeen();
   }, [markServerNotificationsRead, markAllUnreadSeen]);
+
+  const openServerNotification = useCallback((notification: (typeof serverNotifications)[number]) => {
+    setShowNotifs(false);
+    setTimeout(() => resolveNotificationRoute(router.push, {
+      type: notification.type,
+      refId: notification.refId,
+      actorId: notification.actorId,
+    }), 260);
+  }, []);
 
   const [showOutfits, setShowOutfits] = useState(false);
   const [refreshing,  setRefreshing]  = useState(false);

@@ -65,8 +65,9 @@ function CompactWaiting({ message, transparent = false }: { message?: string; tr
         { backgroundColor: colors.background },
         transparent && [StyleSheet.absoluteFillObject, { backgroundColor: transparentOverlay, zIndex: 9999 }],
       ]}
+      pointerEvents={transparent ? 'none' : 'auto'}
       accessible
-      accessibilityViewIsModal
+      accessibilityViewIsModal={!transparent}
       accessibilityRole="progressbar"
       accessibilityLabel={message || t('common.loading')}
       accessibilityState={{ busy: true }}

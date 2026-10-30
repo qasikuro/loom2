@@ -399,6 +399,12 @@ export default function RootLayout() {
   const handleInitialRouteReady = useCallback(() => {
     setInitialRouteReady(true);
   }, []);
+  const handleStartupError = useCallback(() => {
+    // The failed tree cannot report route readiness. Reveal the recovery screen
+    // instead of leaving the launch loader above its Try Again button.
+    setInitialRouteReady(true);
+    setSplashDone(true);
+  }, []);
 
   return (
     <ThemeProvider>
@@ -420,7 +426,7 @@ export default function RootLayout() {
                 <StorigamLoadingOverlay />
               </ClerkLoading>
               <ClerkLoaded>
-                <ErrorBoundary>
+                <ErrorBoundary onError={handleStartupError}>
                   <QueryClientProvider client={queryClient}>
                     <SoundProvider>
                       <AppProvider>
