@@ -352,10 +352,10 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
 
   function handlePress() {
     if (isUnavailable || founderLocked && !owned) return;
-    if (owned) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onActivate(item);
-    } else if (canAfford && !purchasing) {
+    // Owned items activate through the nested status button below. Do not
+    // toggle them again from this parent card press, or one tap can undo itself.
+    if (owned) return;
+    if (canAfford && !purchasing) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       onBuy(item);
     }
