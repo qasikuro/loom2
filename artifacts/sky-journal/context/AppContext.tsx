@@ -300,6 +300,7 @@ export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme' 
   'effect_leaves':      'effect',
   'effect_aurora_clouds': 'effect',
   'effect_moonlit_muse': 'effect',
+  'effect_cosmic_arrival': 'effect',
 };
 
 export interface ShopItem {

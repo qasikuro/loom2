@@ -88,6 +88,14 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost:        { stars: 600 },
   },
   {
+    id:          "effect_cosmic_arrival",
+    name:        "Cosmic Arrival",
+    description: "A golden star falls through luminous blue smoke when visitors open your profile.",
+    icon:        "✦",
+    category:    "effect",
+    cost:        { stars: 0 },
+  },
+  {
     id:             "effect_fire",
     name:           "Sky Lanterns",
     description:    "Warm amber flames float upward like sky lanterns released at summer dusk.",

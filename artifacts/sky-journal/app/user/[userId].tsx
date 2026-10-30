@@ -41,6 +41,7 @@ import { ProfileEffect } from '@/components/ProfileEffect';
 import FounderAuroraCardFrame from '@/components/profile/FounderAuroraCardFrame';
 import { FounderProfileIntro } from '@/components/profile/FounderProfileIntro';
 import { MoonlitMuseIntro } from '@/components/profile/MoonlitMuseIntro';
+import { CosmicProfileArrivalOverlay } from '@/components/profile/CosmicProfileArrivalOverlay';
 import { ProfileCollapseBar, useProfileCollapse } from '@/components/profile/ProfileCollapseBar';
 import { AvatarFlightOverlay, useAvatarAnchor } from '@/components/profile/ProfileAvatarFlight';
 
@@ -505,6 +506,7 @@ export default function UserProfileScreen() {
   const [reportVisible, setReportVisible] = useState(false);
   const [founderIntroVisible, setFounderIntroVisible] = useState(false);
   const [moonlitMuseIntroVisible, setMoonlitMuseIntroVisible] = useState(false);
+  const [cosmicArrivalVisible, setCosmicArrivalVisible] = useState(false);
   const profileLikeBusy = useRef(false);
   const [likingProfile, setLikingProfile] = useState(false);
 
@@ -600,6 +602,7 @@ export default function UserProfileScreen() {
     setBooks([]);
     setFounderIntroVisible(false);
     setMoonlitMuseIntroVisible(false);
+    setCosmicArrivalVisible(false);
     (async () => {
       const [profResult, storsResult, outsResult, booksResult, videosResult] = await Promise.allSettled([
         apiFetch<PublicProfile>(`/users/${userId}`),
@@ -623,8 +626,10 @@ export default function UserProfileScreen() {
       setProfile(profResult.value);
       const profileHasFounderBadge = profResult.value.badges?.some(badge => badge.slug === 'founder') ?? false;
       const hasMoonlitMuse = profResult.value.activeEffect === 'effect_moonlit_muse';
+      const hasCosmicArrival = profResult.value.activeEffect === 'effect_cosmic_arrival';
       setMoonlitMuseIntroVisible(hasMoonlitMuse);
-      setFounderIntroVisible((Boolean(profResult.value.isFounder) || profileHasFounderBadge) && !hasMoonlitMuse);
+      setCosmicArrivalVisible(hasCosmicArrival);
+      setFounderIntroVisible((Boolean(profResult.value.isFounder) || profileHasFounderBadge) && !hasMoonlitMuse && !hasCosmicArrival);
       setStories(storsResult.status === 'fulfilled' ? storsResult.value : []);
       setVideos(videosResult.status === 'fulfilled' ? videosResult.value : []);
       setStoriesError(storsResult.status === 'rejected' || videosResult.status === 'rejected');
@@ -914,7 +919,7 @@ export default function UserProfileScreen() {
             />
             {/* Equipped effects remain visible, just restrained. */}
             {profile.activeEffect === 'effect_aurora_clouds' && <View style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}><AuroraCloudBackdrop /></View>}
-            {profile.activeEffect && profile.activeEffect !== 'effect_aurora_clouds' && profile.activeEffect !== 'effect_moonlit_muse' && (
+            {profile.activeEffect && profile.activeEffect !== 'effect_aurora_clouds' && profile.activeEffect !== 'effect_moonlit_muse' && profile.activeEffect !== 'effect_cosmic_arrival' && (
               <View style={[StyleSheet.absoluteFill, { opacity: 0.6 }]}><ProfileEffect effectId={profile.activeEffect} /></View>
             )}
           </View>
@@ -1454,6 +1459,9 @@ export default function UserProfileScreen() {
           closeLabel={t('common.cancel')}
           onComplete={() => setMoonlitMuseIntroVisible(false)}
         />
+      )}
+      {cosmicArrivalVisible && (
+        <CosmicProfileArrivalOverlay onComplete={() => setCosmicArrivalVisible(false)} />
       )}
     </View>
   );

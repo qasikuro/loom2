@@ -11,7 +11,7 @@ import { isBlocked } from "./blocks";
 
 const router: IRouter = Router();
 const PUBLIC_PROFILE_FRAME_IDS = ["frame_moonlight", "frame_fire", "frame_celestial_wings"] as const;
-const PUBLIC_PROFILE_EFFECT_IDS = ["effect_aurora_clouds"] as const;
+const PUBLIC_PROFILE_EFFECT_IDS = ["effect_aurora_clouds", "effect_cosmic_arrival"] as const;
 
 function safeDiscoverUri(uri: string | null | undefined): string | null {
   if (!uri) return null;

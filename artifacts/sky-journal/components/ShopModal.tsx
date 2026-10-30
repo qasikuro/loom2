@@ -69,6 +69,7 @@ const ITEM_ICON_MAP: Record<string, string> = {
   effect_leaves:      '🍃',
   effect_aurora_clouds: '✦',
   effect_moonlit_muse: '✦',
+  effect_cosmic_arrival: '✦',
   card_frame_founder_regalia: '◆',
 };
 
@@ -86,6 +87,7 @@ const FALLBACK_CATALOG: ShopItem[] = [
   { id: 'card_frame_founder_regalia', name: 'Founder Regalia', description: 'Gold filigree and violet crystals crowning your whole profile card. Included free with Founder.', icon: '◆', category: 'card_frame', cost: { stars: 0 }, founderOnly: true },
   { id: 'effect_aurora_clouds', name: 'Aurora Sanctuary', description: 'A living fantasy sky of violet auroras, drifting clouds, and distant mountains.', icon: '✦', category: 'effect', cost: { stars: 600 } },
   { id: 'effect_moonlit_muse', name: 'Moonlit Muse', description: 'A gothic anime muse arrives in a moonlit burst of violet ribbons, petals, and starlight.', icon: '✦', category: 'effect', cost: { stars: 350 } },
+  { id: 'effect_cosmic_arrival', name: 'Cosmic Arrival', description: 'A golden star falls through luminous blue smoke when visitors open your profile.', icon: '✦', category: 'effect', cost: { stars: 0 } },
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -270,7 +272,23 @@ function ItemPreview({ category, icon, color, itemId }: { category: string; colo
         </View>
       )}
 
-      {category === 'effect' && itemId !== 'effect_aurora_clouds' && itemId !== 'effect_moonlit_muse' && (
+      {category === 'effect' && itemId === 'effect_cosmic_arrival' && (
+        <View style={[pv.effectWrap, { position: 'relative', overflow: 'hidden', backgroundColor: '#081226' }]}
+        >
+          <LinearGradient
+            colors={['#132D55', '#11132B', '#090916']}
+            start={{ x: 0.12, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={{ position: 'absolute', width: 58, height: 58, borderRadius: 29, left: 17, top: 19, backgroundColor: 'rgba(53,147,255,0.17)' }} />
+          <View style={{ position: 'absolute', width: 38, height: 38, borderRadius: 19, left: 35, top: 42, backgroundColor: 'rgba(102,196,255,0.2)' }} />
+          <View style={{ position: 'absolute', width: 26, height: 26, borderRadius: 13, left: 51, top: 58, backgroundColor: 'rgba(125,210,255,0.22)' }} />
+          <Text style={{ position: 'absolute', left: 30, top: 13, color: '#FFF0BA', fontSize: 26, textShadowColor: '#FFD36E', textShadowRadius: 12 }}>✦</Text>
+          <Text style={{ position: 'absolute', left: 64, top: 33, color: '#D8F5FF', fontSize: 12 }}>✧</Text>
+        </View>
+      )}
+      {category === 'effect' && itemId !== 'effect_aurora_clouds' && itemId !== 'effect_moonlit_muse' && itemId !== 'effect_cosmic_arrival' && (
         <View style={[pv.effectWrap, { backgroundColor: `${color}0A` }]}>
           {['●', '✦', '●'].map((dot, i) => (
             <View
@@ -375,10 +393,15 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
             </View>
             <Text style={[styles.cardDesc, { color: colors.mutedForeground }]} numberOfLines={2}>{item.description}</Text>
             <View style={styles.cardFooter}>
-              <View style={styles.costRow}>{costParts.reduce<React.ReactNode[]>((acc, p, i) => {
-                if (i > 0) acc.push(<Text key={`sep${i}`} style={styles.costSep}>+</Text>);
-                acc.push(p); return acc;
-              }, [])}</View>
+              <View style={styles.costRow}>
+                {costParts.length === 0
+                  ? <Text style={[styles.costPart, { color: catColor }]}>{t('components.shop.free', { defaultValue: 'Free' })}</Text>
+                  : costParts.reduce<React.ReactNode[]>((acc, p, i) => {
+                      if (i > 0) acc.push(<Text key={`sep${i}`} style={styles.costSep}>+</Text>);
+                      acc.push(p);
+                      return acc;
+                    }, [])}
+              </View>
 
               {owned ? (
                 <TouchableOpacity
@@ -822,6 +845,8 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
   }, [reloadRewards, markPurchased, t]);
 
   function canAfford(item: ShopItem): boolean {
+    const costs = [item.cost.stars ?? 0, item.cost.aura ?? 0, item.cost.shards ?? 0];
+    if (costs.every(cost => cost === 0)) return true;
     if (!rewardBalance) return false;
     return (
       (rewardBalance.stars        >= (item.cost.stars  ?? 0)) &&
