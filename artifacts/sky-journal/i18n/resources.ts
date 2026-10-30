@@ -14,6 +14,7 @@ import { discoverLogTranslations } from './discoverLogTranslations';
 import { outfitJournalTranslations } from './outfitJournalTranslations';
 import { lumiTranslations } from './lumiTranslations';
 import { lumiHomeTranslations } from '@/features/lumi/home/translations';
+import { notificationCenterTranslations } from './notificationCenterTranslations';
 
 type Tree = Record<string, unknown>;
 
@@ -47,6 +48,7 @@ const extensions: Tree[] = [
   discoverLogTranslations,
   outfitJournalTranslations,
   lumiHomeTranslations as unknown as Tree,
+  notificationCenterTranslations,
 ];
 
 export const mergedTranslations = Object.fromEntries(

@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, useUser } from '@clerk/expo';
 import { accountCacheKey } from '@/utils/accountCache';
 import { LumiHomeCard } from '@/features/lumi/home/LumiHomeCard';
+import { NotificationsExperience } from '@/components/home/NotificationsExperience';
 import {
   useApp, apiFetch, type GuideAvailability, type GuideProfile, type DiscoverPost,
   type ConstellationState, type RewardBalance as RewardBalanceData,
@@ -2306,130 +2307,40 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
-      {/* ── Notifications sheet ──────────────────────────────────────────────── */}
-      <Modal visible={showNotifs} transparent animationType="slide" onRequestClose={() => setShowNotifs(false)}>
-        <Pressable style={m.overlay} onPress={() => setShowNotifs(false)}>
-          <Pressable style={[m.sheet, m.sheetTall, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 24, backgroundColor: colors.card, borderColor: colors.border }]} onPress={e => e.stopPropagation()}>
-            <View style={[m.handle, { backgroundColor: `${accent}28` }]} />
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <Text style={[m.title, { marginBottom: 0, flex: 1 }]}>{t('feature.home.notifications')}</Text>
-              {hasNotifs && <View style={[m.badge, { backgroundColor: accent }]}><Text style={m.badgeN}>{rewards.length + unread}</Text></View>}
-              <TouchableOpacity onPress={() => setShowNotifs(false)} style={[m.closeX, { backgroundColor: colors.muted }]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Icon name="x" size={15} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            </View>
-            {rewards.length === 0 && serverNotifications.length === 0 && unreadCampfireRooms.length === 0 && unreadDmThreads.length === 0 ? (
-              <View style={m.empty}>
-                <Icon name="bell-off" size={28} color={`${colors.mutedForeground}60`} />
-                <Text style={[m.emptyTxt, { color: colors.mutedForeground }]}>{t('feature.home.allCaughtUp')}</Text>
-              </View>
-            ) : (
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
-                {unreadDmThreads.map(thread => (
-                  <TouchableOpacity
-                    key={thread.partnerId}
-                    style={[m.notif, { backgroundColor: 'rgba(107,91,149,0.12)', borderColor: 'rgba(107,91,149,0.30)', borderWidth: 1 }]}
-                    onPress={() => {
-                      markDmThreadRead(thread.partnerId);
-                      setShowNotifs(false);
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      setTimeout(() => router.push(`/messages/${thread.partnerId}?name=${encodeURIComponent(thread.partnerName)}${thread.partnerHandle ? `&handle=${encodeURIComponent(thread.partnerHandle)}` : ''}` as any), 260);
-                    }}
-                    activeOpacity={0.78}
-                  >
-                    <View style={[m.notifIcon, { backgroundColor: 'rgba(107,91,149,0.18)' }]}>
-                      <Icon name="message-circle" size={13} color="#9B78E8" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={1}>
-                        {t('feature.home.messageFrom', { name: thread.partnerName })}
-                      </Text>
-                      <Text style={[m.notifSub, { color: colors.mutedForeground }]}>
-                        {thread.partnerHandle ? `@${thread.partnerHandle}` : t('feature.home.tapRead')}
-                      </Text>
-                    </View>
-                    <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#9B78E8' }} />
-                    <Icon name="chevron-right" size={13} color="rgba(107,91,149,0.55)" />
-                  </TouchableOpacity>
-                ))}
-                {unreadCampfireRooms.map(room => (
-                  <TouchableOpacity
-                    key={room.id}
-                    style={[m.notif, { backgroundColor: 'rgba(120,216,160,0.10)', borderColor: 'rgba(120,216,160,0.28)', borderWidth: 1 }]}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onPress={() => { setShowNotifs(false); setTimeout(() => router.push(`/campfire/${room.id}` as any), 260); }}
-                    activeOpacity={0.78}
-                  >
-                    <View style={[m.notifIcon, { backgroundColor: 'rgba(120,216,160,0.15)' }]}>
-                      <Icon name="message-circle" size={13} color="#78D8A0" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={1}>{t('feature.home.newWhisper', { name: room.name })}</Text>
-                      <Text style={[m.notifSub, { color: colors.mutedForeground }]}>{t('feature.home.joinFire')}</Text>
-                    </View>
-                    <Icon name="chevron-right" size={13} color="rgba(120,216,160,0.55)" />
-                  </TouchableOpacity>
-                ))}
-                {serverNotifications.map(n => (
-                  <View key={n.id} style={[m.notif, { backgroundColor: n.isRead ? colors.muted : `${accent}14`, borderColor: n.isRead ? 'transparent' : `${accent}28` }]}>
-                    <View style={[m.notifIcon, { backgroundColor: `${accent}18` }]}>
-                      <Icon name={n.type === 'guide_session_rescheduled' || n.type === 'guide_session_cancelled' ? 'calendar' : n.type === 'witness' ? 'eye' : n.type === 'save' ? 'bookmark' : (n.type === 'new_story' || n.type === 'new_chapter') ? 'book-open' : n.type === 'resonate' ? 'activity' : 'star'} size={13} color={accent} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={2}>{n.title}</Text>
-                      <Text style={[m.notifSub, { color: colors.mutedForeground }]}>{n.actorName}</Text>
-                    </View>
-                    {!n.isRead && <View style={[m.unread, { backgroundColor: accent }]} />}
-                    <TouchableOpacity
-                      style={[m.deleteBtn, { backgroundColor: 'rgba(255,80,80,0.12)' }]}
-                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); deleteServerNotification(n.id); }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Icon name="x" size={12} color="rgba(255,120,120,0.80)" />
-                    </TouchableOpacity>
-                    {(n.type === 'guide_session_rescheduled' || n.type === 'guide_session_cancelled') && (
-                      <TouchableOpacity
-                        accessibilityRole="button"
-                        accessibilityLabel={n.type === 'guide_session_rescheduled' ? 'Open updated session' : 'Open guide profile'}
-                        style={{ width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }}
-                        onPress={() => {
-                          markServerNotificationsRead();
-                          setShowNotifs(false);
-                          setTimeout(() => {
-                            if (n.type === 'guide_session_rescheduled') {
-                              router.push({ pathname: '/guide-session/[sessionId]', params: { sessionId: n.refId } });
-                            } else {
-                              router.push({ pathname: '/guide/[userId]', params: { userId: n.actorId } });
-                            }
-                          }, 260);
-                        }}
-                      >
-                        <Icon name="chevron-right" size={14} color={accent} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))}
-                {rewards.map(r => (
-                  <View key={r.id} style={[m.notif, { backgroundColor: `${DEF_ACCENT}10`, borderColor: `${DEF_ACCENT}22` }]}>
-                    <Text style={{ fontSize: 20, lineHeight: 24 }}>{r.icon ?? '✦'}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[m.notifTitle, { color: colors.foreground }]}>{r.message}</Text>
-                      {r.subMessage && <Text style={[m.notifSub, { color: colors.mutedForeground }]}>{r.subMessage}</Text>}
-                    </View>
-                    <TouchableOpacity
-                      style={[m.deleteBtn, { backgroundColor: 'rgba(255,80,80,0.12)' }]}
-                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); dismissReward(r.id); }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Icon name="x" size={12} color="rgba(255,120,120,0.80)" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <NotificationsExperience
+        visible={showNotifs}
+        accent={accent}
+        serverNotifications={serverNotifications}
+        unreadDmThreads={unreadDmThreads}
+        unreadCampfireRooms={unreadCampfireRooms}
+        rewards={rewards}
+        friends={friends}
+        onClose={() => setShowNotifs(false)}
+        onVisible={() => {
+          markServerNotificationsRead();
+          markAllUnreadSeen();
+        }}
+        onOpenNotification={openServerNotification}
+        onOpenMessage={thread => {
+          markDmThreadRead(thread.partnerId);
+          setShowNotifs(false);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setTimeout(() => router.push(`/messages/${thread.partnerId}?name=${encodeURIComponent(thread.partnerName)}${thread.partnerHandle ? `&handle=${encodeURIComponent(thread.partnerHandle)}` : ''}` as any), 260);
+        }}
+        onOpenCampfire={room => {
+          setShowNotifs(false);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setTimeout(() => router.push(`/campfire/${room.id}` as any), 260);
+        }}
+        onDeleteNotification={id => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          deleteServerNotification(id);
+        }}
+        onDismissReward={id => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          dismissReward(id);
+        }}
+      />
 
       {/* ── Event Detail Sheet ───────────────────────────────────────────── */}
       {activeEvent && (
