@@ -2331,6 +2331,13 @@ export default function HomeScreen() {
           markAllUnreadSeen();
         }}
         onOpenNotification={openServerNotification}
+        onOpenFriend={userId => {
+          setShowNotifs(false);
+          setTimeout(() => router.push({
+            pathname: '/user/[userId]',
+            params: { userId },
+          } as never), 260);
+        }}
         onOpenMessage={thread => {
           markDmThreadRead(thread.partnerId);
           setShowNotifs(false);
