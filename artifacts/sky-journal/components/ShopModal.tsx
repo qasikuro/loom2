@@ -16,7 +16,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { apiFetch, useApp, COSMETIC_CATEGORY_MAP, type ShopItem } from '@/context/AppContext';
-import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
+import { Button as KindnessButton } from '@workspace/storigam-kindness/components/native/button';
+import { useColors as useDesignSystemColors } from '@workspace/storigam-kindness/hooks/use-colors';
+import type { NativeThemeColors, NativeThemeMode } from '@workspace/storigam-kindness/lib/native-theme';
 import { Icon } from '@/components/Icon';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { FrameRing } from '@/components/profile/CharacterAuraHeader';
@@ -30,10 +33,10 @@ const SHOP_CATALOG_CACHE_KEY = 'shop_catalog_v2';
 // ── Seasonal constants ────────────────────────────────────────────────────────
 
 const SEASON_COLORS: Record<string, string> = {
-  Spring: '#E88FB0',
-  Summer: '#C8A84B',
-  Autumn: '#C8784B',
-  Winter: '#78B4DC',
+  Spring: 'accent',
+  Summer: 'chart3',
+  Autumn: 'chart3',
+  Winter: 'chart4',
 };
 
 const SEASON_ICONS: Record<string, string> = {
@@ -90,13 +93,27 @@ const FALLBACK_CATALOG: ShopItem[] = [
   { id: 'effect_cosmic_arrival', name: 'Cosmic Arrival', description: 'A golden star falls through luminous blue smoke when visitors open your profile.', icon: '✦', category: 'effect', cost: { stars: 0 } },
 ];
 
-const CATEGORY_COLORS: Record<string, string> = {
-  frame:  '#C8A84B',
-  accent: '#9878D8',
-  theme:  '#78B4DC',
-  effect: '#70C8A0',
-  card_frame: '#D9B566',
+const CATEGORY_COLORS: Record<string, keyof NativeThemeColors> = {
+  frame:  'chart3',
+  accent: 'primary',
+  theme:  'chart4',
+  effect: 'chart5',
+  card_frame: 'chart3',
 };
+
+function useShopColors() {
+  const { isDark } = useTheme();
+  return useDesignSystemColors(isDark ? 'dark' : 'light');
+}
+
+function categoryColor(category: string, colors: NativeThemeColors) {
+  return colors[CATEGORY_COLORS[category] ?? 'primary'] as string;
+}
+
+function getSeasonColor(season: string, colors: NativeThemeColors) {
+  const token = SEASON_COLORS[season] as keyof NativeThemeColors | undefined;
+  return colors[token ?? 'primary'] as string;
+}
 
 function categoryLabel(t: (k: string, o?: Record<string, unknown>) => string, category: string) {
   return category === 'card_frame'
@@ -125,6 +142,7 @@ interface ToastProps {
 }
 
 function PurchaseToast({ message, type, visible }: ToastProps) {
+  const colors = useShopColors();
   const opacity    = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
 
@@ -143,9 +161,9 @@ function PurchaseToast({ message, type, visible }: ToastProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const bg   = type === 'success' ? 'rgba(104,200,160,0.96)'
-             : type === 'error'   ? 'rgba(220,80,80,0.96)'
-             :                      'rgba(107,91,149,0.96)';
+  const bg   = type === 'success' ? colors.chart5
+             : type === 'error'   ? colors.destructive
+             :                      colors.primary;
   const icon = type === 'success' ? '✦' : type === 'error' ? '✕' : 'ℹ';
 
   return (
@@ -161,14 +179,15 @@ function PurchaseToast({ message, type, visible }: ToastProps) {
 
 // ── Balance chip ──────────────────────────────────────────────────────────────
 
-function BalanceChip({ icon, value, color, bg, label }: { icon: string; value: number; color: string; bg: string; label: string }) {
+function BalanceChip({ icon, value, color, label }: { icon: string; value: number; color: string; label: string }) {
+  const colors = useShopColors();
   return (
     <View style={styles.balChipWrap}>
-      <View style={[styles.balChip, { backgroundColor: bg, borderColor: `${color}44` }]}>
+      <View style={[styles.balChip, { backgroundColor: colors.muted, borderColor: colors.border }]}>
         <Text style={[styles.balChipIcon, { color }]}>{icon}</Text>
         <Text style={[styles.balChipNum, { color }]}>{value}</Text>
       </View>
-      <Text style={[styles.balChipLabel, { color: `${color}AA` }]}>{label}</Text>
+      <Text style={[styles.balChipLabel, { color: colors.mutedForeground }]}>{label}</Text>
     </View>
   );
 }
@@ -176,7 +195,8 @@ function BalanceChip({ icon, value, color, bg, label }: { icon: string; value: n
 // ── Seasonal badge pill ───────────────────────────────────────────────────────
 
 function SeasonalBadge({ label }: { label: string }) {
-  const color = SEASON_COLORS[label] ?? '#9878D8';
+  const colors = useShopColors();
+  const color = getSeasonColor(label, colors);
   const icon  = SEASON_ICONS[label]  ?? '✦';
   return (
     <View style={[styles.seasonBadge, { backgroundColor: `${color}22`, borderColor: `${color}55` }]}>
@@ -189,17 +209,18 @@ function SeasonalBadge({ label }: { label: string }) {
 // Shows a miniature visual of what each category looks like when equipped.
 // Frames → concentric border rings. Accents → glow band. Themes → page lines.
 
-function ItemPreview({ category, icon, color, itemId }: { category: string; color: string; icon: string; itemId: string }) {
+function ItemPreview({ category, icon, color, itemId, large = false }: { category: string; color: string; icon: string; itemId: string; large?: boolean }) {
+  const frameSize = large ? (itemId === 'frame_celestial_wings' ? 68 : 72) : (itemId === 'frame_celestial_wings' ? 30 : 58);
   return (
-    <View style={[pv.wrap, { backgroundColor: `${color}0C`, borderColor: `${color}28` }]}>
+    <View style={[pv.wrap, large && pv.largeWrap, { backgroundColor: `${color}0C`, borderColor: `${color}28` }]}>
       {category === 'frame' && (
         itemId === 'frame_moonlight' || itemId === 'frame_fire' || itemId === 'frame_celestial_wings' ? (
           <View style={pv.premiumFramePreview}>
-            <FrameRing frameId={itemId} size={itemId === 'frame_celestial_wings' ? 30 : 58} layer="wings" />
-            <View style={[pv.previewAvatar, { backgroundColor: `${color}20`, borderColor: `${color}65` }]}>
+            <FrameRing frameId={itemId} size={frameSize} layer="wings" />
+            <View style={[pv.previewAvatar, large && pv.largePreviewAvatar, { backgroundColor: `${color}20`, borderColor: `${color}65` }]}>
               <Text style={[pv.icon, { color }]}>{itemId === 'frame_moonlight' ? '✧' : itemId === 'frame_celestial_wings' ? '✦' : '◉'}</Text>
             </View>
-            <FrameRing frameId={itemId} size={itemId === 'frame_celestial_wings' ? 30 : 58} layer="ornament" />
+            <FrameRing frameId={itemId} size={frameSize} layer="ornament" />
           </View>
         ) : (
           <View style={[pv.frameOuter, { borderColor: `${color}60` }]}>
@@ -332,44 +353,24 @@ interface ItemCardProps {
 
 function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchasing, founderLocked = false }: ItemCardProps) {
   const { t } = useTranslation();
-  const colors   = useColors();
-  const scale    = useRef(new Animated.Value(1)).current;
-  const catColor = CATEGORY_COLORS[item.category] ?? '#9878D8';
+  const colors   = useShopColors();
+  const { isDark } = useTheme();
+  const mode: NativeThemeMode = isDark ? 'dark' : 'light';
+  const catColor = categoryColor(item.category, colors);
 
   // availableNow is only set to false for out-of-season seasonal items
   const availableNow = item.availableNow !== false;
 
-  function pressIn()  { Animated.spring(scale, { toValue: 0.95, tension: 200, friction: 8, useNativeDriver: true }).start(); }
-  function pressOut() { Animated.spring(scale, { toValue: 1,    tension: 200, friction: 8, useNativeDriver: true }).start(); }
-
   const costParts: React.ReactNode[] = [];
-  if (item.cost.stars)  costParts.push(<Text key="s" style={[styles.costPart, { color: '#C8A84B' }]}>✦ {item.cost.stars}</Text>);
-  if (item.cost.aura)   costParts.push(<Text key="a" style={[styles.costPart, { color: '#9878D8' }]}>◈ {item.cost.aura}</Text>);
-  if (item.cost.shards) costParts.push(<Text key="h" style={[styles.costPart, { color: '#78B4DC' }]}>◇ {item.cost.shards}</Text>);
+  if (item.cost.stars)  costParts.push(<Text key="s" style={[styles.costPart, { color: colors.chart3 }]}>✦ {item.cost.stars}</Text>);
+  if (item.cost.aura)   costParts.push(<Text key="a" style={[styles.costPart, { color: colors.primary }]}>◈ {item.cost.aura}</Text>);
+  if (item.cost.shards) costParts.push(<Text key="h" style={[styles.costPart, { color: colors.chart4 }]}>◇ {item.cost.shards}</Text>);
 
   const isUnavailable = (!availableNow || founderLocked) && !owned;
   const disabled      = isUnavailable || (!owned && (!canAfford || purchasing));
 
-  function handlePress() {
-    if (isUnavailable || founderLocked && !owned) return;
-    // Owned items activate through the nested status button below. Do not
-    // toggle them again from this parent card press, or one tap can undo itself.
-    if (owned) return;
-    if (canAfford && !purchasing) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      onBuy(item);
-    }
-  }
-
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <TouchableOpacity
-        onPress={handlePress}
-        onPressIn={isUnavailable ? undefined : pressIn}
-        onPressOut={isUnavailable ? undefined : pressOut}
-        activeOpacity={1}
-        disabled={disabled}
-      >
+    <View style={styles.cardWrapper}>
         <View style={[
           styles.card,
           { backgroundColor: colors.card, borderColor: isActive ? catColor : owned ? `${catColor}60` : colors.border },
@@ -377,16 +378,32 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
           isActive && { backgroundColor: `${catColor}0A` },
           isUnavailable && { opacity: 0.72 },
         ]}>
-          {/* Visual preview */}
-          <ItemPreview category={item.category} icon={item.icon} color={catColor} itemId={item.id} />
-
-          {/* Info */}
-          <View style={styles.cardInfo}>
-            <View style={styles.cardTitleRow}>
-              <Text style={[styles.cardName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
-              <View style={[styles.catBadge, { backgroundColor: `${catColor}18` }]}>
-                <Text style={[styles.catBadgeText, { color: catColor }]}>{categoryLabel(t, item.category)}</Text>
+          <View style={[styles.cardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <ItemPreview category={item.category} icon={item.icon} color={catColor} itemId={item.id} large />
+            {(owned || isUnavailable) && (
+              <View style={[
+                styles.cardStatus,
+                { backgroundColor: colors.card, borderColor: isActive ? catColor : colors.border },
+              ]}>
+                <Text style={[styles.cardStatusText, { color: isActive ? catColor : colors.mutedForeground }]}>
+                  {isActive
+                    ? t('components.shop.active')
+                    : owned
+                      ? t('components.shop.owned', { defaultValue: 'Owned' })
+                      : founderLocked
+                        ? t('components.shop.founderExclusive', { defaultValue: 'Founder' })
+                        : t('components.shop.returns')}
+                </Text>
               </View>
+            )}
+          </View>
+
+          <View style={styles.cardInfo}>
+            <View style={styles.cardTitleArea}>
+              <Text style={[styles.cardName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
+              <Text style={[styles.cardCategory, { color: catColor }]} numberOfLines={1}>
+                {categoryLabel(t, item.category)}
+              </Text>
               {item.seasonal && item.seasonalLabel && (
                 <SeasonalBadge label={item.seasonalLabel} />
               )}
@@ -404,19 +421,19 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
               </View>
 
               {owned ? (
-                <TouchableOpacity
+                <KindnessButton
+                  label={isActive ? t('components.shop.active') : t('components.shop.setActive')}
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onActivate(item); }}
+                  mode={mode}
+                  variant={isActive ? 'primary' : 'outline'}
+                  size="small"
+                  accessibilityLabel={isActive ? t('components.shop.active') : t('components.shop.setActive')}
                   style={[
-                    styles.ownedBadge,
-                    isActive
-                      ? { backgroundColor: catColor }
-                      : { backgroundColor: `${catColor}22` },
+                    styles.actionButton,
+                    { backgroundColor: isActive ? catColor : colors.muted, borderColor: isActive ? catColor : colors.border },
                   ]}
-                >
-                  <Text style={[styles.ownedBadgeText, { color: isActive ? '#fff' : catColor }]}>
-                    {isActive ? t('components.shop.active') : t('components.shop.setActive')}
-                  </Text>
-                </TouchableOpacity>
+                  labelStyle={[styles.actionButtonLabel, { color: isActive ? colors.primaryForeground : colors.foreground }]}
+                />
               ) : founderLocked ? (
                 <View style={[styles.returnsBadge, { backgroundColor: `${catColor}14`, borderColor: `${catColor}55` }]}>
                   <Text style={[styles.returnsBadgeText, { color: catColor }]}>
@@ -430,26 +447,25 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
                   </Text>
                 </View>
               ) : (
-                <TouchableOpacity
+                <KindnessButton
+                  label={purchasing ? '…' : canAfford ? t('components.shop.get') : t('components.shop.needMore')}
                   onPress={() => { if (!disabled) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onBuy(item); } }}
+                  mode={mode}
+                  variant="primary"
+                  size="small"
                   disabled={disabled}
+                  accessibilityLabel={purchasing ? t('components.shop.purchasing', { defaultValue: 'Purchasing' }) : canAfford ? t('components.shop.get') : t('components.shop.needMore')}
                   style={[
-                    styles.buyBtn,
-                    canAfford
-                      ? { backgroundColor: catColor }
-                      : { backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border },
+                    styles.actionButton,
+                    { backgroundColor: canAfford ? catColor : colors.muted, borderColor: canAfford ? catColor : colors.border },
                   ]}
-                >
-                  <Text style={[styles.buyBtnText, { color: canAfford ? '#fff' : colors.mutedForeground }]}>
-                    {purchasing ? '…' : canAfford ? t('components.shop.get') : t('components.shop.needMore')}
-                  </Text>
-                </TouchableOpacity>
+                  labelStyle={[styles.actionButtonLabel, { color: canAfford ? colors.primaryForeground : colors.mutedForeground }]}
+                />
               )}
             </View>
           </View>
         </View>
-      </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -463,18 +479,20 @@ interface CollectionRowProps {
 
 function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
   const { t } = useTranslation();
-  const colors   = useColors();
+  const colors   = useShopColors();
+  const { isDark } = useTheme();
+  const mode: NativeThemeMode = isDark ? 'dark' : 'light';
   const category = COSMETIC_CATEGORY_MAP[entry.itemId] ?? 'frame';
-  const catColor = CATEGORY_COLORS[category] ?? '#9878D8';
+  const catColor = categoryColor(category, colors);
   const icon     = ITEM_ICON_MAP[entry.itemId] ?? '✦';
 
   const date = new Date(entry.purchasedAt);
   const dateStr = date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
   const costParts: React.ReactNode[] = [];
-  if (entry.starsSpent  > 0) costParts.push(<Text key="s" style={[styles.collCostPart, { color: '#C8A84B' }]}>✦ {entry.starsSpent}</Text>);
-  if (entry.auraSpent   > 0) costParts.push(<Text key="a" style={[styles.collCostPart, { color: '#9878D8' }]}>◈ {entry.auraSpent}</Text>);
-  if (entry.shardsSpent > 0) costParts.push(<Text key="h" style={[styles.collCostPart, { color: '#78B4DC' }]}>◇ {entry.shardsSpent}</Text>);
+  if (entry.starsSpent  > 0) costParts.push(<Text key="s" style={[styles.collCostPart, { color: colors.chart3 }]}>✦ {entry.starsSpent}</Text>);
+  if (entry.auraSpent   > 0) costParts.push(<Text key="a" style={[styles.collCostPart, { color: colors.primary }]}>◈ {entry.auraSpent}</Text>);
+  if (entry.shardsSpent > 0) costParts.push(<Text key="h" style={[styles.collCostPart, { color: colors.chart4 }]}>◇ {entry.shardsSpent}</Text>);
 
   return (
     <View style={[
@@ -504,19 +522,18 @@ function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
         </View>
       </View>
 
-      <TouchableOpacity
+      <KindnessButton
+        label={isActive ? t('components.shop.active') : t('components.shop.setActive')}
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onActivate(entry.itemId); }}
+        mode={mode}
+        variant={isActive ? 'primary' : 'outline'}
+        size="small"
         style={[
-          styles.ownedBadge,
-          isActive
-            ? { backgroundColor: catColor }
-            : { backgroundColor: `${catColor}22` },
+          styles.actionButton,
+          { backgroundColor: isActive ? catColor : colors.muted, borderColor: isActive ? catColor : colors.border },
         ]}
-      >
-        <Text style={[styles.ownedBadgeText, { color: isActive ? '#fff' : catColor }]}>
-          {isActive ? t('components.shop.active') : t('components.shop.setActive')}
-        </Text>
-      </TouchableOpacity>
+        labelStyle={[styles.actionButtonLabel, { color: isActive ? colors.primaryForeground : colors.foreground }]}
+      />
     </View>
   );
 }
@@ -531,7 +548,7 @@ interface CollectionTabProps {
 
 function CollectionTab({ visible, purchaseVersion, catalogItems }: CollectionTabProps) {
   const { t } = useTranslation();
-  const colors  = useColors();
+  const colors  = useShopColors();
   const { activeCosmetics, setActiveCosmetic, character } = useApp();
   const isFounder = !!character?.isFounder;
   const [purchases,      setPurchases]      = useState<PurchaseEntry[]>([]);
@@ -544,7 +561,7 @@ function CollectionTab({ visible, purchaseVersion, catalogItems }: CollectionTab
   const founderItems = isFounder
     ? catalogItems.filter(i => (i.founderOnly || i.id === 'card_frame_founder_regalia') && !purchasedSet.has(i.id))
     : [];
-  const founderCatColor = CATEGORY_COLORS.card_frame;
+  const founderCatColor = categoryColor('card_frame', colors);
 
   // Track whether we need to force a fresh fetch (post-purchase)
   const needsRefresh = useRef(true);
@@ -695,24 +712,25 @@ function CollectionTab({ visible, purchaseVersion, catalogItems }: CollectionTab
 
 type ActiveTab = 'shop' | 'collection';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function TabSwitcher({ active, onChange, colors }: { active: ActiveTab; onChange: (t: ActiveTab) => void; colors: any }) {
+function TabSwitcher({ active, onChange, colors }: { active: ActiveTab; onChange: (t: ActiveTab) => void; colors: NativeThemeColors }) {
   const { t } = useTranslation();
+  const { isDark } = useTheme();
+  const mode: NativeThemeMode = isDark ? 'dark' : 'light';
   return (
     <View style={[styles.tabSwitcher, { backgroundColor: colors.muted, borderColor: colors.border }]}>
       {(['shop', 'collection'] as ActiveTab[]).map(tab => {
         const isActive = tab === active;
         return (
-          <TouchableOpacity
+          <KindnessButton
             key={tab}
+            label={tab === 'shop' ? `✦ ${t('components.shop.shopTab')}` : `◇ ${t('components.shop.collectionTab')}`}
             onPress={() => onChange(tab)}
-            style={[styles.tabBtn, isActive && { backgroundColor: colors.card, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }]}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabBtnText, { color: isActive ? '#6B5B95' : colors.mutedForeground }]}>
-              {tab === 'shop' ? `✦ ${t('components.shop.shopTab')}` : `◇ ${t('components.shop.collectionTab')}`}
-            </Text>
-          </TouchableOpacity>
+            mode={mode}
+            variant={isActive ? 'primary' : 'ghost'}
+            size="small"
+            style={[styles.tabBtn, { borderRadius: colors.radius }]}
+            labelStyle={[styles.tabBtnText, { color: isActive ? colors.primaryForeground : colors.mutedForeground }]}
+          />
         );
       })}
     </View>
@@ -728,7 +746,9 @@ interface ShopModalProps {
 
 export function ShopModal({ visible, onClose }: ShopModalProps) {
   const { t } = useTranslation();
-  const colors  = useColors();
+  const colors  = useShopColors();
+  const { isDark } = useTheme();
+  const mode: NativeThemeMode = isDark ? 'dark' : 'light';
   const insets  = useSafeAreaInsets();
   const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased, character } = useApp();
   const isFounder = !!character?.isFounder;
@@ -741,6 +761,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
 
   const [activeTab,       setActiveTab]       = useState<ActiveTab>('shop');
   const [filterCat,       setFilterCat]       = useState<string | null>(null);
+  const [showEarnGuide,   setShowEarnGuide]   = useState(false);
   const [catalogItems,    setCatalogItems]    = useState<ShopItem[]>(FALLBACK_CATALOG);
   const [previewItems,    setPreviewItems]    = useState<ShopItem[]>([]);
   const [purchasing,      setPurchasing]      = useState<string | null>(null);
@@ -881,14 +902,22 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
 
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerCopy}>
+            <Text style={[styles.eyebrow, { color: colors.primary }]}>
+              {t('components.shop.personalizeLabel', { defaultValue: 'PERSONALIZE YOUR PROFILE' })}
+            </Text>
             <Text style={[styles.title, { color: colors.foreground }]}>{t('components.shop.title')}</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              Spend your stars on cosmetic treasures
+              {t('components.shop.subtitle', { defaultValue: 'Choose little details that feel like you.' })}
             </Text>
           </View>
-          <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: colors.muted }]}>
-            <Icon name="x" size={14} color={colors.mutedForeground} />
+          <TouchableOpacity
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close', { defaultValue: 'Close' })}
+            style={[styles.closeBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+          >
+            <Icon name="x" size={16} color={colors.foreground} />
           </TouchableOpacity>
         </View>
 
@@ -903,44 +932,49 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
             <View style={[styles.balanceRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.balLabel, { color: colors.mutedForeground }]}>{t('components.shop.balanceTitle')}</Text>
-                <Text style={[styles.balHint, { color: colors.mutedForeground }]}>{t('components.shop.balanceHint')}</Text>
               </View>
               <View style={styles.balChips}>
-                <BalanceChip icon="✦" value={stars}  color="#C8A84B" bg="rgba(200,168,75,0.14)"   label={t('components.shop.stars')} />
-                <BalanceChip icon="◈" value={aura}   color="#9878D8" bg="rgba(152,120,216,0.14)"  label={t('components.shop.aura')} />
-                <BalanceChip icon="◇" value={shards} color="#78B4DC" bg="rgba(120,180,220,0.14)"  label={t('components.shop.shards')} />
+                <BalanceChip icon="✦" value={stars}  color={colors.chart3} label={t('components.shop.stars')} />
+                <BalanceChip icon="◈" value={aura}   color={colors.primary} label={t('components.shop.aura')} />
+                <BalanceChip icon="◇" value={shards} color={colors.chart4} label={t('components.shop.shards')} />
               </View>
             </View>
 
-            {/* Earn guide */}
-            <View style={[styles.earnGuide, { borderColor: colors.border }]}>
-              <Text style={[styles.earnGuideTitle, { color: colors.mutedForeground }]}>{t('components.shop.howToEarn')}</Text>
-              <View style={styles.earnGuideGrid}>
+            <KindnessButton
+              label={t('components.shop.howToEarn')}
+              onPress={() => setShowEarnGuide(value => !value)}
+              mode={mode}
+              variant="ghost"
+              size="small"
+              accessibilityLabel={t('components.shop.howToEarn')}
+              style={styles.earnToggle}
+              labelStyle={[styles.earnToggleLabel, { color: colors.mutedForeground }]}
+            />
+            {showEarnGuide && (
+              <View style={[styles.earnGuide, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 {[
-                  { icon: '✦', color: '#C8A84B', name: t('components.shop.stars'),  tips: t('components.shop.earnStars') },
-                  { icon: '◈', color: '#9878D8', name: t('components.shop.aura'),   tips: t('components.shop.earnAura') },
-                  { icon: '◇', color: '#78B4DC', name: t('components.shop.shards'), tips: t('components.shop.earnShards') },
+                  { icon: '✦', color: colors.chart3, name: t('components.shop.stars'), tips: t('components.shop.earnStars') },
+                  { icon: '◈', color: colors.primary, name: t('components.shop.aura'), tips: t('components.shop.earnAura') },
+                  { icon: '◇', color: colors.chart4, name: t('components.shop.shards'), tips: t('components.shop.earnShards') },
                 ].map(({ icon, color, name, tips }) => (
                   <View key={name} style={styles.earnGuideRow}>
                     <Text style={[styles.earnGuideIcon, { color }]}>{icon}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.earnGuideName, { color }]}>{name}</Text>
-                      <Text style={[styles.earnGuideTips, { color: colors.mutedForeground }]}>{tips}</Text>
-                    </View>
+                    <Text style={[styles.earnGuideName, { color }]}>{name}</Text>
+                    <Text style={[styles.earnGuideTips, { color: colors.mutedForeground }]}>{tips}</Text>
                   </View>
                 ))}
               </View>
-            </View>
+            )}
 
             {/* Category filter pills */}
             {(() => {
               const cats: { id: string | null; label: string; icon: string; color: string }[] = [
-                { id: null,     label: t('components.shop.all'),     icon: '✦', color: '#9878D8' },
-                { id: 'effect', label: t('components.shop.categories.effect'), icon: '✨', color: '#70C8A0' },
-                { id: 'frame',  label: t('components.shop.categories.frame'),  icon: '◑', color: '#C8A84B' },
-                { id: 'accent', label: t('components.shop.categories.accent'), icon: '◈', color: '#9878D8' },
-                { id: 'theme',  label: t('components.shop.categories.theme'),  icon: '⋆', color: '#78B4DC' },
-                { id: 'card_frame', label: categoryLabel(t, 'card_frame'), icon: '◆', color: '#D9B566' },
+                { id: null,     label: t('components.shop.all'), icon: '✦', color: colors.primary },
+                { id: 'frame',  label: t('components.shop.categories.frame'), icon: '◉', color: categoryColor('frame', colors) },
+                { id: 'effect', label: t('components.shop.categories.effect'), icon: '✧', color: categoryColor('effect', colors) },
+                { id: 'accent', label: t('components.shop.categories.accent'), icon: '◈', color: categoryColor('accent', colors) },
+                { id: 'theme',  label: t('components.shop.categories.theme'), icon: '⋆', color: categoryColor('theme', colors) },
+                { id: 'card_frame', label: categoryLabel(t, 'card_frame'), icon: '◆', color: categoryColor('card_frame', colors) },
               ];
               return (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterRowContent}>
@@ -950,7 +984,12 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                       <TouchableOpacity
                         key={c.id ?? 'all'}
                         onPress={() => setFilterCat(c.id)}
-                        style={[styles.filterPill, active && { backgroundColor: `${c.color}22`, borderColor: c.color }]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                        style={[
+                          styles.filterPill,
+                          { backgroundColor: active ? `${c.color}20` : colors.muted, borderColor: active ? c.color : colors.border },
+                        ]}
                       >
                         <Text style={[styles.filterPillText, { color: active ? c.color : colors.mutedForeground }]}>
                           {c.icon} {c.label}
@@ -967,12 +1006,15 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
               const visible_catalog = filterCat
                 ? catalogItems.filter(i => i.category === filterCat)
                 : catalogItems;
+              const visible_preview_items = filterCat
+                ? previewItems.filter(i => i.category === filterCat)
+                : previewItems;
               const seasonalItems  = visible_catalog.filter(i => i.seasonal);
               const permanentItems = visible_catalog.filter(i => !i.seasonal);
 
               // Derive current season label + colour from the first seasonal item
               const seasonLabel = seasonalItems[0]?.seasonalLabel ?? null;
-              const seasonColor = seasonLabel ? (SEASON_COLORS[seasonLabel] ?? '#9878D8') : '#9878D8';
+              const seasonAccent = seasonLabel ? getSeasonColor(seasonLabel, colors) : colors.primary;
               const seasonIcon  = seasonLabel ? (SEASON_ICONS[seasonLabel]  ?? '✦')       : '✦';
 
               function renderItem(item: ShopItem, overrides?: Partial<ShopItem>) {
@@ -1001,13 +1043,23 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                   contentContainerStyle={styles.itemList}
                   showsVerticalScrollIndicator={false}
                 >
+                  <View style={styles.resultsHeader}>
+                    <Text style={[styles.resultsTitle, { color: colors.foreground }]}>
+                      {filterCat
+                        ? categoryLabel(t, filterCat)
+                        : t('components.shop.discoverItems', { defaultValue: 'Discover something for your profile' })}
+                    </Text>
+                    <Text style={[styles.resultsCount, { color: colors.mutedForeground }]}>
+                      {visible_catalog.length}
+                    </Text>
+                  </View>
                   {/* ── This Season ─────────────────────────────── */}
                   {seasonalItems.length > 0 && (
                     <>
-                      <View style={[styles.seasonHeader, { borderColor: `${seasonColor}30`, backgroundColor: `${seasonColor}0C` }]}>
+                      <View style={[styles.seasonHeader, { borderColor: `${seasonAccent}30`, backgroundColor: `${seasonAccent}0C` }]}>
                         <Text style={[styles.seasonHeaderIcon]}>{seasonIcon}</Text>
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.seasonHeaderTitle, { color: seasonColor }]}>
+                          <Text style={[styles.seasonHeaderTitle, { color: seasonAccent }]}>
                             {t('components.shop.seasonCollection', { season: seasonLabel })}
                           </Text>
                           <Text style={[styles.seasonHeaderSub, { color: colors.mutedForeground }]}>
@@ -1016,7 +1068,9 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                         </View>
                         <SeasonalBadge label={seasonLabel!} />
                       </View>
-                      {seasonalItems.map(item => renderItem(item))}
+                      <View style={styles.itemGrid}>
+                        {seasonalItems.map(item => renderItem(item))}
+                      </View>
 
                       <View style={styles.sectionDivider}>
                         <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
@@ -1027,17 +1081,23 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                   )}
 
                   {/* ── Permanent items ──────────────────────────── */}
-                  {permanentItems.map(item => renderItem(item))}
+                  {permanentItems.length > 0 && (
+                    <View style={styles.itemGrid}>
+                      {permanentItems.map(item => renderItem(item))}
+                    </View>
+                  )}
 
                   {/* ── Out-of-season preview ────────────────────── */}
-                  {previewItems.length > 0 && (
+                  {visible_preview_items.length > 0 && (
                     <>
                       <View style={styles.sectionDivider}>
                         <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
                         <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t('components.shop.futureSeason')}</Text>
                         <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
                       </View>
-                      {previewItems.map(item => renderItem(item, { availableNow: false }))}
+                      <View style={styles.itemGrid}>
+                        {visible_preview_items.map(item => renderItem(item, { availableNow: false }))}
+                      </View>
                     </>
                   )}
 
@@ -1076,6 +1136,12 @@ const pv = StyleSheet.create({
     overflow: 'hidden',
     flexShrink: 0,
   },
+  largeWrap: {
+    width: '100%',
+    height: '100%',
+    borderWidth: 0,
+    borderRadius: 0,
+  },
   icon: { fontSize: 18 },
   premiumFramePreview: {
     width: '100%',
@@ -1090,6 +1156,11 @@ const pv = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  largePreviewAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
 
   // Frame: concentric border rings
@@ -1198,8 +1269,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     maxHeight: '90%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     overflow: 'hidden',
   },
   handle: {
@@ -1218,6 +1289,15 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 10,
   },
+  headerCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  eyebrow: {
+    fontSize: 9,
+    fontFamily: 'Satoshi-Bold',
+    letterSpacing: 1.2,
+  },
   title: {
     fontSize: 20,
     fontFamily: 'Satoshi-Bold',
@@ -1229,9 +1309,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   closeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 38,
+    height: 38,
+    borderRadius: 20,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1298,11 +1379,24 @@ const styles = StyleSheet.create({
 
   // Earn guide
   earnGuide: {
-    marginHorizontal: 16, marginBottom: 10,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: 12, borderWidth: 1,
-    backgroundColor: 'rgba(107,91,149,0.04)',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
     gap: 8,
+  },
+  earnToggle: {
+    alignSelf: 'flex-start',
+    marginHorizontal: 16,
+    marginBottom: 4,
+    minHeight: 32,
+    paddingHorizontal: 8,
+  },
+  earnToggleLabel: {
+    fontSize: 11,
+    letterSpacing: 0.1,
   },
   earnGuideTitle: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.9 },
   earnGuideGrid:  { gap: 6 },
@@ -1322,23 +1416,76 @@ const styles = StyleSheet.create({
   earnGuideRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   earnGuideIcon:  { fontSize: 13, lineHeight: 18, width: 18, textAlign: 'center' },
   earnGuideName:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1, lineHeight: 16 },
-  earnGuideTips:  { fontSize: 10, fontFamily: 'Satoshi-Regular', lineHeight: 15 },
+  earnGuideTips:  { flex: 1, fontSize: 10, fontFamily: 'Satoshi-Regular', lineHeight: 15 },
 
   // Item list
   itemList: {
     paddingHorizontal: 16,
     paddingBottom: 20,
-    gap: 10,
+    gap: 12,
+  },
+  resultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 2,
+    paddingBottom: 2,
+  },
+  resultsTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Satoshi-Bold',
+    letterSpacing: -0.2,
+  },
+  resultsCount: {
+    minWidth: 26,
+    textAlign: 'right',
+    fontSize: 12,
+    fontFamily: 'Satoshi-Medium',
+  },
+  itemGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 10,
   },
 
   // Card
+  cardWrapper: {
+    width: '48%',
+  },
   card: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    padding: 14,
-    borderRadius: 16,
+    width: '100%',
+    minHeight: 238,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
+    padding: 12,
+    borderRadius: 20,
     borderWidth: 1,
+  },
+  cardPreview: {
+    height: 112,
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  cardStatus: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  cardStatusText: {
+    fontSize: 8,
+    fontFamily: 'Satoshi-Bold',
+    letterSpacing: 0.25,
   },
   cardIconWrap: {
     width: 44,
@@ -1349,7 +1496,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   cardIcon: { fontSize: 22 },
-  cardInfo: { flex: 1, gap: 4 },
+  cardInfo: { flex: 1, gap: 5 },
+  cardTitleArea: { gap: 2, minHeight: 38 },
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1357,10 +1505,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   cardName: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Satoshi-Bold',
     letterSpacing: -0.2,
     flexShrink: 1,
+  },
+  cardCategory: {
+    fontSize: 9,
+    fontFamily: 'Satoshi-Bold',
+    letterSpacing: 0.45,
+    textTransform: 'uppercase',
   },
   catBadge: {
     paddingHorizontal: 7,
@@ -1385,15 +1539,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   cardDesc: {
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: 'Satoshi-Regular',
-    lineHeight: 17,
+    lineHeight: 14,
+    minHeight: 28,
   },
   cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 8,
+    marginTop: 2,
   },
   costRow: {
     flexDirection: 'row',
@@ -1440,6 +1595,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Satoshi-Bold',
     letterSpacing: 0.2,
+  },
+  actionButton: {
+    width: '100%',
+    minHeight: 36,
+    borderRadius: 18,
+    paddingHorizontal: 8,
+  },
+  actionButtonLabel: {
+    fontSize: 11,
+    letterSpacing: 0,
+    textAlign: 'center',
   },
 
   // ── Season section header ─────────────────────────────────────────────────
