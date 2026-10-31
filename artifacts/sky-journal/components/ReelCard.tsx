@@ -1,14 +1,23 @@
 import { Icon } from '@/components/Icon';
-import { ShareButton } from '@/components/ShareButton';
 import { BadgeTray } from '@/components/profile/BadgeTray';
 import type { DiscoverPost } from '@/context/AppContext';
 import * as Haptics from 'expo-haptics';
 import { ReelVideo } from '@/components/ReelVideo';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useColors as useKindnessColors } from '@workspace/storigam-kindness/hooks/use-colors';
+import type { NativeThemeColors } from '@workspace/storigam-kindness/lib/native-theme';
 import React, { useEffect, useState } from 'react';
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface Props {
   post: DiscoverPost;
@@ -28,22 +37,112 @@ interface Props {
   onReport: (id: string) => void;
 }
 
-function ReelAction({ name, label, active, count, onPress }: {
-  name: string; label: string; active?: boolean; count?: number; onPress: () => void;
+function ReelAction({ name, label, active, count, onPress, colors, reduceMotion, compact = false, haptics = true, top }: {
+  name: string;
+  label: string;
+  active?: boolean;
+  count?: number;
+  onPress: () => void;
+  colors: NativeThemeColors;
+  reduceMotion: boolean;
+  compact?: boolean;
+  haptics?: boolean;
+  top?: number;
 }) {
+  const pressScale = useSharedValue(1);
+  const haloOpacity = useSharedValue(active ? 0.24 : 0);
+  const haloScale = useSharedValue(active ? 1 : 0.78);
+  const size = compact ? 38 : 48;
+  const stageSize = size + 10;
+
+  useEffect(() => {
+    cancelAnimation(haloOpacity);
+    cancelAnimation(haloScale);
+    if (reduceMotion) {
+      cancelAnimation(pressScale);
+      pressScale.value = 1;
+      haloOpacity.value = active ? 0.24 : 0;
+      haloScale.value = active ? 1 : 0.78;
+      return;
+    }
+
+    haloOpacity.value = withTiming(active ? 0.24 : 0, { duration: 180 });
+    haloScale.value = withSpring(active ? 1 : 0.78, { damping: 12, stiffness: 240 });
+    return () => {
+      cancelAnimation(haloOpacity);
+      cancelAnimation(haloScale);
+    };
+  }, [active, haloOpacity, haloScale, pressScale, reduceMotion]);
+
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: haloOpacity.value,
+    transform: [{ scale: haloScale.value }],
+  }));
+
+  const pressIn = () => {
+    if (reduceMotion) return;
+    pressScale.value = withSpring(0.92, { damping: 12, stiffness: 280 });
+  };
+
+  const pressOut = () => {
+    if (reduceMotion) return;
+    pressScale.value = withSequence(
+      withSpring(1.06, { damping: 8, stiffness: 320 }),
+      withSpring(1, { damping: 11, stiffness: 250 }),
+    );
+  };
+
   return (
     <TouchableOpacity
-      style={styles.action}
-      onPress={() => { void Haptics.selectionAsync(); onPress(); }}
-      activeOpacity={0.75}
+      style={compact ? [styles.muteButton, top !== undefined && { top }] : styles.action}
+      onPress={() => { if (haptics) void Haptics.selectionAsync(); onPress(); }}
+      onPressIn={pressIn}
+      onPressOut={pressOut}
+      activeOpacity={1}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: !!active }}
     >
-      <View style={[styles.actionIcon, active && styles.actionIconActive]}>
-        <Icon name={name} size={23} color={active ? '#D9C2FF' : '#FFFFFF'} />
+      <View style={[styles.iconStage, { width: stageSize, height: stageSize }]}>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.actionHalo,
+            {
+              width: stageSize,
+              height: stageSize,
+              borderRadius: stageSize / 2,
+              borderColor: colors.primary,
+              backgroundColor: colors.primary,
+              shadowColor: colors.primary,
+            },
+            haloStyle,
+          ]}
+        />
+        <Animated.View
+          style={[
+            styles.actionIcon,
+            {
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              backgroundColor: active ? colors.primary : colors.secondary,
+              borderColor: active ? colors.ring : colors.border,
+            },
+            pressStyle,
+          ]}
+        >
+          <Icon name={name} size={compact ? 18 : 23} color={active ? colors.primaryForeground : colors.secondaryForeground} />
+        </Animated.View>
       </View>
-      <Text style={styles.actionText}>{label}{count !== undefined ? ` · ${count}` : ''}</Text>
+      {!compact && (
+        <Text style={[styles.actionText, { color: colors.foreground, fontFamily: colors.fontFamily.bold, textShadowColor: colors.background }]}>
+          {label}{count !== undefined ? ` · ${count}` : ''}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -53,9 +152,22 @@ export const ReelCard = React.memo(function ReelCard({
   onMuteToggle, onShare, onComment, onLike, onSave, onReport,
 }: Props) {
   const { t } = useTranslation();
+  const colors = useKindnessColors('dark');
   const isVideo = post.contentType === 'video' && !!post.videoUri;
   const [paused, setPaused] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => { if (!playing) setPaused(false); }, [playing]);
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(enabled => { if (mounted) setReduceMotion(enabled); })
+      .catch(() => null);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
   const imageUri = isVideo ? post.thumbnailUri : (post.panels?.[0]?.imageUri ?? post.imageUri);
   return (
     <View style={[styles.card, { height }]}>
@@ -121,40 +233,25 @@ export const ReelCard = React.memo(function ReelCard({
       </View>
 
       {isVideo && (
-        <TouchableOpacity
-          style={styles.muteButton}
+        <ReelAction
+          name={muted ? 'volume-x' : 'volume-2'}
+          label={t(muted ? 'reels.unmute' : 'reels.mute')}
+          active={muted}
           onPress={onMuteToggle}
-          accessibilityRole="button"
-          accessibilityLabel={t(muted ? 'reels.unmute' : 'reels.mute')}
-        >
-          <Icon name={muted ? 'volume-x' : 'volume-2'} size={18} color="#FFFFFF" />
-        </TouchableOpacity>
+          colors={colors}
+          reduceMotion={reduceMotion}
+          compact
+          haptics={false}
+          top={topInset + 40}
+        />
       )}
 
       <View style={styles.actions}>
-        <ReelAction name="heart" label={t(post.liked ? 'reels.liked' : 'reels.like')} count={post.likeCount} active={post.liked} onPress={() => onLike(post.id)} />
-        <ReelAction name="message-circle" label={t('reels.comments', { defaultValue: 'Comment' })} onPress={() => onComment(post)} />
-        <ShareButton
-          style={[styles.action, {
-            flexDirection: 'column',
-            gap: 0,
-            minWidth: 0,
-            minHeight: 0,
-            paddingHorizontal: 0,
-            borderWidth: 0,
-            borderColor: 'transparent',
-            backgroundColor: 'transparent',
-          }]}
-          iconContainerStyle={styles.actionIcon}
-          iconColor="#FFFFFF"
-          iconSize={23}
-          label={t('reels.share')}
-          labelStyle={styles.actionText}
-          accessibilityLabel={t('reels.share')}
-          onPress={() => { void Haptics.selectionAsync(); onShare(post); }}
-        />
-        <ReelAction name="bookmark" label={t(post.saved ? 'reels.saved' : 'reels.save')} active={post.saved} onPress={() => onSave(post.id)} />
-        <ReelAction name="flag" label={t('reels.report')} onPress={() => onReport(post.id)} />
+        <ReelAction name="heart" label={t(post.liked ? 'reels.liked' : 'reels.like')} count={post.likeCount} active={post.liked} onPress={() => onLike(post.id)} colors={colors} reduceMotion={reduceMotion} />
+        <ReelAction name="message-circle" label={t('reels.comments', { defaultValue: 'Comment' })} onPress={() => onComment(post)} colors={colors} reduceMotion={reduceMotion} />
+        <ReelAction name="share-2" label={t('reels.share')} onPress={() => onShare(post)} colors={colors} reduceMotion={reduceMotion} />
+        <ReelAction name="bookmark" label={t(post.saved ? 'reels.saved' : 'reels.save')} active={post.saved} onPress={() => onSave(post.id)} colors={colors} reduceMotion={reduceMotion} />
+        <ReelAction name="flag" label={t('reels.report')} onPress={() => onReport(post.id)} colors={colors} reduceMotion={reduceMotion} />
       </View>
 
       <View style={styles.details} pointerEvents="box-none">
@@ -193,12 +290,13 @@ const styles = StyleSheet.create({
   authorName: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Satoshi-Bold', textShadowColor: '#000', textShadowRadius: 4 },
   chapterPill: { backgroundColor: 'rgba(8,6,24,0.66)', paddingHorizontal: 10, height: 31, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 4 },
   chapterText: { color: '#FFFFFF', fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5 },
-  muteButton: { position: 'absolute', right: 20, top: '43%', backgroundColor: 'rgba(8,6,24,0.58)', padding: 11, borderRadius: 22 },
+  muteButton: { position: 'absolute', right: 16, alignItems: 'center', justifyContent: 'center' },
   actions: { position: 'absolute', right: 14, bottom: 106, alignItems: 'center', gap: 12 },
   action: { alignItems: 'center', width: 76 },
-  actionIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(12,9,30,0.63)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.19)' },
-  actionIconActive: { backgroundColor: 'rgba(145,100,226,0.72)', borderColor: '#D9C2FF' },
-  actionText: { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', textShadowColor: '#000', textShadowRadius: 3, marginTop: 3 },
+  iconStage: { alignItems: 'center', justifyContent: 'center' },
+  actionHalo: { position: 'absolute', borderWidth: 1, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 7 },
+  actionIcon: { alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  actionText: { fontSize: 10, textShadowRadius: 3, marginTop: 3 },
   details: { position: 'absolute', left: 22, bottom: 26, right: 92, alignItems: 'flex-start' },
   moodPill: { backgroundColor: 'rgba(30,20,50,0.72)', borderColor: 'rgba(255,255,255,0.25)', borderWidth: 1, borderRadius: 14, paddingHorizontal: 9, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 7 },
   moodText: { color: '#E9D7FF', fontSize: 11, fontFamily: 'Satoshi-Bold' },
