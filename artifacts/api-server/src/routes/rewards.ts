@@ -54,6 +54,30 @@ export const SHOP_CATALOG: ShopItem[] = [
     category:    "frame",
     cost:        { stars: 360 },
   },
+  {
+    id:          "frame_ember_fox_ears",
+    name:        "Ember Fox",
+    description: "Detailed russet fur, a plush copper halo, and softly flicking fox ears.",
+    icon:        "✦",
+    category:    "frame",
+    cost:        { stars: 360 },
+  },
+  {
+    id:          "frame_moonhare_ears",
+    name:        "Moonhare",
+    description: "Velvet ivory rabbit ears with a gentle, independent sway around your portrait.",
+    icon:        "✦",
+    category:    "frame",
+    cost:        { stars: 360 },
+  },
+  {
+    id:          "frame_frost_lynx_ears",
+    name:        "Frost Lynx",
+    description: "Soft, tufted lynx ears that perk and settle around your profile picture.",
+    icon:        "✦",
+    category:    "frame",
+    cost:        { stars: 360 },
+  },
   // ── Profile Effects ───────────────────────────────────────────────────────
   {
     id:          "effect_butterfly",

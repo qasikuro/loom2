@@ -276,6 +276,9 @@ export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme' 
   'frame_moonlight':    'frame',
   'frame_fire':         'frame',
   'frame_celestial_wings': 'frame',
+  'frame_ember_fox_ears': 'frame',
+  'frame_moonhare_ears': 'frame',
+  'frame_frost_lynx_ears': 'frame',
   'accent_aura':        'accent',
   'theme_locket':       'theme',
   'theme_aurora':       'theme',
@@ -728,7 +731,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         getCacheItem('friends_v1', ownerId),
         getCacheItem('notifications_v1', ownerId),
         getCacheItem('my_guides_v1', ownerId),
-        getCacheItem('shop_catalog_v1', ownerId),
+        getCacheItem('shop_catalog_v2', ownerId),
         getCacheItem('active_outfit_v1', ownerId),
         getCacheItem('blocked_users_v1', ownerId),
       ]);
@@ -795,7 +798,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     'character_v2', 'journal_v2', 'stories_v1', 'outfits_v1',
     'journal_v2_bak', 'stories_v1_bak', 'outfits_v1_bak', // M-5: backup keys
     'discover_v1', 'following_v1', 'saved_stories_v1', 'collection_v1',
-    'shop_catalog_v1', 'reward_balance_v1', 'active_outfit_v1',
+    'shop_catalog_v2', 'reward_balance_v1', 'active_outfit_v1',
     'active_cosmetics_v1', 'gallery_v1', 'gallery_usage_v1', 'friends_v1',
     'notifications_v1', 'my_guides_v1', 'campfire_badge_seen_at',
     'dm_badge_seen_at', FETCH_TIMESTAMPS_KEY,
@@ -1221,7 +1224,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       if (shopRaw?.catalog && Array.isArray(shopRaw.catalog)) {
         cacheWrites.push(
-          setCacheItem('shop_catalog_v1', JSON.stringify({
+          setCacheItem('shop_catalog_v2', JSON.stringify({
             catalog:         shopRaw.catalog,
             seasonalPreview: shopRaw.seasonalPreview ?? [],
             purchasedIds: shopRaw.purchasedIds ?? [],

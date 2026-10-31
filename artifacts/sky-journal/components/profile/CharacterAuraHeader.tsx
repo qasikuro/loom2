@@ -15,6 +15,7 @@ import {
   ACCENT_CONFIGS, DEFAULT_AURA, FRAME_CONFIGS, MOOD_AURA, MOOD_ORBS,
   PARTICLE_SIZES, PARTICLE_XS,
 } from './profileConstants';
+import { AnimalEarFrameArt, isAnimalEarFrameId } from './AnimalEarFrameArt';
 
 // ── Motion gate: reduced-motion preference + tab focus ─────────────────────
 
@@ -146,6 +147,19 @@ export function FrameRing({
     marginTop: -size / 2,
     overflow: 'visible' as const,
   };
+
+  if (isAnimalEarFrameId(frameId)) {
+    return (
+      <AnimalEarFrameArt
+        frameId={frameId}
+        size={size}
+        layer={layer}
+        motionEnabled={animate && screenMotionEnabled}
+        ringColor={cfg.color}
+        ringGlow={cfg.glow}
+      />
+    );
+  }
 
   if (isCelestialWings) {
     const wingLift = wingFlap.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -1.6, 0] });

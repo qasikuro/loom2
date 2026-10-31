@@ -29,6 +29,11 @@ import { useTranslation } from 'react-i18next';
 
 const COLLECTION_CACHE_KEY  = 'collection_v1';
 const SHOP_CATALOG_CACHE_KEY = 'shop_catalog_v2';
+const ANIMAL_EAR_FRAME_IDS = new Set([
+  'frame_ember_fox_ears',
+  'frame_moonhare_ears',
+  'frame_frost_lynx_ears',
+]);
 
 // ── Seasonal constants ────────────────────────────────────────────────────────
 
@@ -53,6 +58,9 @@ const ITEM_ICON_MAP: Record<string, string> = {
   frame_moonlight:    '☾',
   frame_fire:         '✦',
   frame_celestial_wings: '✦',
+  frame_ember_fox_ears: '✦',
+  frame_moonhare_ears: '✦',
+  frame_frost_lynx_ears: '✦',
   accent_aura:        '◈',
   theme_locket:       '◇',
   theme_aurora:       '⋆',
@@ -84,6 +92,9 @@ const FALLBACK_CATALOG: ShopItem[] = [
   { id: 'frame_moonlight', name: 'Moonlight', description: 'A silver-lilac orbit, a quiet crescent, and tiny stars circling your profile picture.', icon: '☾', category: 'frame', cost: { stars: 180 } },
   { id: 'frame_fire', name: 'Fire', description: 'A living ember ring with warm sparks that flicker around your profile picture.', icon: '✦', category: 'frame', cost: { stars: 180 } },
   { id: 'frame_celestial_wings', name: 'Celestial Wings', description: 'Pearl-white wings with gold filigree, softly moving in a celestial breeze.', icon: '✦', category: 'frame', cost: { stars: 360 } },
+  { id: 'frame_ember_fox_ears', name: 'Ember Fox', description: 'Detailed russet fur, a plush copper halo, and softly flicking fox ears.', icon: '✦', category: 'frame', cost: { stars: 360 } },
+  { id: 'frame_moonhare_ears', name: 'Moonhare', description: 'Velvet ivory rabbit ears with a gentle, independent sway around your portrait.', icon: '✦', category: 'frame', cost: { stars: 360 } },
+  { id: 'frame_frost_lynx_ears', name: 'Frost Lynx', description: 'Soft, tufted lynx ears that perk and settle around your profile picture.', icon: '✦', category: 'frame', cost: { stars: 360 } },
   { id: 'effect_butterfly', name: 'Ethereal Butterflies', description: 'Luminous butterflies drift across your profile, wings catching the light of distant stars.', icon: '🦋', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_fireflies', name: 'Firefly Glow',         description: 'Golden fireflies blink softly around you like scattered wishes under a summer sky.',         icon: '✨', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_hearts',    name: 'Floating Hearts',      description: 'Soft hearts rise gently from below, carrying warmth to every corner of your sky.',           icon: '💜', category: 'effect', cost: { stars: 0 } },
@@ -94,6 +105,7 @@ const FALLBACK_CATALOG: ShopItem[] = [
 ];
 
 const CATEGORY_COLORS: Record<string, keyof NativeThemeColors> = {
+  ears: 'chart3',
   frame:  'chart3',
   accent: 'primary',
   theme:  'chart4',
@@ -210,15 +222,18 @@ function SeasonalBadge({ label }: { label: string }) {
 // Frames → concentric border rings. Accents → glow band. Themes → page lines.
 
 function ItemPreview({ category, icon, color, itemId, large = false }: { category: string; color: string; icon: string; itemId: string; large?: boolean }) {
-  const frameSize = large ? (itemId === 'frame_celestial_wings' ? 68 : 72) : (itemId === 'frame_celestial_wings' ? 30 : 58);
+  const isAnimalEarFrame = ANIMAL_EAR_FRAME_IDS.has(itemId);
+  const frameSize = large ? (isAnimalEarFrame ? 76 : itemId === 'frame_celestial_wings' ? 68 : 72) : (isAnimalEarFrame ? 40 : itemId === 'frame_celestial_wings' ? 30 : 58);
   return (
     <View style={[pv.wrap, large && pv.largeWrap, { backgroundColor: `${color}0C`, borderColor: `${color}28` }]}>
       {category === 'frame' && (
-        itemId === 'frame_moonlight' || itemId === 'frame_fire' || itemId === 'frame_celestial_wings' ? (
+        itemId === 'frame_moonlight' || itemId === 'frame_fire' || itemId === 'frame_celestial_wings' || isAnimalEarFrame ? (
           <View style={pv.premiumFramePreview}>
             <FrameRing frameId={itemId} size={frameSize} layer="wings" />
             <View style={[pv.previewAvatar, large && pv.largePreviewAvatar, { backgroundColor: `${color}20`, borderColor: `${color}65` }]}>
-              <Text style={[pv.icon, { color }]}>{itemId === 'frame_moonlight' ? '✧' : itemId === 'frame_celestial_wings' ? '✦' : '◉'}</Text>
+              {isAnimalEarFrame
+                ? <Icon name="user" size={large ? 19 : 14} color={color} strokeWidth={1.7} />
+                : <Text style={[pv.icon, { color }]}>{itemId === 'frame_moonlight' ? '✧' : itemId === 'frame_celestial_wings' ? '✦' : '◉'}</Text>}
             </View>
             <FrameRing frameId={itemId} size={frameSize} layer="ornament" />
           </View>
@@ -294,8 +309,7 @@ function ItemPreview({ category, icon, color, itemId, large = false }: { categor
       )}
 
       {category === 'effect' && itemId === 'effect_cosmic_arrival' && (
-        <View style={[pv.effectWrap, { position: 'relative', overflow: 'hidden', backgroundColor: '#081226' }]}
-        >
+        <View style={[pv.effectWrap, { position: 'relative', overflow: 'hidden', backgroundColor: '#081226' }]}>
           <LinearGradient
             colors={['#132D55', '#11132B', '#090916']}
             start={{ x: 0.12, y: 0 }}
@@ -309,6 +323,7 @@ function ItemPreview({ category, icon, color, itemId, large = false }: { categor
           <Text style={{ position: 'absolute', left: 64, top: 33, color: '#D8F5FF', fontSize: 12 }}>✧</Text>
         </View>
       )}
+
       {category === 'effect' && itemId !== 'effect_aurora_clouds' && itemId !== 'effect_moonlit_muse' && itemId !== 'effect_cosmic_arrival' && (
         <View style={[pv.effectWrap, { backgroundColor: `${color}0A` }]}>
           {['●', '✦', '●'].map((dot, i) => (
@@ -970,6 +985,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
             {(() => {
               const cats: { id: string | null; label: string; icon: string; color: string }[] = [
                 { id: null,     label: t('components.shop.all'), icon: '✦', color: colors.primary },
+                { id: 'ears',   label: t('components.shop.categories.ears', { defaultValue: 'Animal ears' }), icon: '⌁', color: categoryColor('ears', colors) },
                 { id: 'frame',  label: t('components.shop.categories.frame'), icon: '◉', color: categoryColor('frame', colors) },
                 { id: 'effect', label: t('components.shop.categories.effect'), icon: '✧', color: categoryColor('effect', colors) },
                 { id: 'accent', label: t('components.shop.categories.accent'), icon: '◈', color: categoryColor('accent', colors) },
@@ -1003,12 +1019,16 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
 
             {/* Items — split into This Season + Always Available */}
             {(() => {
-              const visible_catalog = filterCat
-                ? catalogItems.filter(i => i.category === filterCat)
+              const visible_catalog = filterCat === 'ears'
+                ? catalogItems.filter(i => ANIMAL_EAR_FRAME_IDS.has(i.id))
+                : filterCat
+                  ? catalogItems.filter(i => i.category === filterCat)
                 : catalogItems;
-              const visible_preview_items = filterCat
-                ? previewItems.filter(i => i.category === filterCat)
-                : previewItems;
+              const visible_preview_items = filterCat === 'ears'
+                ? previewItems.filter(i => ANIMAL_EAR_FRAME_IDS.has(i.id))
+                : filterCat
+                  ? previewItems.filter(i => i.category === filterCat)
+                  : previewItems;
               const seasonalItems  = visible_catalog.filter(i => i.seasonal);
               const permanentItems = visible_catalog.filter(i => !i.seasonal);
 
@@ -1045,9 +1065,11 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                 >
                   <View style={styles.resultsHeader}>
                     <Text style={[styles.resultsTitle, { color: colors.foreground }]}>
-                      {filterCat
-                        ? categoryLabel(t, filterCat)
-                        : t('components.shop.discoverItems', { defaultValue: 'Discover something for your profile' })}
+                      {filterCat === 'ears'
+                        ? t('components.shop.categories.ears', { defaultValue: 'Animal ears' })
+                        : filterCat
+                          ? categoryLabel(t, filterCat)
+                          : t('components.shop.discoverItems', { defaultValue: 'Discover something for your profile' })}
                     </Text>
                     <Text style={[styles.resultsCount, { color: colors.mutedForeground }]}>
                       {visible_catalog.length}
