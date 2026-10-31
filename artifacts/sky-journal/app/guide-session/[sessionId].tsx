@@ -636,9 +636,16 @@ export default function GuideSessionScreen() {
             <PillButton testID="session-join" colors={colors} flex icon="user-plus" busy={joining} disabled={isFull}
               label={isFull ? 'Session is full' : t('social.joinSession')} onPress={() => void join()} />
           ) : (
-            <PillButton testID="session-chat" colors={colors} flex variant={isOwner && phase === 'live' ? 'secondary' : 'primary'} icon="message-circle"
-              label={phase === 'live' ? 'Open chat' : phase === 'ended' ? 'Chat history' : 'Waiting room chat'}
-              onPress={() => switchTab('chat')} />
+            <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
+              <PillButton testID="session-comments" colors={colors} flex variant="secondary" icon="heart"
+                label="Kind words" onPress={() => router.push({
+                  pathname: '/content-comments',
+                  params: { contentType: 'session', contentId: session.id, title: session.title },
+                } as never)} />
+              <PillButton testID="session-chat" colors={colors} flex variant={isOwner && phase === 'live' ? 'secondary' : 'primary'} icon="message-circle"
+                label={phase === 'live' ? 'Open chat' : phase === 'ended' ? 'Chat history' : 'Waiting room chat'}
+                onPress={() => switchTab('chat')} />
+            </View>
           )}
           {isOwner && phase === 'live' && (
             <PillButton testID="session-end" colors={colors} flex variant="danger" icon="square" label="End session" busy={ending} onPress={confirmEnd} />

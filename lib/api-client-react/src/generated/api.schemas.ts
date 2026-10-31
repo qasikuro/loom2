@@ -5,6 +5,63 @@
  * Sky Journal API
  * OpenAPI spec version: 0.2.0
  */
+export type ContentCommentContentType =
+  (typeof ContentCommentContentType)[keyof typeof ContentCommentContentType];
+
+export const ContentCommentContentType = {
+  story: "story",
+  video: "video",
+  outfit: "outfit",
+  book: "book",
+  tutorial: "tutorial",
+  session: "session",
+} as const;
+
+export type ContentCommentKindnessTag =
+  | (typeof ContentCommentKindnessTag)[keyof typeof ContentCommentKindnessTag]
+  | null;
+
+export const ContentCommentKindnessTag = {
+  creativity: "creativity",
+  smile: "smile",
+  outfit: "outfit",
+  colors: "colors",
+  relaxing: "relaxing",
+  keepCreating: "keepCreating",
+} as const;
+
+export type ContentCommentCreatorReaction =
+  | (typeof ContentCommentCreatorReaction)[keyof typeof ContentCommentCreatorReaction]
+  | null;
+
+export const ContentCommentCreatorReaction = {
+  heart: "heart",
+  sparkle: "sparkle",
+  flower: "flower",
+  clap: "clap",
+} as const;
+
+export interface ContentComment {
+  id: string;
+  contentType: ContentCommentContentType;
+  contentId: string;
+  authorName: string;
+  authorUsername: string | null;
+  authorAvatarUri: string | null;
+  parentId: string | null;
+  content: string;
+  kindnessTag: ContentCommentKindnessTag;
+  creatorReaction: ContentCommentCreatorReaction;
+  /** @minimum 0 */
+  likeCount: number;
+  /** @minimum 0 */
+  replyCount: number;
+  likedByMe: boolean;
+  isMine: boolean;
+  isContentOwner: boolean;
+  createdAt: string;
+}
+
 export type LumiMessageRole =
   (typeof LumiMessageRole)[keyof typeof LumiMessageRole];
 
@@ -1766,4 +1823,123 @@ export type GetChatConversationParams = {
    * UUID of the oldest message already loaded.
    */
   beforeId?: string;
+};
+
+export type ListMyPostVisibility200ItemKind =
+  (typeof ListMyPostVisibility200ItemKind)[keyof typeof ListMyPostVisibility200ItemKind];
+
+export const ListMyPostVisibility200ItemKind = {
+  story: "story",
+  outfit: "outfit",
+  book: "book",
+  tutorial: "tutorial",
+} as const;
+
+export type ListMyPostVisibility200Item = {
+  id: string;
+  kind: ListMyPostVisibility200ItemKind;
+  title: string;
+  label: string;
+  visibility: string;
+};
+
+/**
+ * private means owner-only; friends requires reciprocal follows
+ */
+export type UpdateMyPostVisibilityBodyVisibility =
+  (typeof UpdateMyPostVisibilityBodyVisibility)[keyof typeof UpdateMyPostVisibilityBodyVisibility];
+
+export const UpdateMyPostVisibilityBodyVisibility = {
+  public: "public",
+  friends: "friends",
+  private: "private",
+} as const;
+
+export type UpdateMyPostVisibilityBody = {
+  /** private means owner-only; friends requires reciprocal follows */
+  visibility: UpdateMyPostVisibilityBodyVisibility;
+};
+
+export type UpdateMyPostVisibility200Visibility =
+  (typeof UpdateMyPostVisibility200Visibility)[keyof typeof UpdateMyPostVisibility200Visibility];
+
+export const UpdateMyPostVisibility200Visibility = {
+  public: "public",
+  friends: "friends",
+  private: "private",
+} as const;
+
+export type UpdateMyPostVisibility200 = {
+  id: string;
+  kind: string;
+  visibility: UpdateMyPostVisibility200Visibility;
+};
+
+export type GetContentCommentsParams = {
+  parentId?: string;
+};
+
+export type GetContentComments200 = {
+  comments: ContentComment[];
+};
+
+export type CreateContentCommentBodyKindnessTag =
+  | (typeof CreateContentCommentBodyKindnessTag)[keyof typeof CreateContentCommentBodyKindnessTag]
+  | null;
+
+export const CreateContentCommentBodyKindnessTag = {
+  creativity: "creativity",
+  smile: "smile",
+  outfit: "outfit",
+  colors: "colors",
+  relaxing: "relaxing",
+  keepCreating: "keepCreating",
+} as const;
+
+export type CreateContentCommentBody = {
+  /**
+   * @minLength 1
+   * @maxLength 500
+   */
+  content: string;
+  parentId?: string | null;
+  kindnessTag?: CreateContentCommentBodyKindnessTag;
+};
+
+export type ToggleContentCommentLike200 = {
+  liked: boolean;
+};
+
+export type SetContentCommentCreatorReactionBodyReaction =
+  | (typeof SetContentCommentCreatorReactionBodyReaction)[keyof typeof SetContentCommentCreatorReactionBodyReaction]
+  | null;
+
+export const SetContentCommentCreatorReactionBodyReaction = {
+  heart: "heart",
+  sparkle: "sparkle",
+  flower: "flower",
+  clap: "clap",
+} as const;
+
+export type SetContentCommentCreatorReactionBody = {
+  reaction: SetContentCommentCreatorReactionBodyReaction;
+};
+
+export type SetContentCommentCreatorReaction200CreatorReaction =
+  | (typeof SetContentCommentCreatorReaction200CreatorReaction)[keyof typeof SetContentCommentCreatorReaction200CreatorReaction]
+  | null;
+
+export const SetContentCommentCreatorReaction200CreatorReaction = {
+  heart: "heart",
+  sparkle: "sparkle",
+  flower: "flower",
+  clap: "clap",
+} as const;
+
+export type SetContentCommentCreatorReaction200 = {
+  creatorReaction: SetContentCommentCreatorReaction200CreatorReaction;
+};
+
+export type DeleteContentComment200 = {
+  deleted: boolean;
 };

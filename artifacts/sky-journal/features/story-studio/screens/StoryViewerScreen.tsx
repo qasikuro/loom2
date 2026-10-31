@@ -382,6 +382,8 @@ export default function StoryScreen() {
 
   const story = cachedStory ?? fetchedStory;
   const post  = cachedPost;
+  const commentContentId = story?.id ?? post?.id ?? id;
+  const commentContentType = post?.contentType === 'video' ? 'video' : 'story';
   // A network-fetched fallback may be another user's public story. Only a
   // story present in the account's own collection can expose creator actions.
   const isOwnStory = !!cachedStory;
@@ -895,6 +897,20 @@ export default function StoryScreen() {
         </View>
 
         <View style={styles.actionRow}>
+          {(story || post) && (
+            <TouchableOpacity
+              style={styles.shareIconBtn}
+              onPress={() => router.push({
+                pathname: '/content-comments',
+                params: { contentType: commentContentType, contentId: commentContentId, title },
+              } as never)}
+              activeOpacity={0.72}
+              accessibilityRole="button"
+              accessibilityLabel="Open comments"
+            >
+              <Icon name="message-circle" size={16} color="rgba(200,184,232,0.75)" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[styles.shareIconBtn]}
             onPress={handleShare}

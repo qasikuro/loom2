@@ -42,8 +42,11 @@ import type {
   ComposeVideoResponse,
   ConfirmStorigamUnsubscribeParams,
   ConstellationState,
+  ContentComment,
   ConversationClearResult,
+  CreateContentCommentBody,
   CreateGuideSessionInput,
+  DeleteContentComment200,
   DiscoverPost,
   FeatureUsageControlInput,
   FeatureUsageOverview,
@@ -59,6 +62,8 @@ import type {
   GetAdminModerationRecordsParams,
   GetAdminModerationReportsParams,
   GetChatConversationParams,
+  GetContentComments200,
+  GetContentCommentsParams,
   GuideSession,
   GuideSessionActivity,
   GuideSessionActivityInput,
@@ -105,6 +110,8 @@ import type {
   RescheduleGuideSessionInput,
   RestoreAdminUserVisibility200,
   RewardBalance,
+  SetContentCommentCreatorReaction200,
+  SetContentCommentCreatorReactionBody,
   ShopResponse,
   StorigamFeedbackInput,
   StorigamFeedbackResponse,
@@ -113,6 +120,10 @@ import type {
   Story,
   StoryInput,
   StoryLikeState,
+  ToggleContentCommentLike200,
+  UnregisterPushDevice200,
+  UpdateMyPostVisibility200,
+  UpdateMyPostVisibilityBody,
   ViewStorigamUnsubscribeParams,
 } from "./api.schemas";
 
@@ -8527,4 +8538,712 @@ export const useDeleteMyAccount = <
   TContext
 > => {
   return useMutation(getDeleteMyAccountMutationOptions(options));
+};
+
+/**
+ * @summary List the signed-in user's content and its current audience
+ */
+export const getListMyPostVisibilityUrl = () => {
+  return `/api/my-posts/visibility`;
+};
+
+export const listMyPostVisibility = async (
+  options?: RequestInit,
+): Promise<ListMyPostVisibility200Item[]> => {
+  return customFetch<ListMyPostVisibility200Item[]>(
+    getListMyPostVisibilityUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListMyPostVisibilityQueryKey = () => {
+  return [`/api/my-posts/visibility`] as const;
+};
+
+export const getListMyPostVisibilityQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyPostVisibility>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listMyPostVisibility>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMyPostVisibilityQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listMyPostVisibility>>
+  > = ({ signal }) => listMyPostVisibility({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyPostVisibility>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListMyPostVisibilityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMyPostVisibility>>
+>;
+export type ListMyPostVisibilityQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List the signed-in user's content and its current audience
+ */
+
+export function useListMyPostVisibility<
+  TData = Awaited<ReturnType<typeof listMyPostVisibility>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listMyPostVisibility>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMyPostVisibilityQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Change a post audience; ownership is checked on the server
+ */
+export const getUpdateMyPostVisibilityUrl = (
+  kind: "story" | "outfit" | "book" | "tutorial",
+  id: string,
+) => {
+  return `/api/my-posts/${kind}/${id}/visibility`;
+};
+
+export const updateMyPostVisibility = async (
+  kind: "story" | "outfit" | "book" | "tutorial",
+  id: string,
+  updateMyPostVisibilityBody: UpdateMyPostVisibilityBody,
+  options?: RequestInit,
+): Promise<UpdateMyPostVisibility200> => {
+  return customFetch<UpdateMyPostVisibility200>(
+    getUpdateMyPostVisibilityUrl(kind, id),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateMyPostVisibilityBody),
+    },
+  );
+};
+
+export const getUpdateMyPostVisibilityMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyPostVisibility>>,
+    TError,
+    {
+      kind: "story" | "outfit" | "book" | "tutorial";
+      id: string;
+      data: BodyType<UpdateMyPostVisibilityBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMyPostVisibility>>,
+  TError,
+  {
+    kind: "story" | "outfit" | "book" | "tutorial";
+    id: string;
+    data: BodyType<UpdateMyPostVisibilityBody>;
+  },
+  TContext
+> => {
+  const mutationKey = ["updateMyPostVisibility"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMyPostVisibility>>,
+    {
+      kind: "story" | "outfit" | "book" | "tutorial";
+      id: string;
+      data: BodyType<UpdateMyPostVisibilityBody>;
+    }
+  > = (props) => {
+    const { kind, id, data } = props ?? {};
+
+    return updateMyPostVisibility(kind, id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMyPostVisibilityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMyPostVisibility>>
+>;
+export type UpdateMyPostVisibilityMutationBody =
+  BodyType<UpdateMyPostVisibilityBody>;
+export type UpdateMyPostVisibilityMutationError = ErrorType<void>;
+
+/**
+ * @summary Change a post audience; ownership is checked on the server
+ */
+export const useUpdateMyPostVisibility = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyPostVisibility>>,
+    TError,
+    {
+      kind: "story" | "outfit" | "book" | "tutorial";
+      id: string;
+      data: BodyType<UpdateMyPostVisibilityBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMyPostVisibility>>,
+  TError,
+  {
+    kind: "story" | "outfit" | "book" | "tutorial";
+    id: string;
+    data: BodyType<UpdateMyPostVisibilityBody>;
+  },
+  TContext
+> => {
+  return useMutation(getUpdateMyPostVisibilityMutationOptions(options));
+};
+
+/**
+ * @summary Get comments for readable Storigam content
+ */
+export const getGetContentCommentsUrl = (
+  contentType: "story" | "video" | "outfit" | "book" | "tutorial" | "session",
+  contentId: string,
+  params?: GetContentCommentsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/content/${contentType}/${contentId}/comments?${stringifiedParams}`
+    : `/api/content/${contentType}/${contentId}/comments`;
+};
+
+export const getContentComments = async (
+  contentType: "story" | "video" | "outfit" | "book" | "tutorial" | "session",
+  contentId: string,
+  params?: GetContentCommentsParams,
+  options?: RequestInit,
+): Promise<GetContentComments200> => {
+  return customFetch<GetContentComments200>(
+    getGetContentCommentsUrl(contentType, contentId, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetContentCommentsQueryKey = (
+  contentType: "story" | "video" | "outfit" | "book" | "tutorial" | "session",
+  contentId: string,
+  params?: GetContentCommentsParams,
+) => {
+  return [
+    `/api/content/${contentType}/${contentId}/comments`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetContentCommentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getContentComments>>,
+  TError = ErrorType<void>,
+>(
+  contentType: "story" | "video" | "outfit" | "book" | "tutorial" | "session",
+  contentId: string,
+  params?: GetContentCommentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getContentComments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getGetContentCommentsQueryKey(contentType, contentId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getContentComments>>
+  > = ({ signal }) =>
+    getContentComments(contentType, contentId, params, {
+      signal,
+      ...requestOptions,
+    });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(contentType && contentId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getContentComments>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetContentCommentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getContentComments>>
+>;
+export type GetContentCommentsQueryError = ErrorType<void>;
+
+/**
+ * @summary Get comments for readable Storigam content
+ */
+
+export function useGetContentComments<
+  TData = Awaited<ReturnType<typeof getContentComments>>,
+  TError = ErrorType<void>,
+>(
+  contentType: "story" | "video" | "outfit" | "book" | "tutorial" | "session",
+  contentId: string,
+  params?: GetContentCommentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getContentComments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetContentCommentsQueryOptions(
+    contentType,
+    contentId,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Post a kind comment or reply
+ */
+export const getCreateContentCommentUrl = (
+  contentType: "story" | "video" | "outfit" | "book" | "tutorial" | "session",
+  contentId: string,
+) => {
+  return `/api/content/${contentType}/${contentId}/comments`;
+};
+
+export const createContentComment = async (
+  contentType: "story" | "video" | "outfit" | "book" | "tutorial" | "session",
+  contentId: string,
+  createContentCommentBody: CreateContentCommentBody,
+  options?: RequestInit,
+): Promise<ContentComment> => {
+  return customFetch<ContentComment>(
+    getCreateContentCommentUrl(contentType, contentId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createContentCommentBody),
+    },
+  );
+};
+
+export const getCreateContentCommentMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createContentComment>>,
+    TError,
+    {
+      contentType:
+        "story" | "video" | "outfit" | "book" | "tutorial" | "session";
+      contentId: string;
+      data: BodyType<CreateContentCommentBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createContentComment>>,
+  TError,
+  {
+    contentType: "story" | "video" | "outfit" | "book" | "tutorial" | "session";
+    contentId: string;
+    data: BodyType<CreateContentCommentBody>;
+  },
+  TContext
+> => {
+  const mutationKey = ["createContentComment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createContentComment>>,
+    {
+      contentType:
+        "story" | "video" | "outfit" | "book" | "tutorial" | "session";
+      contentId: string;
+      data: BodyType<CreateContentCommentBody>;
+    }
+  > = (props) => {
+    const { contentType, contentId, data } = props ?? {};
+
+    return createContentComment(contentType, contentId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateContentCommentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createContentComment>>
+>;
+export type CreateContentCommentMutationBody =
+  BodyType<CreateContentCommentBody>;
+export type CreateContentCommentMutationError = ErrorType<void>;
+
+/**
+ * @summary Post a kind comment or reply
+ */
+export const useCreateContentComment = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createContentComment>>,
+    TError,
+    {
+      contentType:
+        "story" | "video" | "outfit" | "book" | "tutorial" | "session";
+      contentId: string;
+      data: BodyType<CreateContentCommentBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createContentComment>>,
+  TError,
+  {
+    contentType: "story" | "video" | "outfit" | "book" | "tutorial" | "session";
+    contentId: string;
+    data: BodyType<CreateContentCommentBody>;
+  },
+  TContext
+> => {
+  return useMutation(getCreateContentCommentMutationOptions(options));
+};
+
+/**
+ * @summary Like or unlike a readable comment
+ */
+export const getToggleContentCommentLikeUrl = (commentId: string) => {
+  return `/api/content-comments/${commentId}/like`;
+};
+
+export const toggleContentCommentLike = async (
+  commentId: string,
+  options?: RequestInit,
+): Promise<ToggleContentCommentLike200> => {
+  return customFetch<ToggleContentCommentLike200>(
+    getToggleContentCommentLikeUrl(commentId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getToggleContentCommentLikeMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleContentCommentLike>>,
+    TError,
+    { commentId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof toggleContentCommentLike>>,
+  TError,
+  { commentId: string },
+  TContext
+> => {
+  const mutationKey = ["toggleContentCommentLike"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof toggleContentCommentLike>>,
+    { commentId: string }
+  > = (props) => {
+    const { commentId } = props ?? {};
+
+    return toggleContentCommentLike(commentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ToggleContentCommentLikeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof toggleContentCommentLike>>
+>;
+
+export type ToggleContentCommentLikeMutationError = ErrorType<void>;
+
+/**
+ * @summary Like or unlike a readable comment
+ */
+export const useToggleContentCommentLike = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof toggleContentCommentLike>>,
+    TError,
+    { commentId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof toggleContentCommentLike>>,
+  TError,
+  { commentId: string },
+  TContext
+> => {
+  return useMutation(getToggleContentCommentLikeMutationOptions(options));
+};
+
+/**
+ * @summary Let the content owner acknowledge a comment
+ */
+export const getSetContentCommentCreatorReactionUrl = (commentId: string) => {
+  return `/api/content-comments/${commentId}/creator-reaction`;
+};
+
+export const setContentCommentCreatorReaction = async (
+  commentId: string,
+  setContentCommentCreatorReactionBody: SetContentCommentCreatorReactionBody,
+  options?: RequestInit,
+): Promise<SetContentCommentCreatorReaction200> => {
+  return customFetch<SetContentCommentCreatorReaction200>(
+    getSetContentCommentCreatorReactionUrl(commentId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(setContentCommentCreatorReactionBody),
+    },
+  );
+};
+
+export const getSetContentCommentCreatorReactionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setContentCommentCreatorReaction>>,
+    TError,
+    { commentId: string; data: BodyType<SetContentCommentCreatorReactionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setContentCommentCreatorReaction>>,
+  TError,
+  { commentId: string; data: BodyType<SetContentCommentCreatorReactionBody> },
+  TContext
+> => {
+  const mutationKey = ["setContentCommentCreatorReaction"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setContentCommentCreatorReaction>>,
+    { commentId: string; data: BodyType<SetContentCommentCreatorReactionBody> }
+  > = (props) => {
+    const { commentId, data } = props ?? {};
+
+    return setContentCommentCreatorReaction(commentId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetContentCommentCreatorReactionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setContentCommentCreatorReaction>>
+>;
+export type SetContentCommentCreatorReactionMutationBody =
+  BodyType<SetContentCommentCreatorReactionBody>;
+export type SetContentCommentCreatorReactionMutationError = ErrorType<void>;
+
+/**
+ * @summary Let the content owner acknowledge a comment
+ */
+export const useSetContentCommentCreatorReaction = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setContentCommentCreatorReaction>>,
+    TError,
+    { commentId: string; data: BodyType<SetContentCommentCreatorReactionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setContentCommentCreatorReaction>>,
+  TError,
+  { commentId: string; data: BodyType<SetContentCommentCreatorReactionBody> },
+  TContext
+> => {
+  return useMutation(
+    getSetContentCommentCreatorReactionMutationOptions(options),
+  );
+};
+
+/**
+ * @summary Remove your own comment or a comment on your content
+ */
+export const getDeleteContentCommentUrl = (commentId: string) => {
+  return `/api/content-comments/${commentId}`;
+};
+
+export const deleteContentComment = async (
+  commentId: string,
+  options?: RequestInit,
+): Promise<DeleteContentComment200> => {
+  return customFetch<DeleteContentComment200>(
+    getDeleteContentCommentUrl(commentId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getDeleteContentCommentMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteContentComment>>,
+    TError,
+    { commentId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteContentComment>>,
+  TError,
+  { commentId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteContentComment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteContentComment>>,
+    { commentId: string }
+  > = (props) => {
+    const { commentId } = props ?? {};
+
+    return deleteContentComment(commentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteContentCommentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteContentComment>>
+>;
+
+export type DeleteContentCommentMutationError = ErrorType<void>;
+
+/**
+ * @summary Remove your own comment or a comment on your content
+ */
+export const useDeleteContentComment = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteContentComment>>,
+    TError,
+    { commentId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteContentComment>>,
+  TError,
+  { commentId: string },
+  TContext
+> => {
+  return useMutation(getDeleteContentCommentMutationOptions(options));
 };

@@ -38,11 +38,13 @@ import storigamInterestRouter from "./storigam-interest";
 import adminEmailsRouter from "./admin-emails";
 import adminInterestCampaignsRouter from "./admin-interest-campaigns";
 import mediaAssetsRouter from "./media-assets";
+import contentCommentsRouter from "./content-comments";
 
 const router: IRouter = Router();
 
 router.use(mediaAssetsRouter);
 router.use(healthRouter);
+router.use(contentCommentsRouter);
 router.use(characterRouter);
 router.use(journalEntriesRouter);
 router.use(storiesRouter);

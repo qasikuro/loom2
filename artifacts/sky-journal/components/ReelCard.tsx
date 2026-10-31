@@ -22,6 +22,7 @@ interface Props {
   onAuthorPress: (userId: string) => void;
   onMuteToggle: () => void;
   onShare: (post: DiscoverPost) => void;
+  onComment: (post: DiscoverPost) => void;
   onLike: (id: string) => void;
   onSave: (id: string) => void;
   onReport: (id: string) => void;
@@ -49,7 +50,7 @@ function ReelAction({ name, label, active, count, onPress }: {
 
 export const ReelCard = React.memo(function ReelCard({
   post, height, topInset, playing, prepareVideo, onVideoReady, muted, onOpen, onAuthorPress,
-  onMuteToggle, onShare, onLike, onSave, onReport,
+  onMuteToggle, onShare, onComment, onLike, onSave, onReport,
 }: Props) {
   const { t } = useTranslation();
   const isVideo = post.contentType === 'video' && !!post.videoUri;
@@ -132,6 +133,7 @@ export const ReelCard = React.memo(function ReelCard({
 
       <View style={styles.actions}>
         <ReelAction name="heart" label={t(post.liked ? 'reels.liked' : 'reels.like')} count={post.likeCount} active={post.liked} onPress={() => onLike(post.id)} />
+        <ReelAction name="message-circle" label={t('reels.comments', { defaultValue: 'Comment' })} onPress={() => onComment(post)} />
         <ShareButton
           style={[styles.action, {
             flexDirection: 'column',

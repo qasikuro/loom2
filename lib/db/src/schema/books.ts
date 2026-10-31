@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 // ── Page shape (matches StoryPageDB from stories.ts) ─────────────────────────
 
@@ -93,7 +93,10 @@ export const bookCommentsTable = pgTable("book_comments", {
   userId:    text("user_id").notNull(),
   parentId:  uuid("parent_id"),                        // null = top-level
   content:   text("content").notNull(),
+  kindnessTag: text("kindness_tag"),
+  creatorReaction: text("creator_reaction"),
   likeCount: integer("like_count").notNull().default(0),
+  isHidden:  boolean("is_hidden").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

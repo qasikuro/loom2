@@ -2932,3 +2932,174 @@ export const UnblockUserParams = zod.object({
 export const UnblockUserResponse = zod.object({
   blocked: zod.boolean(),
 });
+
+/**
+ * @summary List the signed-in user's content and its current audience
+ */
+export const ListMyPostVisibilityResponseItem = zod.object({
+  id: zod.string(),
+  kind: zod.enum(["story", "outfit", "book", "tutorial"]),
+  title: zod.string(),
+  label: zod.string(),
+  visibility: zod.string(),
+});
+export const ListMyPostVisibilityResponse = zod.array(
+  ListMyPostVisibilityResponseItem,
+);
+
+/**
+ * @summary Change a post audience; ownership is checked on the server
+ */
+export const UpdateMyPostVisibilityParams = zod.object({
+  kind: zod.enum(["story", "outfit", "book", "tutorial"]),
+  id: zod.coerce.string().uuid(),
+});
+
+export const UpdateMyPostVisibilityBody = zod.object({
+  visibility: zod
+    .enum(["public", "friends", "private"])
+    .describe("private means owner-only; friends requires reciprocal follows"),
+});
+
+export const UpdateMyPostVisibilityResponse = zod.object({
+  id: zod.string(),
+  kind: zod.string(),
+  visibility: zod.enum(["public", "friends", "private"]),
+});
+
+/**
+ * @summary Get comments for readable Storigam content
+ */
+export const GetContentCommentsParams = zod.object({
+  contentType: zod.enum([
+    "story",
+    "video",
+    "outfit",
+    "book",
+    "tutorial",
+    "session",
+  ]),
+  contentId: zod.coerce.string().uuid(),
+});
+
+export const GetContentCommentsQueryParams = zod.object({
+  parentId: zod.coerce.string().uuid().optional(),
+});
+
+export const getContentCommentsResponseCommentsItemLikeCountMin = 0;
+
+export const getContentCommentsResponseCommentsItemReplyCountMin = 0;
+
+export const GetContentCommentsResponse = zod.object({
+  comments: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      contentType: zod.enum([
+        "story",
+        "video",
+        "outfit",
+        "book",
+        "tutorial",
+        "session",
+      ]),
+      contentId: zod.string().uuid(),
+      authorName: zod.string(),
+      authorUsername: zod.string().nullable(),
+      authorAvatarUri: zod.string().nullable(),
+      parentId: zod.string().uuid().nullable(),
+      content: zod.string(),
+      kindnessTag: zod
+        .enum([
+          "creativity",
+          "smile",
+          "outfit",
+          "colors",
+          "relaxing",
+          "keepCreating",
+        ])
+        .nullable(),
+      creatorReaction: zod
+        .enum(["heart", "sparkle", "flower", "clap"])
+        .nullable(),
+      likeCount: zod
+        .number()
+        .min(getContentCommentsResponseCommentsItemLikeCountMin),
+      replyCount: zod
+        .number()
+        .min(getContentCommentsResponseCommentsItemReplyCountMin),
+      likedByMe: zod.boolean(),
+      isMine: zod.boolean(),
+      isContentOwner: zod.boolean(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Post a kind comment or reply
+ */
+export const CreateContentCommentParams = zod.object({
+  contentType: zod.enum([
+    "story",
+    "video",
+    "outfit",
+    "book",
+    "tutorial",
+    "session",
+  ]),
+  contentId: zod.coerce.string().uuid(),
+});
+
+export const createContentCommentBodyContentMax = 500;
+
+export const CreateContentCommentBody = zod.object({
+  content: zod.string().min(1).max(createContentCommentBodyContentMax),
+  parentId: zod.string().uuid().nullish(),
+  kindnessTag: zod
+    .enum([
+      "creativity",
+      "smile",
+      "outfit",
+      "colors",
+      "relaxing",
+      "keepCreating",
+    ])
+    .nullish(),
+});
+
+/**
+ * @summary Like or unlike a readable comment
+ */
+export const ToggleContentCommentLikeParams = zod.object({
+  commentId: zod.coerce.string().uuid(),
+});
+
+export const ToggleContentCommentLikeResponse = zod.object({
+  liked: zod.boolean(),
+});
+
+/**
+ * @summary Let the content owner acknowledge a comment
+ */
+export const SetContentCommentCreatorReactionParams = zod.object({
+  commentId: zod.coerce.string().uuid(),
+});
+
+export const SetContentCommentCreatorReactionBody = zod.object({
+  reaction: zod.enum(["heart", "sparkle", "flower", "clap"]).nullable(),
+});
+
+export const SetContentCommentCreatorReactionResponse = zod.object({
+  creatorReaction: zod.enum(["heart", "sparkle", "flower", "clap"]).nullable(),
+});
+
+/**
+ * @summary Remove your own comment or a comment on your content
+ */
+export const DeleteContentCommentParams = zod.object({
+  commentId: zod.coerce.string().uuid(),
+});
+
+export const DeleteContentCommentResponse = zod.object({
+  deleted: zod.boolean(),
+});

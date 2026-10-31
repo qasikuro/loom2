@@ -694,6 +694,9 @@ importers:
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
+      '@workspace/storigam-kindness':
+        specifier: workspace:*
+        version: link:../storigam-kindness
       expo-asset:
         specifier: 12.0.14
         version: 12.0.14(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
@@ -899,6 +902,8 @@ importers:
       zod-validation-error:
         specifier: ^3.5.4
         version: 3.5.4(zod@3.25.76)
+
+  artifacts/storigam-kindness: {}
 
   artifacts/storigam-landing:
     devDependencies:

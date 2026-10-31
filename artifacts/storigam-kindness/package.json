@@ -1,0 +1,17 @@
+{
+  "name": "@workspace/storigam-kindness",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/generated/tokens.tsx",
+    "./tokens": "./src/generated/tokens.tsx",
+    "./components/*": "./src/components/*.tsx",
+    "./lib/*": "./src/lib/*.tsx",
+    "./hooks/*": "./src/hooks/*.tsx"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-native": ">=0.81"
+  }
+}

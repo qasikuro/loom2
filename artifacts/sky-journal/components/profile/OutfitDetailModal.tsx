@@ -136,6 +136,28 @@ export function OutfitDetailModal({
                     </Text>
                   ) : null}
 
+                  <TouchableOpacity
+                    style={[s.actionBtn, {
+                      backgroundColor: `${colors.primary}10`,
+                      borderColor: `${colors.primary}40`,
+                    }]}
+                    onPress={() => {
+                      const contentId = outfit.id;
+                      const title = outfit.name;
+                      onClose();
+                      router.push({
+                        pathname: '/content-comments',
+                        params: { contentType: 'outfit', contentId, title },
+                      } as never);
+                    }}
+                    activeOpacity={0.82}
+                    accessibilityRole="button"
+                    accessibilityLabel="Leave a kind comment on this outfit"
+                  >
+                    <Icon name="message-circle" size={15} color={colors.primary} />
+                    <Text style={[s.actionBtnText, { color: colors.primary }]}>Leave a little kindness</Text>
+                  </TouchableOpacity>
+
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {!!(outfit as any).story && (
                     <View style={[s.storyCard, { backgroundColor: `${colors.primary}0A`, borderColor: `${colors.primary}22` }]}>

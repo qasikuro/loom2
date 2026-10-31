@@ -19,6 +19,7 @@ export * from "./appSettings";
 export * from "./notificationBroadcasts";
 export * from "./badges";
 export * from "./books";
+export * from "./contentComments";
 export * from "./mangaGenerations";
 export * from "./uploadedImages";
 export * from "./mediaCompositions";

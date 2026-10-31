@@ -103,6 +103,17 @@ export default function GuideTutorialReaderScreen() {
             : <PillButton testID="reader-follow" colors={colors} variant="secondary" icon="user-plus" label="Follow" onPress={() => followUser(tut.guideId)} />)}
         </TouchableOpacity>
         <Text style={[gs.body, { color: colors.mutedForeground, fontSize: 14, lineHeight: 21, marginVertical: 14 }]}>{tut.description}</Text>
+        <PillButton
+          testID="tutorial-comments"
+          colors={colors}
+          variant="secondary"
+          icon="message-circle"
+          label="Leave a little kindness"
+          onPress={() => router.push({
+            pathname: '/content-comments',
+            params: { contentType: 'tutorial', contentId: tut.id, title: tut.title },
+          } as never)}
+        />
 
         <SectionCard colors={colors} icon="list" eyebrow="READ ALONG" title={finished ? 'You reached the end' : `Step ${index + 1}`}>
           <TutorialStepper steps={tut.steps} index={index} completed={visited} colors={colors} onIndex={go}

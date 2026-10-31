@@ -169,6 +169,10 @@ export default function ReelsScreen() {
             topInset={topPad}
             onOpen={openPost}
             onAuthorPress={openAuthor}
+            onComment={post => router.push({
+              pathname: '/content-comments',
+              params: { contentType: post.contentType, contentId: post.id, title: post.chapterTitle },
+            } as never)}
             playing={playbackEnabled && item.id === activePostId && item.contentType === 'video'}
             prepareVideo={preparedIndices.includes(index)}
             onVideoReady={onVideoBufferHealth}

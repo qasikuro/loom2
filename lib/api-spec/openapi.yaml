@@ -1921,8 +1921,249 @@ paths:
         "500":
           description: The deletion request could not be started
 
+  /my-posts/visibility:
+    get:
+      operationId: listMyPostVisibility
+      tags: [stories]
+      summary: List the signed-in user's content and its current audience
+      responses:
+        "200":
+          description: Owned posts; legacy tutorial settings are preserved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, kind, title, label, visibility]
+                  properties:
+                    id: { type: string }
+                    kind: { type: string, enum: [story, outfit, book, tutorial] }
+                    title: { type: string }
+                    label: { type: string }
+                    visibility: { type: string }
+  /my-posts/{kind}/{id}/visibility:
+    patch:
+      operationId: updateMyPostVisibility
+      tags: [stories]
+      summary: Change a post audience; ownership is checked on the server
+      parameters:
+        - in: path
+          name: kind
+          required: true
+          schema: { type: string, enum: [story, outfit, book, tutorial] }
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [visibility]
+              properties:
+                visibility:
+                  type: string
+                  enum: [public, friends, private]
+                  description: private means owner-only; friends requires reciprocal follows
+      responses:
+        "200":
+          description: Saved audience
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, kind, visibility]
+                properties:
+                  id: { type: string }
+                  kind: { type: string }
+                  visibility: { type: string, enum: [public, friends, private] }
+        "404":
+          description: The post does not exist or is not owned by the signed-in user
+  /content/{contentType}/{contentId}/comments:
+    get:
+      operationId: getContentComments
+      tags: [social]
+      summary: Get comments for readable Storigam content
+      parameters:
+        - in: path
+          name: contentType
+          required: true
+          schema: { type: string, enum: [story, video, outfit, book, tutorial, session] }
+        - in: path
+          name: contentId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: parentId
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Visible comments and reply counts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [comments]
+                properties:
+                  comments:
+                    type: array
+                    items: { $ref: "#/components/schemas/ContentComment" }
+        "404":
+          description: Content is unavailable to this viewer
+    post:
+      operationId: createContentComment
+      tags: [social]
+      summary: Post a kind comment or reply
+      parameters:
+        - in: path
+          name: contentType
+          required: true
+          schema: { type: string, enum: [story, video, outfit, book, tutorial, session] }
+        - in: path
+          name: contentId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, minLength: 1, maxLength: 500 }
+                parentId: { type: string, format: uuid, nullable: true }
+                kindnessTag:
+                  type: string
+                  nullable: true
+                  enum: [creativity, smile, outfit, colors, relaxing, keepCreating]
+      responses:
+        "201":
+          description: Posted comment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ContentComment" }
+        "400":
+          description: Invalid comment or reply target
+        "401":
+          description: Sign-in is required
+        "404":
+          description: Content is unavailable to this viewer
+  /content-comments/{commentId}/like:
+    post:
+      operationId: toggleContentCommentLike
+      tags: [social]
+      summary: Like or unlike a readable comment
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Current like state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [liked]
+                properties:
+                  liked: { type: boolean }
+        "404":
+          description: Comment is unavailable
+  /content-comments/{commentId}/creator-reaction:
+    put:
+      operationId: setContentCommentCreatorReaction
+      tags: [social]
+      summary: Let the content owner acknowledge a comment
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reaction]
+              properties:
+                reaction:
+                  type: string
+                  nullable: true
+                  enum: [heart, sparkle, flower, clap]
+      responses:
+        "200":
+          description: Saved creator acknowledgement
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [creatorReaction]
+                properties:
+                  creatorReaction: { type: string, nullable: true, enum: [heart, sparkle, flower, clap] }
+        "403":
+          description: Only the content owner can react
+        "404":
+          description: Comment is unavailable
+  /content-comments/{commentId}:
+    delete:
+      operationId: deleteContentComment
+      tags: [social]
+      summary: Remove your own comment or a comment on your content
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deleted]
+                properties:
+                  deleted: { type: boolean }
+        "404":
+          description: Comment is unavailable
+        "403":
+          description: You cannot remove this comment
+
 components:
   schemas:
+    ContentComment:
+      type: object
+      required: [id, contentType, contentId, authorName, authorUsername, authorAvatarUri, parentId, content, kindnessTag, creatorReaction, likeCount, replyCount, likedByMe, isMine, isContentOwner, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        contentType: { type: string, enum: [story, video, outfit, book, tutorial, session] }
+        contentId: { type: string, format: uuid }
+        authorName: { type: string }
+        authorUsername: { type: string, nullable: true }
+        authorAvatarUri: { type: string, nullable: true }
+        parentId: { type: string, format: uuid, nullable: true }
+        content: { type: string }
+        kindnessTag:
+          type: string
+          nullable: true
+          enum: [creativity, smile, outfit, colors, relaxing, keepCreating]
+        creatorReaction:
+          type: string
+          nullable: true
+          enum: [heart, sparkle, flower, clap]
+        likeCount: { type: integer, minimum: 0 }
+        replyCount: { type: integer, minimum: 0 }
+        likedByMe: { type: boolean }
+        isMine: { type: boolean }
+        isContentOwner: { type: boolean }
+        createdAt: { type: string, format: date-time }
     LumiMessage:
       type: object
       required: [role, content]

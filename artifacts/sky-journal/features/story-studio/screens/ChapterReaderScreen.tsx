@@ -311,7 +311,10 @@ export default function ChapterReaderScreen() {
       <Text style={styles.endSub}>"{chapter.title}"</Text>
       <TouchableOpacity
         style={styles.endBtn}
-        onPress={() => router.push(`/engagement?chapterId=${chapterId}&bookId=${bookId}&tab=comments` as never)}
+        onPress={() => router.push({
+          pathname: '/content-comments',
+          params: { contentType: 'book', contentId: chapterId, title: chapter.title },
+        } as never)}
         activeOpacity={0.85}
       >
         <Icon name="message-circle" size={15} color="#fff" />
@@ -428,7 +431,10 @@ export default function ChapterReaderScreen() {
       >
         <TouchableOpacity
           style={styles.barBtn}
-          onPress={() => router.push(`/engagement?chapterId=${chapterId}&bookId=${bookId}&tab=comments` as never)}
+          onPress={() => router.push({
+            pathname: '/content-comments',
+            params: { contentType: 'book', contentId: chapterId, title: chapter.title },
+          } as never)}
         >
           <Icon name="message-circle" size={20} color="rgba(255,255,255,0.60)" />
           <Text style={styles.barBtnTxt}>{t('studioReader.comments')}</Text>
