@@ -10,8 +10,34 @@ const base = {
 } as const;
 
 describe('getAuthStartupRouteDecision', () => {
-  it('waits for Expo Router to resolve the initial route instead of consuming the startup check early', () => {
-    expect(getAuthStartupRouteDecision({ ...base, segments: [] })).toBe('waiting');
+  it('waits for Expo Router to resolve a non-root deep link before consuming the startup check', () => {
+    expect(getAuthStartupRouteDecision({
+      ...base,
+      pathname: '/profile',
+      segments: [],
+    })).toBe('waiting');
+  });
+
+  it('resolves a signed-in browser root even while route segments are temporarily empty', () => {
+    expect(getAuthStartupRouteDecision({ ...base, segments: [] })).toBe('reels');
+  });
+
+  it('sends a signed-out browser root to sign-in when route segments are temporarily empty', () => {
+    expect(getAuthStartupRouteDecision({
+      ...base,
+      isSignedIn: false,
+      segments: [],
+    })).toBe('sign-in');
+  });
+
+  it('marks the redirected root destination ready even if segments remain empty', () => {
+    expect(getAuthStartupRouteDecision({
+      ...base,
+      pathname: '/sign-in',
+      isSignedIn: false,
+      segments: [],
+      startupRouteChecked: true,
+    })).toBe('ready');
   });
 
   it('routes a signed-in cold start from the root index to Reels', () => {

@@ -16,11 +16,15 @@ export function getAuthStartupRouteDecision({
   if (!isLoaded) return 'waiting';
 
   const firstSegment = segments[0];
-  if (!startupRouteChecked && !firstSegment) return 'waiting';
+  // The root URL is deterministic even when Expo Router briefly exposes no
+  // segments in browser preview. Resolve it from auth state instead of leaving
+  // the startup overlay up forever.
+  if (!startupRouteChecked && !firstSegment && pathname !== '/') return 'waiting';
 
   // On a cold start, "/" is the tabs index route. Move authenticated users to
   // Reels once; do not repeat this when they later choose the Home tab.
   if (!startupRouteChecked && isSignedIn && pathname === '/') return 'reels';
+  if (!startupRouteChecked && !isSignedIn && pathname === '/') return 'sign-in';
   if (isSignedIn && firstSegment === '(auth)') return 'reels';
   if (!isSignedIn && firstSegment === '(tabs)') return 'sign-in';
 

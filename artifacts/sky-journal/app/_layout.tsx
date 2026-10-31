@@ -349,7 +349,7 @@ function AuthNavigator({ onRouteReady }: { onRouteReady: () => void }) {
   // Wait until Expo Router provides the initial segments before consuming this
   // one-time check. An empty segment list during cold start previously left the
   // root route unresolved when the splash disappeared.
-  if (segments.length > 0 && !hasCheckedStartupRoute.current) {
+  if ((segments.length > 0 || pathname === '/') && !hasCheckedStartupRoute.current) {
     hasCheckedStartupRoute.current = true;
   }
 
