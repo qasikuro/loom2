@@ -47,7 +47,6 @@ interface Props {
   onBioLayout?: (y: number) => void;
 }
 
-export const OWN_AVATAR_BOX = 124;
 export const OWN_AVATAR_SIZE = 96;
 
 /** The real avatar visual with equipped frame + mood ring; shared by inline and flight overlay. */
@@ -59,11 +58,12 @@ export function OwnProfileAvatar({ avatarSource, contain, activeFrame, mood, dec
   decorationOpacity?: Animated.AnimatedInterpolation<number>;
 }) {
   const moodData = MOOD_ORBS.find(m => m.key === mood) || MOOD_ORBS[2];
+  const frameMotionEnabled = activeFrame !== 'frame_celestial_wings';
   return (
     <View pointerEvents="none" style={s.avatarVisual}>
       {activeFrame && (
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}>
-          <FrameRing frameId={activeFrame} size={112} layer="wings" />
+          <FrameRing frameId={activeFrame} size={112} layer="wings" motionEnabled={frameMotionEnabled} />
         </Animated.View>
       )}
       <View style={[s.avatarCircle, {
@@ -74,7 +74,7 @@ export function OwnProfileAvatar({ avatarSource, contain, activeFrame, mood, dec
       <BreathingAvatarRing mood={mood} />
       {activeFrame && (
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}>
-          <FrameRing frameId={activeFrame} size={112} layer="ornament" />
+          <FrameRing frameId={activeFrame} size={112} layer="ornament" motionEnabled={frameMotionEnabled} />
         </Animated.View>
       )}
     </View>
@@ -413,9 +413,9 @@ const s = StyleSheet.create({
   visPillText:      { fontSize: 12.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
 
   profileHero:      { alignItems: 'center', marginBottom: 12 },
-  avatarWrap:       { width: 124, height: 124, position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: 3 },
+  avatarWrap:       { width: 124, height: 124, position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: 3, overflow: 'visible' },
   avatarCircle:     { width: 96, height: 96, borderRadius: 48, borderWidth: 2, overflow: 'hidden' },
-  avatarVisual:     { width: 124, height: 124, alignItems: 'center', justifyContent: 'center' },
+  avatarVisual:     { width: 124, height: 124, alignItems: 'center', justifyContent: 'center', overflow: 'visible' },
   avatarEditBtnWrap:{ position: 'absolute', bottom: 5, right: 7, zIndex: 70 },
   avatarEditBtn:    { width: 28, height: 28, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 

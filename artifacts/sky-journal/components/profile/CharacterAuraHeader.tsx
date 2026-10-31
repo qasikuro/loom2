@@ -39,17 +39,21 @@ export function FrameRing({
   frameId,
   size = 76,
   layer = 'all',
+  motionEnabled = true,
 }: {
   frameId: string;
   size?: number;
   layer?: 'wings' | 'ornament' | 'all';
+  /** Lets owner-profile previews keep animated visitor cosmetics still. */
+  motionEnabled?: boolean;
 }) {
   const cfg     = FRAME_CONFIGS[frameId];
   const pulse   = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
   const orbit   = useRef(new Animated.Value(0)).current;
   const wingFlap = useRef(new Animated.Value(0)).current;
-  const { animate } = useDecorativeMotion();
+  const { animate: screenMotionEnabled } = useDecorativeMotion();
+  const animate = motionEnabled && screenMotionEnabled;
   const isMoonlight = frameId === 'frame_moonlight';
   const isFire = frameId === 'frame_fire';
   const isCelestialWings = frameId === 'frame_celestial_wings';
@@ -575,7 +579,7 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
       ) : null}
       {activeEffect === 'effect_aurora_clouds' && animate
         ? <AuroraCloudBackdrop />
-        : activeEffect && activeEffect !== 'effect_moonlit_muse' && animate
+        : activeEffect && activeEffect !== 'effect_moonlit_muse' && activeEffect !== 'effect_cosmic_arrival' && animate
           ? <ProfileEffect effectId={activeEffect} />
           : null}
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: paddingTop * 0.1, left: -screenW * 0.1, width: screenW * 1.2, height: screenW * 1.2, borderRadius: screenW * 0.6, backgroundColor: aura.accent, opacity: glow2Opacity, transform: [{ scale: glowScale }] }} />

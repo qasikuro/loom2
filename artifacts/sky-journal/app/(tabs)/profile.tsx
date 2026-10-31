@@ -22,8 +22,8 @@ import { MoodPickerModal } from '@/components/profile/MoodPickerModal';
 import { OutfitDetailModal } from '@/components/profile/OutfitDetailModal';
 import { ProfileAboutSection } from '@/components/profile/ProfileAboutSection';
 import { ProfileVibeSection } from '@/components/profile/ProfileVibeSection';
-import { OWN_AVATAR_BOX, OWN_AVATAR_SIZE, OwnProfileAvatar, ProfileHeaderSection } from '@/components/profile/ProfileHeaderSection';
-import { AvatarFlightOverlay, useAvatarAnchor } from '@/components/profile/ProfileAvatarFlight';
+import { OWN_AVATAR_SIZE, OwnProfileAvatar, ProfileHeaderSection } from '@/components/profile/ProfileHeaderSection';
+import { AvatarFlightOverlay, PROFILE_AVATAR_RENDER_BOUNDS, useAvatarAnchor } from '@/components/profile/ProfileAvatarFlight';
 import { ProfileStyleSection } from '@/components/profile/ProfileStyleSection';
 import { ProfileSettingsDrawer } from '@/components/profile/ProfileSettingsDrawer';
 import { TitlePickerModal } from '@/components/profile/TitlePickerModal';
@@ -335,7 +335,7 @@ export default function CharacterScreen() {
         scrollY={scrollY}
         range={profileCollapseAt}
         topInset={topPad}
-        boxSize={OWN_AVATAR_BOX}
+        boxSize={PROFILE_AVATAR_RENDER_BOUNDS}
         avatarSize={OWN_AVATAR_SIZE}
         hidden={drawerOpen || moonlitMuseIntroVisible}
       >

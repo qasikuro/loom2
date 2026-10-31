@@ -43,7 +43,7 @@ import { FounderProfileIntro } from '@/components/profile/FounderProfileIntro';
 import { MoonlitMuseIntro } from '@/components/profile/MoonlitMuseIntro';
 import { CosmicProfileArrivalOverlay } from '@/components/profile/CosmicProfileArrivalOverlay';
 import { ProfileCollapseBar, useProfileCollapse } from '@/components/profile/ProfileCollapseBar';
-import { AvatarFlightOverlay, useAvatarAnchor } from '@/components/profile/ProfileAvatarFlight';
+import { AvatarFlightOverlay, PROFILE_AVATAR_RENDER_BOUNDS, useAvatarAnchor } from '@/components/profile/ProfileAvatarFlight';
 
 // ── Mood aura data ────────────────────────────────────────────────────────────
 type AuraData = {
@@ -627,9 +627,10 @@ export default function UserProfileScreen() {
       const profileHasFounderBadge = profResult.value.badges?.some(badge => badge.slug === 'founder') ?? false;
       const hasMoonlitMuse = profResult.value.activeEffect === 'effect_moonlit_muse';
       const hasCosmicArrival = profResult.value.activeEffect === 'effect_cosmic_arrival';
+      const showCosmicArrival = hasCosmicArrival && meId !== userId;
       setMoonlitMuseIntroVisible(hasMoonlitMuse);
-      setCosmicArrivalVisible(hasCosmicArrival);
-      setFounderIntroVisible((Boolean(profResult.value.isFounder) || profileHasFounderBadge) && !hasMoonlitMuse && !hasCosmicArrival);
+      setCosmicArrivalVisible(showCosmicArrival);
+      setFounderIntroVisible((Boolean(profResult.value.isFounder) || profileHasFounderBadge) && !hasMoonlitMuse && !showCosmicArrival);
       setStories(storsResult.status === 'fulfilled' ? storsResult.value : []);
       setVideos(videosResult.status === 'fulfilled' ? videosResult.value : []);
       setStoriesError(storsResult.status === 'rejected' || videosResult.status === 'rejected');
@@ -919,8 +920,10 @@ export default function UserProfileScreen() {
             />
             {/* Equipped effects remain visible, just restrained. */}
             {profile.activeEffect === 'effect_aurora_clouds' && <View style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}><AuroraCloudBackdrop /></View>}
-            {profile.activeEffect && profile.activeEffect !== 'effect_aurora_clouds' && profile.activeEffect !== 'effect_moonlit_muse' && profile.activeEffect !== 'effect_cosmic_arrival' && (
-              <View style={[StyleSheet.absoluteFill, { opacity: 0.6 }]}><ProfileEffect effectId={profile.activeEffect} /></View>
+            {profile.activeEffect && profile.activeEffect !== 'effect_aurora_clouds' && profile.activeEffect !== 'effect_moonlit_muse' && (
+              <View style={[StyleSheet.absoluteFill, { opacity: 0.6 }]}>
+                <ProfileEffect effectId={profile.activeEffect === 'effect_cosmic_arrival' ? undefined : profile.activeEffect} />
+              </View>
             )}
           </View>
 
@@ -1423,7 +1426,7 @@ export default function UserProfileScreen() {
         range={profileCollapseAt}
         topInset={topPad}
         hasLeftAction
-        boxSize={PUBLIC_PROFILE_HALO_SIZE}
+        boxSize={PROFILE_AVATAR_RENDER_BOUNDS}
         avatarSize={PUBLIC_PROFILE_AVATAR_SIZE}
         hidden={founderIntroVisible || moonlitMuseIntroVisible}
       >
@@ -1545,13 +1548,14 @@ const styles = StyleSheet.create({
     width: PUBLIC_PROFILE_HALO_SIZE, height: PUBLIC_PROFILE_HALO_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
   },
   quietHeader: { paddingHorizontal: 16, paddingBottom: 6, alignItems: 'center' },
   quietBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, height: 300, overflow: 'hidden' },
   quietTopRow: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
   quietTopBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   explorerPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 14, paddingHorizontal: 9, minHeight: 28, maxWidth: 170 },
-  avatarSlot: { width: PUBLIC_PROFILE_HALO_SIZE, height: PUBLIC_PROFILE_HALO_SIZE, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  avatarSlot: { width: PUBLIC_PROFILE_HALO_SIZE, height: PUBLIC_PROFILE_HALO_SIZE, alignItems: 'center', justifyContent: 'center', marginTop: 2, overflow: 'visible' },
   identityBlock: { width: '100%', alignItems: 'center', gap: 5, marginTop: 4 },
   onlinePill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1 },
   onlineDot: { width: 6, height: 6, borderRadius: 3 },
