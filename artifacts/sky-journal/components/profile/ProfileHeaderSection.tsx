@@ -57,10 +57,19 @@ export function OwnProfileAvatar({ avatarSource, contain, activeFrame, mood, dec
   mood: string;
   decorationOpacity?: Animated.AnimatedInterpolation<number>;
 }) {
+  const colors = useColors();
   const moodData = MOOD_ORBS.find(m => m.key === mood) || MOOD_ORBS[2];
   const frameMotionEnabled = activeFrame !== 'frame_celestial_wings';
   return (
     <View pointerEvents="none" style={s.avatarVisual}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <View style={[s.avatarStageGlow, { backgroundColor: colors.primary }]} />
+        <View style={[s.avatarStageOrbit, { borderColor: colors.primary }]} />
+        <View style={[s.avatarStageInnerOrbit, { borderColor: colors.primary }]} />
+        <View style={[s.avatarStageSpark, s.avatarStageSparkTopLeft, { backgroundColor: colors.primary }]} />
+        <View style={[s.avatarStageSpark, s.avatarStageSparkTopRight, { backgroundColor: colors.primary }]} />
+        <View style={[s.avatarStageSpark, s.avatarStageSparkBottomLeft, { backgroundColor: colors.primary }]} />
+      </View>
       {activeFrame && (
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}>
           <FrameRing frameId={activeFrame} size={112} layer="wings" motionEnabled={frameMotionEnabled} />
@@ -416,6 +425,13 @@ const s = StyleSheet.create({
   avatarWrap:       { width: 124, height: 124, position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: 3, overflow: 'visible' },
   avatarCircle:     { width: 96, height: 96, borderRadius: 48, borderWidth: 2, overflow: 'hidden' },
   avatarVisual:     { width: 124, height: 124, alignItems: 'center', justifyContent: 'center', overflow: 'visible' },
+  avatarStageGlow:  { position: 'absolute', width: 116, height: 116, borderRadius: 58, opacity: 0.08 },
+  avatarStageOrbit: { position: 'absolute', width: 122, height: 122, borderRadius: 61, borderWidth: 1, borderStyle: 'dashed', opacity: 0.35 },
+  avatarStageInnerOrbit: { position: 'absolute', width: 108, height: 108, borderRadius: 54, borderWidth: 1, opacity: 0.18 },
+  avatarStageSpark: { position: 'absolute', width: 4, height: 4, borderRadius: 2, opacity: 0.75 },
+  avatarStageSparkTopLeft: { left: 17, top: 27 },
+  avatarStageSparkTopRight: { right: 18, top: 25 },
+  avatarStageSparkBottomLeft: { left: 21, bottom: 23 },
   avatarEditBtnWrap:{ position: 'absolute', bottom: 5, right: 7, zIndex: 70 },
   avatarEditBtn:    { width: 28, height: 28, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 
