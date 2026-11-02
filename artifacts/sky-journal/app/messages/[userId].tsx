@@ -1704,7 +1704,7 @@ function MessagesScreenContent() {
                   ))}
                 </View>
               </ScrollView>
-            </View>
+            </Reanimated.View>
           )}
 
           {/* ── Shared Lumi companions (remount per conversation) ── */}
@@ -1815,7 +1815,7 @@ function MessagesScreenContent() {
               }
               {!sending && <Icon name="send" size={18} color="#FFFFFF" />}
             </TouchableOpacity>
-          </Reanimated.View>
+          </View>
           </>
           )}
           </View>
