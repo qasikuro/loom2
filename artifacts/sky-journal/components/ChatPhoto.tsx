@@ -67,15 +67,15 @@ function MessagePhoto({ uri, width, maxHeight, onOpen, onLongPress, scope }: Pho
     }
   };
   return (
-    <View style={[styles.messagePhoto, { width, height: maxHeight ? Math.min(width / aspect, maxHeight) : width, backgroundColor: colors.muted }]}>
-      {readUri && <ExpoImage
+    <View testID="chat-photo-row" style={[styles.messagePhoto, { width, height: maxHeight ? Math.min(width / aspect, maxHeight) : width, backgroundColor: colors.muted }]}>
+      {imageSource && <ExpoImage
         key={attempt}
-        source={{ uri: readUri, cacheKey: JSON.stringify([scope, uri]) }}
+        source={imageSource}
         recyclingKey={JSON.stringify([scope, uri])}
         style={StyleSheet.absoluteFill}
         contentFit="contain"
         cachePolicy="memory-disk"
-        priority="high"
+        priority="normal"
         transition={0}
         accessibilityLabel="Shared photo"
         accessible={!onOpen}
@@ -101,7 +101,7 @@ function MessagePhoto({ uri, width, maxHeight, onOpen, onLongPress, scope }: Pho
       {status === 'ready' && onOpen && (
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onOpen} onLongPress={onLongPress} delayLongPress={350}
           accessibilityRole="imagebutton" accessibilityLabel="View shared photo"
-          accessibilityHint="Opens the photo. Hold for message options." />
+          accessibilityHint="Opens the photo. Hold for message options." testID="chat-photo-thumbnail-ready" />
       )}
       {status === 'loading' && (
         <View style={styles.photoStatus} pointerEvents="none" accessibilityLabel="Loading photo">

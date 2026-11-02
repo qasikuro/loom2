@@ -3,9 +3,10 @@ import { Icon } from '@/components/Icon';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatStickerAnimation';
 import { ChatMessagePhoto, ChatPhotoDraft, ChatPhotoViewer } from '@/components/ChatPhoto';
+import { ChatMessageVideo, ChatVideoDraft, ChatVideoViewer } from '@/components/ChatVideo';
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
-import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
+import { ImageUploadError, persistImageUri, persistVideoUri } from '@/utils/persistImage';
 import { useClearConversation, useRemoveFriend, type ChatMessageInput } from '@workspace/api-client-react';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
 import { showToastGlobal } from '@/components/Toast';
@@ -25,6 +26,7 @@ import {
   type DmCachedMessage,
 } from '@/utils/dmConversationCache';
 import { mergeChatMessages, upsertChatMessages } from '@/utils/chatMessageHistory';
+import { CHAT_HISTORY_LIST_CONFIG } from '@/utils/chatListPerformance';
 import { nextDmRetry } from '@/utils/dmRetryPolicy';
 import { useSound } from '@/context/SoundContext';
 import { useSSE } from '@/hooks/useSSE';
@@ -76,9 +78,17 @@ const PURPLE2 = '#3B2A8C';
 const BORDER  = 'rgba(200,184,232,0.10)';
 const MUTED   = 'rgba(200,184,232,0.45)';
 const CHAT_PAGE_SIZE = 50;
+const CHAT_VIDEO_MAX_BYTES = 25 * 1024 * 1024;
+const CHAT_VIDEO_MAX_DURATION_MS = 60_000;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Message = DmCachedMessage;
+type VideoDraft = {
+  uri: string;
+  thumbnailUri: string | null;
+  mimeType?: string | null;
+  fileName?: string | null;
+};
 
 type ListItem =
   | { type: 'date'; date: string; key: string }
@@ -166,7 +176,9 @@ function outboxMessage(
     toUserId: partnerId,
     content: item.content,
     imageUri: item.imageUri ?? item.localPhotoUri ?? null,
-    expression: item.expression,
+    videoUri: item.videoUri ?? item.localVideoUri ?? null,
+    thumbnailUri: item.thumbnailUri ?? item.localThumbnailUri ?? null,
+    expression: item.expression ?? null,
     isRead: false,
     createdAt: item.createdAt,
     isOwn: true,
@@ -267,11 +279,12 @@ type DmMessageCellProps = {
   colors: DmRowColors;
   onDelete: (message: Message) => void;
   onOpenPhoto: (uri: string) => void;
+  onOpenVideo: (uri: string) => void;
   onRetry: (messageId: string) => void;
 };
 
 const DmMessageCell = React.memo(function DmMessageCell({
-  item, partnerInitial, avatarUri, name, contentWidth, colors, onDelete, onOpenPhoto, onRetry,
+  item, partnerInitial, avatarUri, name, contentWidth, colors, onDelete, onOpenPhoto, onOpenVideo, onRetry,
 }: DmMessageCellProps) {
   if (item.type === 'date') {
     return (
@@ -286,6 +299,9 @@ const DmMessageCell = React.memo(function DmMessageCell({
   }
 
   const msg = item.msg;
+  const hasPhoto = !!msg.imageUri;
+  const hasVideo = !!msg.videoUri;
+  const hasMedia = hasPhoto || hasVideo;
   const deleteMessage = () => onDelete(msg);
   if (msg.expression) {
     return (
@@ -301,7 +317,7 @@ const DmMessageCell = React.memo(function DmMessageCell({
     );
   }
   return (
-    <View style={[styles.msgRow, msg.isOwn ? styles.msgRowOwn : styles.msgRowOther]}>
+    <View testID={`chat-message-${msg.id}`} style={[styles.msgRow, msg.isOwn ? styles.msgRowOwn : styles.msgRowOther]}>
       {!msg.isOwn && (
         <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
           {avatarUri
@@ -314,18 +330,23 @@ const DmMessageCell = React.memo(function DmMessageCell({
           styles.bubble,
           msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
           msg.isOwn ? { backgroundColor: colors.own } : { backgroundColor: colors.other, borderColor: colors.otherBorder },
-          msg.imageUri && styles.bubblePhoto,
+          hasMedia && styles.bubblePhoto,
         ]}
         onLongPress={deleteMessage}
         onPress={msg.deliveryState === 'failed'
           ? () => onRetry(msg.id)
-          : msg.imageUri ? () => onOpenPhoto(msg.imageUri!) : undefined}
-        accessibilityRole={msg.imageUri ? 'imagebutton' : undefined}
-        accessible={!msg.imageUri}
-        accessibilityLabel={msg.imageUri
+          : hasPhoto ? () => onOpenPhoto(msg.imageUri!)
+            : hasVideo ? () => onOpenVideo(msg.videoUri!) : undefined}
+        accessibilityRole={hasPhoto ? 'imagebutton' : hasVideo ? 'button' : undefined}
+        accessible
+        accessibilityLabel={hasPhoto
           ? `${msg.isOwn ? 'You' : (name ?? 'Partner')} sent a photo${msg.content ? `: ${msg.content}` : ''}, ${fmtTime(msg.createdAt)}`
+          : hasVideo
+            ? `${msg.isOwn ? 'You' : (name ?? 'Partner')} sent a video${msg.content ? `: ${msg.content}` : ''}, ${fmtTime(msg.createdAt)}`
           : `${msg.isOwn ? 'You' : (name ?? 'Partner')}: ${msg.content ?? ''}, ${fmtTime(msg.createdAt)}`}
-        accessibilityHint={msg.imageUri ? 'Opens the photo. Hold for message options.' : msg.isOwn ? 'Hold for message options.' : undefined}
+        accessibilityHint={hasPhoto ? 'Opens the photo. Hold for message options.'
+          : hasVideo ? 'Opens the video. Hold for message options.'
+            : msg.isOwn ? 'Hold for message options.' : undefined}
         activeOpacity={0.85}
         delayLongPress={350}
       >
@@ -337,12 +358,19 @@ const DmMessageCell = React.memo(function DmMessageCell({
             onLongPress={deleteMessage}
           />
         )}
+        {msg.videoUri && (
+          <ChatMessageVideo
+            thumbnailUri={msg.thumbnailUri}
+            width={Math.min(contentWidth * 0.62, 280)}
+            height={Math.min(contentWidth * 0.36, 170)}
+          />
+        )}
         {!!msg.content && (
-          <Text maxFontSizeMultiplier={1.35} style={[styles.bubbleText, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? '#FBF9FF' : colors.otherText }]}>
+          <Text maxFontSizeMultiplier={1.35} style={[styles.bubbleText, hasMedia && styles.photoCaption, { color: msg.isOwn ? '#FBF9FF' : colors.otherText }]}>
             {msg.content}
           </Text>
         )}
-        <Text maxFontSizeMultiplier={1.2} style={[styles.bubbleTime, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : colors.sub }]}>
+        <Text maxFontSizeMultiplier={1.2} style={[styles.bubbleTime, hasMedia && styles.photoCaption, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : colors.sub }]}>
           {fmtTime(msg.createdAt)}
         </Text>
         {msg.deliveryState && (
@@ -367,6 +395,7 @@ const DmMessageCell = React.memo(function DmMessageCell({
     && previous.colors === next.colors
     && previous.onDelete === next.onDelete
     && previous.onOpenPhoto === next.onOpenPhoto
+    && previous.onOpenVideo === next.onOpenVideo
     && previous.onRetry === next.onRetry;
 });
 
@@ -453,7 +482,9 @@ function MessagesScreenContent() {
   chatActiveRef.current = chatActivity.active;
   const [input,         setInput]         = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [videoDraft, setVideoDraft] = useState<VideoDraft | null>(null);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const [viewingVideo, setViewingVideo] = useState<string | null>(null);
   const [pickingPhoto, setPickingPhoto] = useState(false);
   const uploadedPhotoRef = useRef<{ uri: string; path: string } | null>(null);
   const photoIdentity = JSON.stringify([myUserId, userId]);
@@ -476,7 +507,9 @@ function MessagesScreenContent() {
     lastMsgIdRef.current = initialMessages.at(-1)?.id ?? null;
     setError(null);
     setPhotoUri(null);
+    setVideoDraft(null);
     setViewingPhoto(null);
+    setViewingVideo(null);
     setPickingPhoto(false);
     setSending(false);
     reactionTrackerRef.current = { seen: initialMessages.map(m => m.id) };
@@ -884,6 +917,7 @@ function MessagesScreenContent() {
       const ev = data as {
         type: string; id?: string; fromUserId?: string; toUserId?: string;
         content?: string | null; expression?: string | null; imageUri?: string | null;
+        videoUri?: string | null; thumbnailUri?: string | null;
         isRead?: boolean; createdAt?: string; isOwn?: boolean;
         messageId?: string; forEveryone?: boolean; partnerId?: string; blocked?: boolean;
       };
@@ -907,12 +941,14 @@ function MessagesScreenContent() {
       }
 
       const ownSharedReaction = ev?.fromUserId === myUserId && ev.toUserId === userId
-        && !!parseSharedReaction(ev.content) && !ev.imageUri && !ev.expression;
+        && !!parseSharedReaction(ev.content) && !ev.imageUri && !ev.videoUri && !ev.expression;
       if (ev?.type === 'new_message' && (ev.fromUserId === userId || ownSharedReaction) && ev.id) {
         const newMsg: Message = {
           id: ev.id, fromUserId: ev.fromUserId!, toUserId: ev.toUserId ?? '',
           content: ev.content ?? null, expression: ev.expression ?? null,
           imageUri: ev.imageUri ?? null,
+          videoUri: ev.videoUri ?? null,
+          thumbnailUri: ev.thumbnailUri ?? null,
           isRead: ev.isRead ?? false, createdAt: ev.createdAt!, isOwn: ev.fromUserId === myUserId,
         };
         recordSharedReaction(newMsg);
@@ -985,12 +1021,45 @@ function MessagesScreenContent() {
     setShowPicker(false);
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'], allowsMultipleSelection: false, quality: 0.85,
+        mediaTypes: ['images', 'videos'],
+        allowsMultipleSelection: false,
+        quality: 0.85,
+        videoMaxDuration: 60,
       });
       if (identity !== photoIdentityRef.current) return;
-      if (!result.canceled && result.assets[0]?.uri) {
+      const asset = !result.canceled ? result.assets[0] : null;
+      if (asset?.uri && asset.type === 'video') {
+        if (asset.fileSize != null && asset.fileSize > CHAT_VIDEO_MAX_BYTES) {
+          showToastGlobal('Choose a video under 25 MB to send in chat.', 'warning');
+          return;
+        }
+        if (asset.duration != null && asset.duration > CHAT_VIDEO_MAX_DURATION_MS) {
+          showToastGlobal('Chat videos can be up to 60 seconds long.', 'warning');
+          return;
+        }
+        let thumbnailUri: string | null = null;
+        if (Platform.OS !== 'web') {
+          try {
+            const { getThumbnailAsync } = await import('expo-video-thumbnails');
+            const thumbnail = await getThumbnailAsync(asset.uri, { time: 0, quality: 0.72 });
+            thumbnailUri = thumbnail.uri;
+          } catch {
+            // A missing poster must not prevent the video itself from being sent.
+          }
+        }
+        if (identity !== photoIdentityRef.current) return;
         uploadedPhotoRef.current = null;
-        setPhotoUri(result.assets[0].uri);
+        setPhotoUri(null);
+        setVideoDraft({
+          uri: asset.uri,
+          thumbnailUri,
+          mimeType: asset.mimeType,
+          fileName: asset.fileName,
+        });
+      } else if (asset?.uri) {
+        uploadedPhotoRef.current = null;
+        setVideoDraft(null);
+        setPhotoUri(asset.uri);
       }
     } catch {
       showToastGlobal('Could not open your photos. Check photo permissions and try again.', 'warning');
@@ -1032,19 +1101,44 @@ function MessagesScreenContent() {
         );
         await saveDmOutbox(accountId, partnerId, outboxRef.current);
       }
+      if (!prepared.videoUri && prepared.localVideoUri) {
+        const uploaded = await persistVideoUri(prepared.localVideoUri, {
+          mimeType: prepared.localVideoMimeType ?? undefined,
+          fileName: prepared.localVideoFileName,
+        });
+        const path = uploaded.startsWith('/') ? uploaded : new URL(uploaded).pathname;
+        if (!/^\/api\/videos\/[\w.-]+$/.test(path)) throw new Error('Invalid uploaded video');
+        prepared = { ...prepared, videoUri: path };
+        outboxRef.current = outboxRef.current.map(entry =>
+          entry.clientMessageId === prepared.clientMessageId ? prepared : entry,
+        );
+        await saveDmOutbox(accountId, partnerId, outboxRef.current);
+      }
+      if (!prepared.thumbnailUri && prepared.localThumbnailUri) {
+        const uploaded = await persistImageUri(prepared.localThumbnailUri);
+        const path = uploaded.startsWith('/') ? uploaded : new URL(uploaded).pathname;
+        if (!/^\/api\/images\/[\w.-]+$/.test(path)) throw new Error('Invalid video poster');
+        prepared = { ...prepared, thumbnailUri: path };
+        outboxRef.current = outboxRef.current.map(entry =>
+          entry.clientMessageId === prepared.clientMessageId ? prepared : entry,
+        );
+        await saveDmOutbox(accountId, partnerId, outboxRef.current);
+      }
       if (identity !== photoIdentityRef.current) return;
       const body: ChatMessageInput = {
         clientMessageId: prepared.clientMessageId,
         ...(prepared.content ? { content: prepared.content } : {}),
         ...(prepared.expression ? { expression: prepared.expression } : {}),
         ...(prepared.imageUri ? { imageUri: prepared.imageUri } : {}),
+        ...(prepared.videoUri ? { videoUri: prepared.videoUri } : {}),
+        ...(prepared.thumbnailUri ? { thumbnailUri: prepared.thumbnailUri } : {}),
       };
       const controller = new AbortController();
       sendControllersRef.current.set(prepared.clientMessageId, controller);
       const timeout = setTimeout(() => controller.abort(), 15_000);
       let sent: Message;
       try {
-        sent = await apiFetch<Message>(`/messages/${partnerId}${prepared.imageUri ? '/photos' : ''}`, {
+        sent = await apiFetch<Message>(`/messages/${partnerId}${prepared.imageUri ? '/photos' : prepared.videoUri ? '/videos' : ''}`, {
           method: 'POST', signal: controller.signal,
           body: JSON.stringify(body),
         });
@@ -1075,6 +1169,9 @@ function MessagesScreenContent() {
       if (prepared.localPhotoUri) {
         setPhotoUri(current => current === prepared.localPhotoUri ? null : current);
         if (uploadedPhotoRef.current?.uri === prepared.localPhotoUri) uploadedPhotoRef.current = null;
+      }
+      if (prepared.localVideoUri) {
+        setVideoDraft(current => current?.uri === prepared.localVideoUri ? null : current);
       }
     } catch (err) {
       if (identity !== photoIdentityRef.current) return;
@@ -1159,7 +1256,7 @@ function MessagesScreenContent() {
 
   const handleSend = useCallback(async () => {
     const content = input.trim();
-    if ((!content && !photoUri) || sending || pickingPhoto || !userId || isBlocked || deletedPartner) return;
+    if ((!content && !photoUri && !videoDraft) || sending || pickingPhoto || !userId || isBlocked || deletedPartner) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSending(true);
     jumpToNewest();
@@ -1168,8 +1265,14 @@ function MessagesScreenContent() {
       createdAt: new Date().toISOString(),
       content: content || null,
       imageUri: null,
+      videoUri: null,
+      thumbnailUri: null,
       expression: null,
       localPhotoUri: photoUri,
+      localVideoUri: videoDraft?.uri ?? null,
+      localThumbnailUri: videoDraft?.thumbnailUri ?? null,
+      localVideoMimeType: videoDraft?.mimeType ?? null,
+      localVideoFileName: videoDraft?.fileName ?? null,
       attempts: 0,
       retryAt: Date.now(),
     };
@@ -1178,6 +1281,7 @@ function MessagesScreenContent() {
       if (queued) {
         setInput(current => current === input ? '' : current);
         setPhotoUri(current => current === photoUri ? null : current);
+        setVideoDraft(current => current?.uri === videoDraft?.uri ? null : current);
         uploadedPhotoRef.current = null;
       } else if (content) {
         setInput(current => restoreFailedChatDraft(current, content));
@@ -1185,7 +1289,7 @@ function MessagesScreenContent() {
     } finally {
       setSending(false);
     }
-  }, [input, photoUri, sending, pickingPhoto, userId, jumpToNewest, isBlocked, deletedPartner, queueOutgoingMessage]);
+  }, [input, photoUri, videoDraft, sending, pickingPhoto, userId, jumpToNewest, isBlocked, deletedPartner, queueOutgoingMessage]);
 
   const retryMessage = useCallback((messageId: string) => {
     if (isBlocked || deletedPartner) {
@@ -1333,6 +1437,7 @@ function MessagesScreenContent() {
   }, [messages, t]);
   const partnerInitial = partnerDisplayName.charAt(0).toUpperCase();
   const handleOpenPhoto = useCallback((uri: string) => setViewingPhoto(uri), []);
+  const handleOpenVideo = useCallback((uri: string) => setViewingVideo(uri), []);
   const renderMessageItem = useCallback(({ item }: { item: ListItem }) => {
     return (
       <DmMessageCell
@@ -1344,10 +1449,74 @@ function MessagesScreenContent() {
         colors={th}
         onDelete={handleDeleteMsg}
         onOpenPhoto={handleOpenPhoto}
+        onOpenVideo={handleOpenVideo}
         onRetry={retryMessage}
       />
     );
-  }, [partnerDisplayAvatar, contentWidth, handleDeleteMsg, handleOpenPhoto, retryMessage, partnerDisplayName, partnerInitial, th]);
+  }, [partnerDisplayAvatar, contentWidth, handleDeleteMsg, handleOpenPhoto, handleOpenVideo, retryMessage, partnerDisplayName, partnerInitial, th]);
+  const listContentContainerStyle = useMemo<StyleProp<ViewStyle>>(
+    () => [
+      styles.listPad,
+      { width: contentWidth, alignSelf: 'center', paddingTop: 14, paddingBottom: 12 },
+    ],
+    [contentWidth],
+  );
+  const typingIndicator = useMemo(() => partnerTyping ? (
+    <View style={[styles.msgRow, styles.msgRowOther]}>
+      <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
+        {partnerDisplayAvatar
+          ? <Image source={{ uri: partnerDisplayAvatar }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          : <Text style={[styles.bubbleAvatarSmText, { color: PURPLE }]}>{partnerInitial}</Text>
+        }
+      </View>
+      <View style={[styles.bubble, styles.bubbleOther, { paddingVertical: 10, paddingHorizontal: 16 }]}>
+        <Text style={{ color: MUTED, fontSize: 18, letterSpacing: 4 }}>•••</Text>
+      </View>
+    </View>
+  ) : null, [partnerTyping, partnerDisplayAvatar, partnerInitial]);
+  const emptyListComponent = useMemo(() => (
+    <View style={styles.invertedEmpty}>
+      {loading ? (
+        <View style={styles.openingConversation}>
+          {!!inboxPreview && (
+            <View style={styles.openingPreview}>
+              <Text style={styles.openingPreviewText} numberOfLines={3}>{inboxPreview}</Text>
+            </View>
+          )}
+          <View style={styles.openingBubbleRow}>
+            <View style={styles.openingAvatarPlaceholder} />
+            <View style={[styles.openingBubblePlaceholder, { width: '64%' }]} />
+          </View>
+          <View style={[styles.openingBubbleRow, styles.openingBubbleOwn]}>
+            <View style={[styles.openingBubblePlaceholder, { width: '48%', height: 34 }]} />
+          </View>
+          <View style={styles.openingBubbleRow}>
+            <View style={styles.openingAvatarPlaceholder} />
+            <View style={[styles.openingBubblePlaceholder, { width: '54%', height: 54 }]} />
+          </View>
+          <View style={styles.openingStatus}>
+            <SkyLoadingMark size={18} color={PURPLE} />
+            <Text style={styles.openingStatusText}>{t('social.openingConversation')}</Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.emptyWrap}>
+          <LinearGradient
+            colors={[`${PURPLE}28`, `${PURPLE}10`]}
+            style={styles.emptyIcon}
+          >
+            <Text style={{ fontSize: 32 }}>✦</Text>
+          </LinearGradient>
+          <Text style={styles.emptyTitle}>{t('social.beginStory')}</Text>
+          <Text style={styles.emptyBody}>
+            {isGuide === 'true'
+              ? t('social.guideAwaits')
+              : t('social.funWhisper')}
+          </Text>
+        </View>
+      )}
+    </View>
+  ), [loading, inboxPreview, t, isGuide]);
   const handleOpenLumiPalette = useCallback(() => setShowPicker(false), []);
 
   const stickerCellWidth = Math.max(52, Math.min(72, Math.floor((contentWidth - 44) / 5)));
@@ -1428,6 +1597,7 @@ function MessagesScreenContent() {
         >
           <FlatList<ListItem>
             ref={flatRef}
+            testID="dm-message-history"
             inverted
             maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 60 }}
             data={listData}
@@ -1436,10 +1606,7 @@ function MessagesScreenContent() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-            initialNumToRender={12}
-            maxToRenderPerBatch={8}
-            updateCellsBatchingPeriod={40}
-            windowSize={7}
+            {...CHAT_HISTORY_LIST_CONFIG}
             onEndReached={loadOlderMessages}
             onEndReachedThreshold={0.35}
             ListFooterComponent={loadingOlderMessages ? (
@@ -1540,7 +1707,7 @@ function MessagesScreenContent() {
           <View style={[styles.dock, { backgroundColor: th.bar, borderColor: th.border }]} pointerEvents="box-none">
           <View style={{ width: contentWidth, alignSelf: 'center', paddingTop: 4 }} pointerEvents="box-none">
             <ChatLumiCompanion key={`${photoIdentity}:${reactionPlaybackEpoch}`}
-              enabled={!loading && !isBlocked && !deletedPartner && !viewingPhoto && !pickingPhoto}
+              enabled={!loading && !isBlocked && !deletedPartner && !viewingPhoto && !viewingVideo && !pickingPhoto}
               busy={sending}
               partnerName={partnerDisplayName}
               events={reactionEvents}
@@ -1561,11 +1728,16 @@ function MessagesScreenContent() {
           ) : (
           <>
           {photoUri && <ChatPhotoDraft uri={photoUri} busy={sending} color={th.ink} onRemove={() => { setPhotoUri(null); uploadedPhotoRef.current = null; }} />}
+          {videoDraft && <ChatVideoDraft
+            thumbnailUri={videoDraft.thumbnailUri}
+            busy={sending}
+            onRemove={() => setVideoDraft(null)}
+          />}
            <View style={[styles.inputBar, { width: contentWidth, paddingBottom: kbOpen && Platform.OS !== 'web' ? 6 : bottomPad }]}>
             <TouchableOpacity
               style={[styles.stickerToggleBtn, { backgroundColor: isDark ? 'rgba(155,120,255,0.17)' : 'rgba(107,78,232,0.10)', borderColor: th.border }]} onPress={pickPhoto}
               hitSlop={4}
-              disabled={loading || sending || pickingPhoto} accessibilityRole="button" accessibilityLabel="Attach a photo"
+              disabled={loading || sending || pickingPhoto} accessibilityRole="button" accessibilityLabel="Attach a photo or video"
               accessibilityState={{ disabled: loading || sending || pickingPhoto, busy: pickingPhoto }}
               activeOpacity={0.75}
             >
@@ -1619,20 +1791,20 @@ function MessagesScreenContent() {
             </View>
 
             <TouchableOpacity
-              style={[styles.sendBtn, !input.trim() && !photoUri && styles.sendBtnDisabled]}
+              style={[styles.sendBtn, !input.trim() && !photoUri && !videoDraft && styles.sendBtnDisabled]}
               hitSlop={4}
               onPress={() => { const keep = inputRef.current?.isFocused() ?? false; void handleSend(); if (keep) inputRef.current?.focus(); }}
               accessibilityRole="button"
               accessibilityLabel={sending ? 'Sending message' : 'Send message'}
-              accessibilityState={{ disabled: (!input.trim() && !photoUri) || sending || loading || pickingPhoto, busy: sending }}
-              disabled={(!input.trim() && !photoUri) || sending || loading || pickingPhoto}
+              accessibilityState={{ disabled: (!input.trim() && !photoUri && !videoDraft) || sending || loading || pickingPhoto, busy: sending }}
+              disabled={(!input.trim() && !photoUri && !videoDraft) || sending || loading || pickingPhoto}
               activeOpacity={0.8}
             >
               {sending
                 ? <SkyLoadingMark size={19} color="rgba(255,255,255,0.9)" />
                 : (
                   <LinearGradient
-                    colors={input.trim() || photoUri ? [PURPLE, PURPLE2] : ['#AA98E4', '#8976CF']}
+                    colors={input.trim() || photoUri || videoDraft ? [PURPLE, PURPLE2] : ['#AA98E4', '#8976CF']}
                     style={StyleSheet.absoluteFill}
                   />
                 )
@@ -1646,6 +1818,7 @@ function MessagesScreenContent() {
         </KeyboardAvoidingViewCompat>
 
       {viewingPhoto && <ChatPhotoViewer uri={viewingPhoto} onClose={() => setViewingPhoto(null)} background={NIGHT} color="rgba(220,210,255,0.90)" />}
+      {viewingVideo && <ChatVideoViewer uri={viewingVideo} onClose={() => setViewingVideo(null)} />}
 
       {/* ── Full-screen sticker animation overlay ─────────── */}
       {playingAnim && (

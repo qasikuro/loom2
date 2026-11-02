@@ -23,8 +23,14 @@ export type DmOutboxItem = {
   createdAt: string;
   content: string | null;
   imageUri: string | null;
+  videoUri?: string | null;
+  thumbnailUri?: string | null;
   expression: ChatMessageInput['expression'] | null;
   localPhotoUri?: string | null;
+  localVideoUri?: string | null;
+  localThumbnailUri?: string | null;
+  localVideoMimeType?: string | null;
+  localVideoFileName?: string | null;
   attempts: number;
   retryAt: number;
 };

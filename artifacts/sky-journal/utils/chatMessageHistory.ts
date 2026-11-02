@@ -5,7 +5,7 @@ export type MergeableChatMessage = ChatMessage & {
 };
 
 const MESSAGE_FIELDS: (keyof MergeableChatMessage)[] = [
-  'id', 'fromUserId', 'toUserId', 'content', 'imageUri', 'expression',
+  'id', 'fromUserId', 'toUserId', 'content', 'imageUri', 'videoUri', 'thumbnailUri', 'expression',
   'isRead', 'createdAt', 'isOwn', 'deliveryState',
 ];
 
