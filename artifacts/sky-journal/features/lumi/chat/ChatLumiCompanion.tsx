@@ -23,7 +23,6 @@ import { useSharedChatLumis } from './useSharedChatLumis';
 type Props = {
   enabled?: boolean;
   externalPickerOpen?: boolean;
-  keyboardProgress?: { value: number };
   onOpenPalette?: () => void;
   busy?: boolean;
   partnerName?: string;
@@ -94,7 +93,7 @@ function Mascot({ side, size, children }: { side: LumiSide; size: number; childr
 }
 
 function ChatLumiCompanionView({
-  enabled = true, externalPickerOpen = false, keyboardProgress, onOpenPalette, busy = false, partnerName, events, onSendReaction,
+  enabled = true, externalPickerOpen = false, onOpenPalette, busy = false, partnerName, events, onSendReaction,
 }: Props) {
   const { t } = useTranslation();
   const c = useColors();
@@ -116,17 +115,11 @@ function ChatLumiCompanionView({
   }, [externalPickerOpen, enabled]);
 
   useEffect(() => {
-    if (keyboardProgress || Platform.OS === 'web') return;
+    if (Platform.OS === 'web') return;
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKbOpen(true));
     const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKbOpen(false));
     return () => { show.remove(); hide.remove(); };
-  }, [keyboardProgress]);
-  const nameTagKeyboardStyle = useAnimatedStyle(() => {
-    const progress = keyboardProgress
-      ? Math.max(0, Math.min(1, keyboardProgress.value))
-      : kbOpen ? 1 : 0;
-    return { opacity: 1 - progress };
-  }, [kbOpen, keyboardProgress]);
+  }, []);
 
   // Keep the stage geometry steady while the native keyboard moves the screen.
   // Resizing on keyboardDidShow caused a second, abrupt jump at the end.
@@ -226,8 +219,8 @@ function ChatLumiCompanionView({
 
         {stageW > 0 && (
           <>
-            <Animated.Text pointerEvents="none" numberOfLines={1} style={[styles.nameTag, { left: 8, maxWidth: Math.max(48, stageW / 3), color: c.mutedForeground }, nameTagKeyboardStyle]}>{partner}</Animated.Text>
-            <Animated.Text pointerEvents="none" numberOfLines={1} style={[styles.nameTag, { right: 8, textAlign: 'right', color: accent }, nameTagKeyboardStyle]}>{t('lumiChat.you', { defaultValue: 'You' })}</Animated.Text>
+            <Text pointerEvents="none" numberOfLines={1} style={[styles.nameTag, { left: 8, maxWidth: Math.max(48, stageW / 3), color: c.mutedForeground, opacity: kbOpen ? 0 : 1 }]}>{partner}</Text>
+            <Text pointerEvents="none" numberOfLines={1} style={[styles.nameTag, { right: 8, textAlign: 'right', color: accent, opacity: kbOpen ? 0 : 1 }]}>{t('lumiChat.you', { defaultValue: 'You' })}</Text>
           </>
         )}
 

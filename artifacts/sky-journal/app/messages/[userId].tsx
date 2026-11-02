@@ -34,7 +34,7 @@ import { useAuth } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
-import Reanimated, { FadeIn, FadeOut, useAnimatedStyle } from 'react-native-reanimated';
+import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -56,7 +56,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAvoidingViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
-import { hasScreenKeyboardController, ScreenKeyboardProvider } from '@/components/ScreenKeyboardProvider';
+import { ScreenKeyboardProvider } from '@/components/ScreenKeyboardProvider';
 import { restoreFailedChatDraft } from '@/utils/chatDraft';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/context/ThemeContext';
@@ -83,16 +83,7 @@ const CHAT_VIDEO_MAX_DURATION_MS = 60_000;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Message = DmCachedMessage;
-type KeyboardProgress = { value: number };
-type KeyboardAnimation = { progress: KeyboardProgress };
-type KeyboardAnimationHook = () => KeyboardAnimation;
-let useControllerKeyboardAnimation: KeyboardAnimationHook | null = null;
-try {
-  // Keep this optional for Expo Go, where the native keyboard module is absent.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const keyboardController = require('react-native-keyboard-controller');
-  useControllerKeyboardAnimation = keyboardController.useReanimatedKeyboardAnimation ?? null;
-} catch { /* native keyboard controller is unavailable */ }
+
 type VideoDraft = {
   uri: string;
   thumbnailUri: string | null;
@@ -417,19 +408,13 @@ export default function MessagesScreen() {
   // Keyboard-controller provider scoped to this screen's content only.
   return (
     <ScreenKeyboardProvider>
-      {hasScreenKeyboardController && useControllerKeyboardAnimation
-        ? <ControllerKeyboardBridge key={screenKey} screenKey={screenKey} />
-        : <MessagesScreenContent key={screenKey} />}
+      <MessagesScreenContent key={screenKey} />
     </ScreenKeyboardProvider>
   );
 }
 
-function ControllerKeyboardBridge({ screenKey }: { screenKey: string }) {
-  const { progress } = useControllerKeyboardAnimation!();
-  return <MessagesScreenContent key={screenKey} keyboardProgress={progress} />;
-}
 
-function MessagesScreenContent({ keyboardProgress }: { keyboardProgress?: KeyboardProgress }) {
+function MessagesScreenContent() {
   const { t } = useTranslation();
   const { userId, name, handle, avatarUri, isGuide, deleted } = useLocalSearchParams<{
     userId:     string;
@@ -1024,17 +1009,11 @@ function MessagesScreenContent({ keyboardProgress }: { keyboardProgress?: Keyboa
   const inputRef = useRef<TextInput>(null);
   const [kbOpen, setKbOpen] = useState(false);
   useEffect(() => {
-    if (keyboardProgress || Platform.OS === 'web') return;
+    if (Platform.OS === 'web') return;
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKbOpen(true));
     const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKbOpen(false));
     return () => { show.remove(); hide.remove(); };
-  }, [keyboardProgress]);
-  const inputBarKeyboardStyle = useAnimatedStyle(() => {
-    const progress = keyboardProgress
-      ? Math.max(0, Math.min(1, keyboardProgress.value))
-      : kbOpen ? 1 : 0;
-    return { paddingBottom: bottomPad + (6 - bottomPad) * progress };
-  }, [bottomPad, kbOpen, keyboardProgress]);
+  }, []);
   const jumpToNewest = useCallback(() => {
     flatRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
@@ -1725,7 +1704,7 @@ function MessagesScreenContent({ keyboardProgress }: { keyboardProgress?: Keyboa
                   ))}
                 </View>
               </ScrollView>
-            </Reanimated.View>
+            </View>
           )}
 
           {/* ── Shared Lumi companions (remount per conversation) ── */}
@@ -1736,7 +1715,6 @@ function MessagesScreenContent({ keyboardProgress }: { keyboardProgress?: Keyboa
               busy={sending}
               partnerName={partnerDisplayName}
               events={reactionEvents}
-              keyboardProgress={keyboardProgress}
               onSendReaction={handleSendLumiReaction}
               externalPickerOpen={showPicker}
               onOpenPalette={handleOpenLumiPalette} />
@@ -1759,7 +1737,7 @@ function MessagesScreenContent({ keyboardProgress }: { keyboardProgress?: Keyboa
             busy={sending}
             onRemove={() => setVideoDraft(null)}
           />}
-           <Reanimated.View style={[styles.inputBar, { width: contentWidth }, inputBarKeyboardStyle]}>
+           <View style={[styles.inputBar, { width: contentWidth, paddingBottom: kbOpen && Platform.OS !== 'web' ? 6 : bottomPad }]}>
             <TouchableOpacity
               style={[styles.stickerToggleBtn, { backgroundColor: isDark ? 'rgba(155,120,255,0.17)' : 'rgba(107,78,232,0.10)', borderColor: th.border }]} onPress={pickPhoto}
               hitSlop={4}
