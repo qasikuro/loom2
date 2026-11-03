@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, appSettingsTable } from "@workspace/db";
 import { requireAdmin } from "../middleware/auth";
 import { z } from "zod";
+import { sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -12,6 +13,8 @@ const DEFAULT_FEATURES: Record<string, boolean> = {
   music: true,
   shop: true,
   season: true,
+  shop_button: false,
+  season_button: false,
   campfire: true,
   guides: true,
   notifications: true,
@@ -61,16 +64,32 @@ router.put("/admin/settings/:key", requireAdmin, async (req: Request, res: Respo
 
   const parsed = PutBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "value is required" });
+  const value = parsed.data.value;
+  if (key === "features") {
+    const result = z.record(z.boolean()).safeParse(value);
+    if (!result.success || Object.keys(result.data).some(k => !(k in DEFAULT_FEATURES))) {
+      return res.status(400).json({ error: "Features must contain known boolean flags." });
+    }
+  } else if (key === "maintenance_mode" && typeof value !== "boolean") {
+    return res.status(400).json({ error: "Maintenance mode must be a boolean." });
+  } else if (key === "min_app_version" && (typeof value !== "string" || !/^\d+\.\d+\.\d+$/.test(value))) {
+    return res.status(400).json({ error: "App version must have the format 1.0.0." });
+  }
 
   try {
-    await db
+    const [saved] = await db
       .insert(appSettingsTable)
       .values({ key, value: parsed.data.value as never, updatedAt: new Date() })
       .onConflictDoUpdate({
         target: appSettingsTable.key,
-        set: { value: parsed.data.value as never, updatedAt: new Date() },
-      });
-    return res.json({ ok: true, key, value: parsed.data.value });
+        set: {
+          value: key === "features"
+            ? sql`coalesce(${appSettingsTable.value}, '{}'::jsonb) || ${JSON.stringify(value)}::jsonb`
+            : value as never,
+          updatedAt: new Date(),
+        },
+      }).returning();
+    return res.json({ ok: true, key, value: key === "features" ? normalizeFeatures(saved.value) : saved.value });
   } catch (err) {
     req.log.error({ err }, "admin/settings PUT failed");
     return res.status(500).json({ error: "Internal server error" });

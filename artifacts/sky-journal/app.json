@@ -2,17 +2,14 @@
   "expo": {
     "name": "Storigam",
     "slug": "sky-journal",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/storigam-icon.png",
-    "scheme": ["storigam", "sky-journal"],
+    "scheme": [
+      "storigam",
+      "sky-journal"
+    ],
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/storigam-mark.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#030014"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.storigam.app",
@@ -20,14 +17,15 @@
     },
     "android": {
       "package": "com.storigam.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/storigam-adaptive-icon.png",
         "backgroundColor": "#030014"
       }
     },
     "web": {
-      "favicon": "./assets/images/storigam-favicon.png"
+      "favicon": "./assets/images/storigam-favicon.png",
+      "output": "static"
     },
     "plugins": [
       [
@@ -81,7 +79,12 @@
             }
           }
         }
-      ]
+      ],
+      "expo-asset",
+      "expo-localization",
+      "expo-audio",
+      "expo-video",
+      "expo-sharing"
     ],
     "assetBundlePatterns": [
       "**/*"

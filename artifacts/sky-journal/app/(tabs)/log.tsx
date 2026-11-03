@@ -541,7 +541,7 @@ export default function JournalScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [corruptionBannerDismissed, setCorruptionBannerDismissed] = useState(false);
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const sectionY  = useRef<Record<string, number>>({});
 
   const filtered = useMemo(() => journalEntries.filter(e => {

@@ -117,7 +117,7 @@ export const DiscussionHistory = React.memo(function DiscussionHistory({ message
                     {ended ? 'There are no recent messages to show.' : 'Say hello, share a thought, or discuss the current activity. Use Q&A for questions you want the guide to answer.'}
                   </Text>
                 </View>
-              : null
+              : undefined
         }
       />
       {unread && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Jump to latest messages"

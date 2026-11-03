@@ -6,6 +6,8 @@ import {
   startMediaCompositionCleanup,
 } from "./services/mediaCompositionCleanup";
 import { startGuideSessionReminders } from "./services/guideSessionReminders";
+import { startAccountDeletionProcessor } from "./services/accountDeletion";
+import { startChatPerformanceFixtureCleanup } from "./routes/test-chat-fixtures";
 
 const rawPort = process.env["PORT"];
 
@@ -37,6 +39,8 @@ app.listen(port, (err) => {
       await cleanupExpiredMediaCompositions();
       startMediaCompositionCleanup();
       startGuideSessionReminders();
+      startAccountDeletionProcessor();
+      startChatPerformanceFixtureCleanup();
       logger.info("Startup migrations completed");
     })
     .catch((err) => logger.error({ err }, "Startup migrations failed (non-fatal)"));

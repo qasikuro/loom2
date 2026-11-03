@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
-import { db } from "@workspace/db";
+import { db, characterTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import * as cache from "../lib/cache";
+import { emitSSEEvent } from "../lib/sseEmitter";
 
 const router: IRouter = Router();
 
@@ -15,23 +16,44 @@ router.post("/users/:userId/block", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Cannot block yourself" });
 
   try {
-    await db.execute(sql`
-      INSERT INTO blocks (blocker_id, blocked_id)
-      VALUES (${blockerId}, ${blockedId})
-      ON CONFLICT (blocker_id, blocked_id) DO NOTHING
-    `);
+    const [target] = await db.select({ userId: characterTable.userId })
+      .from(characterTable)
+      .where(sql`${characterTable.userId} = ${blockedId}`)
+      .limit(1);
+    if (!target) return res.status(404).json({ error: "User not found" });
 
-    // Remove any existing follow relationship in both directions
-    await db.execute(sql`
-      DELETE FROM follows
-       WHERE (follower_id = ${blockerId} AND following_id = ${blockedId})
-          OR (follower_id = ${blockedId} AND following_id = ${blockerId})
-    `);
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`
+        INSERT INTO blocks (blocker_id, blocked_id)
+        VALUES (${blockerId}, ${blockedId})
+        ON CONFLICT (blocker_id, blocked_id) DO NOTHING
+      `);
+
+      // Blocking ends the social relationship and removes pending requests,
+      // without touching either user's messages or account data.
+      await tx.execute(sql`
+        DELETE FROM follows
+         WHERE (follower_id = ${blockerId} AND following_id = ${blockedId})
+            OR (follower_id = ${blockedId} AND following_id = ${blockerId})
+      `);
+      await tx.execute(sql`
+        DELETE FROM friend_requests
+         WHERE (sender_id = ${blockerId} AND recipient_id = ${blockedId})
+            OR (sender_id = ${blockedId} AND recipient_id = ${blockerId})
+      `);
+    });
 
     // Invalidate discover cache for both parties — block changes feed visibility
     cache.invalidate(`discover:${blockerId}`);
     cache.invalidate(`discover:${blockedId}`);
 
+    // Only the blocker receives this state event; the blocked user is not
+    // notified that the relationship changed.
+    emitSSEEvent(`messages:${blockerId}`, {
+      type: "block_relationship_changed",
+      partnerId: blockedId,
+      blocked: true,
+    });
     return res.json({ blocked: true });
   } catch (err) {
     req.log.error({ err }, "Failed to block user");
@@ -53,6 +75,11 @@ router.delete("/users/:userId/block", requireAuth, async (req, res) => {
     // Invalidate discover cache for both parties — unblocking changes feed visibility
     cache.invalidate(`discover:${blockerId}`);
     cache.invalidate(`discover:${blockedId}`);
+    emitSSEEvent(`messages:${blockerId}`, {
+      type: "block_relationship_changed",
+      partnerId: blockedId,
+      blocked: false,
+    });
 
     return res.json({ blocked: false });
   } catch (err) {
@@ -67,7 +94,7 @@ router.get("/users/blocked", requireAuth, async (req, res) => {
   try {
     const rows = await db.execute(sql`
       SELECT b.blocked_id   AS "blockedId",
-             c.name         AS name,
+             COALESCE(c.name, 'Deleted account') AS name,
              c.username     AS username,
              c.avatar_uri   AS "avatarUri"
         FROM blocks b

@@ -44,13 +44,47 @@ const KEYS = {
 };
 
 export const STORY_EDITOR_DRAFT_KEY = 'story_draft_v2';
+export const TEXT_STORY_DRAFT_KEY = 'draft:text-story';
 
 export type ResumableStoryDraft = {
-  kind: 'manga' | 'chapter';
+  kind: 'manga' | 'chapter' | 'text-story';
   title: string;
   imageUri?: string;
   savedAt: number;
 };
+
+export type CreateDestination = {
+  pathname: string;
+  params?: Record<string, string>;
+};
+
+export function getCreateDestination(
+  pathname: string,
+  eventPrompt?: string,
+  eventMood?: string,
+  extraParams: Record<string, string> = {},
+): CreateDestination {
+  const params = {
+    ...(eventPrompt ? { eventPrompt } : {}),
+    ...(eventPrompt && eventMood ? { eventMood } : {}),
+    ...extraParams,
+  };
+
+  return Object.keys(params).length > 0 ? { pathname, params } : { pathname };
+}
+
+export function getDraftResumeDestination(
+  draft: ResumableStoryDraft,
+  eventPrompt?: string,
+  eventMood?: string,
+): CreateDestination {
+  const pathname = draft.kind === 'manga'
+    ? '/quick-moment'
+    : draft.kind === 'text-story'
+      ? '/text-story'
+      : '/chapter-editor';
+  return getCreateDestination(pathname, eventPrompt, eventMood, { resumeDraft: '1' });
+}
 
 async function save<T extends object>(key: string, data: T): Promise<void> {
   try {
@@ -109,9 +143,10 @@ export const vibePostDraft = {
 };
 
 export async function getResumableStoryDraft(): Promise<ResumableStoryDraft | null> {
-  const [mangaDraft, chapterRaw] = await Promise.all([
+  const [mangaDraft, chapterRaw, textStoryRaw] = await Promise.all([
     quickMomentDraft.load(),
     AsyncStorage.getItem(STORY_EDITOR_DRAFT_KEY).catch(() => null),
+    AsyncStorage.getItem(TEXT_STORY_DRAFT_KEY).catch(() => null),
   ]);
   const drafts: ResumableStoryDraft[] = [];
 
@@ -158,6 +193,36 @@ export async function getResumableStoryDraft(): Promise<ResumableStoryDraft | nu
       }
     } catch {
       // Ignore malformed local drafts; the editors validate them when opened.
+    }
+  }
+
+  if (textStoryRaw) {
+    try {
+      const value: unknown = JSON.parse(textStoryRaw);
+      if (value && typeof value === 'object') {
+        const draft = value as {
+          title?: unknown;
+          blocks?: unknown;
+          savedAt?: unknown;
+        };
+        const title = typeof draft.title === 'string' ? draft.title.trim() : '';
+        const blocks = Array.isArray(draft.blocks) ? draft.blocks : [];
+        const hasContent = blocks.some(block => {
+          if (!block || typeof block !== 'object') return false;
+          const item = block as { text?: unknown; imageUri?: unknown };
+          return (typeof item.text === 'string' && item.text.trim().length > 0)
+            || (typeof item.imageUri === 'string' && item.imageUri.length > 0);
+        });
+        if (title || hasContent) {
+          drafts.push({
+            kind: 'text-story',
+            title: title || 'Text story draft',
+            savedAt: typeof draft.savedAt === 'number' ? draft.savedAt : 0,
+          });
+        }
+      }
+    } catch {
+      // Ignore malformed drafts; the editor validates them before use.
     }
   }
 

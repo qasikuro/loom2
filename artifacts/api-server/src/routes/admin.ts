@@ -12,20 +12,44 @@ import {
   characterBadgesTable,
   campfireMessagesTable,
   campfireRoomsTable,
+  moderationLogsTable,
 } from "@workspace/db";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, count, desc, eq, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
+import {
+  GrantCelestialWingsTestStarsBody,
+  GetCelestialWingsTestGrantStatusResponse,
+  GrantCelestialWingsTestStarsResponse,
+} from "@workspace/api-zod";
+import { publishableKeyFromHost } from "@clerk/shared/keys";
 import { requireAdmin, requireAuth, getUserId } from "../middleware/auth";
+import { getClerkProxyHost } from "../middlewares/clerkProxyMiddleware";
 import { clerkClient } from "@clerk/express";
 import { emitSSEEvent } from "../lib/sseEmitter";
 import { sendPushNotification } from "../services/pushService";
+import { normalizePublicMediaFields } from "../lib/publicMediaUri";
+import { invalidate as invalidateCache } from "../lib/cache";
+import { getStarsGrantStatus, grantStarsIdempotently } from "../services/adminTestGrantService";
 
 const router: IRouter = Router();
 
+const CELESTIAL_WINGS_TEST_USERNAME = "thekin";
+const CELESTIAL_WINGS_TEST_AMOUNT = 1_000;
+const CELESTIAL_WINGS_TEST_EVENT_TYPE = "admin_test_grant";
+
+function moderationReason(req: Request, fallback: string): string {
+  const value = (req.body as { reason?: unknown } | undefined)?.reason;
+  return typeof value === "string" && value.trim()
+    ? value.trim().slice(0, 500)
+    : fallback;
+}
+
 // ── Public config (no auth) ───────────────────────────────────────────────────
-router.get("/admin/config", (_req: Request, res: Response) => {
+router.get("/admin/config", (req: Request, res: Response) => {
+  const configuredKey = process.env.CLERK_PUBLISHABLE_KEY;
+  const host = getClerkProxyHost(req) ?? "";
   res.set("Cache-Control", "no-store").json({
-    publishableKey: process.env.CLERK_PUBLISHABLE_KEY ?? "",
+    publishableKey: configuredKey ? publishableKeyFromHost(host, configuredKey) : "",
     _ts: Date.now(),
   });
 });
@@ -147,6 +171,7 @@ router.get("/admin/users/:id", requireAdmin, async (req: Request, res: Response)
         isPublic:     characterTable.isPublic,
         isAdmin:      characterTable.isAdmin,
         isBanned:     characterTable.isBanned,
+        isHidden:     characterTable.isHidden,
         galleryLimit:  characterTable.galleryLimit,
         updatedAt:     characterTable.updatedAt,
         isFounder:     characterTable.isFounder,
@@ -198,6 +223,72 @@ router.get("/admin/users/:id", requireAdmin, async (req: Request, res: Response)
   }
 });
 
+router.get("/admin/test-grants/celestial-wings", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const status = await getStarsGrantStatus({
+      targetUsername: CELESTIAL_WINGS_TEST_USERNAME,
+      eventType: CELESTIAL_WINGS_TEST_EVENT_TYPE,
+    });
+    if (!status) {
+      res.status(404).json({ error: "The test account @thekin was not found." });
+      return;
+    }
+    const response = GetCelestialWingsTestGrantStatusResponse.parse(status);
+    res.set("Cache-Control", "no-store").json(response);
+  } catch (err) {
+    req.log.error({ err }, "Celestial Wings test-grant status failed");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/admin/test-grants/celestial-wings", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+  const adminId = getUserId(req);
+  const parsed = GrantCelestialWingsTestStarsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  try {
+    const grant = await grantStarsIdempotently({
+      adminId,
+      targetUsername: CELESTIAL_WINGS_TEST_USERNAME,
+      amount: CELESTIAL_WINGS_TEST_AMOUNT,
+      eventType: CELESTIAL_WINGS_TEST_EVENT_TYPE,
+      refId: parsed.data.requestId,
+      reason: "Admin-requested 1,000 Star credit for Celestial Wings shop testing.",
+    });
+
+    if (!grant) {
+      res.status(404).json({ error: "The test account @thekin was not found." });
+      return;
+    }
+
+    if (grant.granted) {
+      req.log.info({
+        adminId,
+        targetUserId: grant.targetUserId,
+        amount: grant.amount,
+        currency: "stars",
+        grantRef: parsed.data.requestId,
+      }, "Celestial Wings test credit granted");
+    }
+
+    const response = GrantCelestialWingsTestStarsResponse.parse({
+      username: grant.username,
+      amount: grant.amount,
+      granted: grant.granted,
+      alreadyGranted: grant.alreadyGranted,
+      starsBefore: grant.starsBefore,
+      starsAfter: grant.starsAfter,
+    });
+    res.set("Cache-Control", "no-store").json(response);
+  } catch (err) {
+    req.log.error({ err, adminId }, "Celestial Wings test credit failed");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── User management ───────────────────────────────────────────────────────────
 
 router.get("/admin/users", requireAdmin, async (req: Request, res: Response) => {
@@ -223,6 +314,8 @@ router.get("/admin/users", requireAdmin, async (req: Request, res: Response) => 
         isPublic:      characterTable.isPublic,
         isAdmin:       characterTable.isAdmin,
         isBanned:      characterTable.isBanned,
+        isHidden:      characterTable.isHidden,
+        suspendedUntil: characterTable.suspendedUntil,
         galleryLimit:  characterTable.galleryLimit,
         updatedAt:     characterTable.updatedAt,
         isFounder:     characterTable.isFounder,
@@ -273,11 +366,38 @@ router.put("/admin/users/:id/ban", requireAdmin, async (req: Request, res: Respo
   }
 
   try {
-    await db
-      .update(characterTable)
-      .set({ isBanned: true })
-      .where(and(eq(characterTable.userId, targetId), ne(characterTable.isAdmin, true)));
+    const reason = moderationReason(req, "Permanent ban from User Management.");
+    const updated = await db.transaction(async (tx) => {
+      const [target] = await tx
+        .update(characterTable)
+        .set({ isBanned: true, suspendedUntil: null })
+        .where(and(eq(characterTable.userId, targetId), ne(characterTable.isAdmin, true)))
+        .returning({
+          userId: characterTable.userId,
+          name: characterTable.name,
+          username: characterTable.username,
+        });
+      if (target) {
+        await tx.insert(moderationLogsTable).values({
+          adminId,
+          action: "ban_user",
+          targetType: "user",
+          targetId,
+          targetUserId: targetId,
+          reason,
+          snapshot: {
+            contentType: "User",
+            title: target.name,
+            preview: "User account",
+            userName: target.name,
+            username: target.username,
+          },
+        });
+      }
+      return target;
+    });
 
+    if (!updated) return res.status(404).json({ error: "User not found or cannot be banned." });
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Admin ban user failed");
@@ -286,19 +406,140 @@ router.put("/admin/users/:id/ban", requireAdmin, async (req: Request, res: Respo
 });
 
 router.put("/admin/users/:id/unban", requireAdmin, async (req: Request, res: Response) => {
+  const adminId = getUserId(req);
   const targetId = String(req.params.id);
 
   try {
-    await db
-      .update(characterTable)
-      .set({ isBanned: false })
-      .where(eq(characterTable.userId, targetId));
+    const reason = moderationReason(req, "Ban removed from User Management.");
+    const updated = await db.transaction(async (tx) => {
+      const [target] = await tx
+        .update(characterTable)
+        .set({ isBanned: false })
+        .where(eq(characterTable.userId, targetId))
+        .returning({
+          userId: characterTable.userId,
+          name: characterTable.name,
+          username: characterTable.username,
+        });
+      if (target) {
+        await tx.insert(moderationLogsTable).values({
+          adminId,
+          action: "unban_user",
+          targetType: "user",
+          targetId,
+          targetUserId: targetId,
+          reason,
+          snapshot: {
+            contentType: "User",
+            title: target.name,
+            preview: "User account",
+            userName: target.name,
+            username: target.username,
+          },
+        });
+      }
+      return target;
+    });
 
+    if (!updated) return res.status(404).json({ error: "User not found." });
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Admin unban user failed");
     return res.status(500).json({ error: "Internal server error" });
   }
+});
+
+async function setUserHidden(req: Request, res: Response, hidden: boolean): Promise<void> {
+  const adminId = getUserId(req);
+  const targetId = String(req.params.id);
+
+  if (targetId === adminId) {
+    res.status(400).json({ error: "Cannot hide or restore your own account." });
+    return;
+  }
+
+  try {
+    const reason = moderationReason(
+      req,
+      hidden ? "Temporarily hidden from other users." : "User visibility restored.",
+    );
+    const updated = await db.transaction(async tx => {
+      const condition = hidden
+        ? and(
+            eq(characterTable.userId, targetId),
+            eq(characterTable.isAdmin, false),
+            eq(characterTable.isHidden, false),
+          )
+        : and(
+            eq(characterTable.userId, targetId),
+            eq(characterTable.isHidden, true),
+          );
+
+      const [target] = await tx
+        .update(characterTable)
+        .set({ isHidden: hidden })
+        .where(condition)
+        .returning({
+          userId: characterTable.userId,
+          name: characterTable.name,
+          username: characterTable.username,
+        });
+
+      if (target) {
+        await tx.insert(moderationLogsTable).values({
+          adminId,
+          action: hidden ? "hide_user" : "unhide_user",
+          targetType: "user",
+          targetId,
+          targetUserId: targetId,
+          reason,
+          snapshot: {
+            contentType: "User",
+            title: target.name,
+            preview: hidden ? "Temporarily hidden from other users" : "User visibility restored",
+            userName: target.name,
+            username: target.username,
+          },
+        });
+        return target;
+      }
+
+      // Make retries safe without producing duplicate moderation history.
+      const [existing] = await tx
+        .select({
+          userId: characterTable.userId,
+          name: characterTable.name,
+          username: characterTable.username,
+          isAdmin: characterTable.isAdmin,
+          isHidden: characterTable.isHidden,
+        })
+        .from(characterTable)
+        .where(eq(characterTable.userId, targetId))
+        .limit(1);
+
+      if (!existing || (hidden && existing.isAdmin) || existing.isHidden !== hidden) return null;
+      return existing;
+    });
+
+    if (!updated) {
+      res.status(404).json({ error: "User not found or cannot be hidden." });
+      return;
+    }
+
+    invalidateCache("discover:");
+    res.json({ ok: true, isHidden: hidden });
+  } catch (err) {
+    req.log.error({ err, targetId }, hidden ? "Admin hide user failed" : "Admin restore user visibility failed");
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+router.put("/admin/users/:id/hide", requireAdmin, async (req: Request, res: Response) => {
+  await setUserHidden(req, res, true);
+});
+
+router.put("/admin/users/:id/unhide", requireAdmin, async (req: Request, res: Response) => {
+  await setUserHidden(req, res, false);
 });
 
 router.put("/admin/users/:id/toggle-admin", requireAdmin, async (req: Request, res: Response) => {
@@ -399,7 +640,8 @@ router.get("/admin/content", requireAdmin, async (req: Request, res: Response) =
         .from(outfitsTable)
         .leftJoin(characterTable, eq(characterTable.userId, outfitsTable.userId))
         .where(where);
-      return res.json({ items: rows, total });
+      res.setHeader("Cache-Control", "no-store");
+      return res.json({ items: normalizePublicMediaFields(rows), total, _ts: Date.now() });
     }
 
     // Default: stories
@@ -420,6 +662,7 @@ router.get("/admin/content", requireAdmin, async (req: Request, res: Response) =
         witnessedCount: storiesTable.witnessedCount,
         savedCount:     storiesTable.savedCount,
         panels:         storiesTable.panels,
+        pages:          storiesTable.pages,
         date:           storiesTable.date,
         authorName:     characterTable.name,
         username:       characterTable.username,
@@ -436,7 +679,8 @@ router.get("/admin/content", requireAdmin, async (req: Request, res: Response) =
       .from(storiesTable)
       .leftJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
       .where(where);
-    return res.json({ items: rows, total });
+    res.setHeader("Cache-Control", "no-store");
+    return res.json({ items: normalizePublicMediaFields(rows), total, _ts: Date.now() });
   } catch (err) {
     req.log.error({ err }, "Admin list content failed");
     return res.status(500).json({ error: "Internal server error" });
@@ -446,7 +690,38 @@ router.get("/admin/content", requireAdmin, async (req: Request, res: Response) =
 router.put("/admin/content/stories/:id/hide", requireAdmin, async (req: Request, res: Response) => {
   const id = String(req.params.id);
   try {
-    await db.update(storiesTable).set({ isHidden: true }).where(eq(storiesTable.id, id));
+    const adminId = getUserId(req);
+    const reason = moderationReason(req, "Hidden from the Admin Content page.");
+    const changed = await db.transaction(async (tx) => {
+      const [story] = await tx
+        .select({
+          userId: storiesTable.userId,
+          chapterTitle: storiesTable.chapterTitle,
+          description: storiesTable.description,
+          contentType: storiesTable.contentType,
+        })
+        .from(storiesTable)
+        .where(eq(storiesTable.id, id))
+        .limit(1);
+      if (!story) return false;
+      await tx.update(storiesTable).set({ isHidden: true }).where(eq(storiesTable.id, id));
+      await tx.insert(moderationLogsTable).values({
+        adminId,
+        action: "hide",
+        targetType: story.contentType === "video" ? "video" : "story",
+        targetId: id,
+        targetUserId: story.userId,
+        reason,
+        snapshot: {
+          contentType: story.contentType === "video" ? "Video" : "Story",
+          title: story.chapterTitle,
+          preview: story.description || "Story content",
+        },
+      });
+      return true;
+    });
+    if (!changed) return res.status(404).json({ error: "Story not found" });
+    invalidateCache("discover:");
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Admin hide story failed");
@@ -457,7 +732,38 @@ router.put("/admin/content/stories/:id/hide", requireAdmin, async (req: Request,
 router.put("/admin/content/stories/:id/unhide", requireAdmin, async (req: Request, res: Response) => {
   const id = String(req.params.id);
   try {
-    await db.update(storiesTable).set({ isHidden: false }).where(eq(storiesTable.id, id));
+    const adminId = getUserId(req);
+    const reason = moderationReason(req, "Restored from the Admin Content page.");
+    const changed = await db.transaction(async (tx) => {
+      const [story] = await tx
+        .select({
+          userId: storiesTable.userId,
+          chapterTitle: storiesTable.chapterTitle,
+          description: storiesTable.description,
+          contentType: storiesTable.contentType,
+        })
+        .from(storiesTable)
+        .where(eq(storiesTable.id, id))
+        .limit(1);
+      if (!story) return false;
+      await tx.update(storiesTable).set({ isHidden: false }).where(eq(storiesTable.id, id));
+      await tx.insert(moderationLogsTable).values({
+        adminId,
+        action: "restore",
+        targetType: story.contentType === "video" ? "video" : "story",
+        targetId: id,
+        targetUserId: story.userId,
+        reason,
+        snapshot: {
+          contentType: story.contentType === "video" ? "Video" : "Story",
+          title: story.chapterTitle,
+          preview: story.description || "Story content",
+        },
+      });
+      return true;
+    });
+    if (!changed) return res.status(404).json({ error: "Story not found" });
+    invalidateCache("discover:");
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Admin unhide story failed");
@@ -468,16 +774,46 @@ router.put("/admin/content/stories/:id/unhide", requireAdmin, async (req: Reques
 router.delete("/admin/content/stories/:id", requireAdmin, async (req: Request, res: Response) => {
   const id = String(req.params.id);
   try {
-    // Fetch author before deleting so we can notify them
-    const [story] = await db
-      .select({ userId: storiesTable.userId })
-      .from(storiesTable)
-      .where(eq(storiesTable.id, id))
-      .limit(1);
+    const adminId = getUserId(req);
+    const reason = moderationReason(req, "Removed from the Admin Content page.");
+    const story = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({
+          userId: storiesTable.userId,
+          chapterTitle: storiesTable.chapterTitle,
+          description: storiesTable.description,
+          contentType: storiesTable.contentType,
+          userName: characterTable.name,
+          username: characterTable.username,
+        })
+        .from(storiesTable)
+        .leftJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
+        .where(eq(storiesTable.id, id))
+        .limit(1);
+
+      if (!row) return null;
+
+      await tx.delete(storiesTable).where(eq(storiesTable.id, id));
+      await tx.insert(moderationLogsTable).values({
+        adminId,
+        action: "remove",
+        targetType: row.contentType === "video" ? "video" : "story",
+        targetId: id,
+        targetUserId: row.userId,
+        reason,
+        snapshot: {
+          contentType: row.contentType === "video" ? "Video" : "Story",
+          title: row.chapterTitle,
+          preview: row.description || "Story content",
+          userName: row.userName,
+          username: row.username,
+        },
+      });
+      return row;
+    });
 
     if (!story) return res.status(404).json({ error: "Story not found" });
-
-    await db.delete(storiesTable).where(eq(storiesTable.id, id));
+    invalidateCache("discover:");
 
     // Notify the author
     await db.insert(notificationsTable).values({
@@ -505,7 +841,37 @@ router.delete("/admin/content/stories/:id", requireAdmin, async (req: Request, r
 router.put("/admin/content/outfits/:id/hide", requireAdmin, async (req: Request, res: Response) => {
   const id = String(req.params.id);
   try {
-    await db.update(outfitsTable).set({ isHidden: true }).where(eq(outfitsTable.id, id));
+    const adminId = getUserId(req);
+    const reason = moderationReason(req, "Hidden from the Admin Content page.");
+    const changed = await db.transaction(async (tx) => {
+      const [outfit] = await tx
+        .select({
+          userId: outfitsTable.userId,
+          name: outfitsTable.name,
+          description: outfitsTable.description,
+          story: outfitsTable.story,
+        })
+        .from(outfitsTable)
+        .where(eq(outfitsTable.id, id))
+        .limit(1);
+      if (!outfit) return false;
+      await tx.update(outfitsTable).set({ isHidden: true }).where(eq(outfitsTable.id, id));
+      await tx.insert(moderationLogsTable).values({
+        adminId,
+        action: "hide",
+        targetType: "outfit",
+        targetId: id,
+        targetUserId: outfit.userId,
+        reason,
+        snapshot: {
+          contentType: "Outfit",
+          title: outfit.name,
+          preview: outfit.description || outfit.story || "Outfit image",
+        },
+      });
+      return true;
+    });
+    if (!changed) return res.status(404).json({ error: "Outfit not found" });
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Admin hide outfit failed");
@@ -516,7 +882,37 @@ router.put("/admin/content/outfits/:id/hide", requireAdmin, async (req: Request,
 router.put("/admin/content/outfits/:id/unhide", requireAdmin, async (req: Request, res: Response) => {
   const id = String(req.params.id);
   try {
-    await db.update(outfitsTable).set({ isHidden: false }).where(eq(outfitsTable.id, id));
+    const adminId = getUserId(req);
+    const reason = moderationReason(req, "Restored from the Admin Content page.");
+    const changed = await db.transaction(async (tx) => {
+      const [outfit] = await tx
+        .select({
+          userId: outfitsTable.userId,
+          name: outfitsTable.name,
+          description: outfitsTable.description,
+          story: outfitsTable.story,
+        })
+        .from(outfitsTable)
+        .where(eq(outfitsTable.id, id))
+        .limit(1);
+      if (!outfit) return false;
+      await tx.update(outfitsTable).set({ isHidden: false }).where(eq(outfitsTable.id, id));
+      await tx.insert(moderationLogsTable).values({
+        adminId,
+        action: "restore",
+        targetType: "outfit",
+        targetId: id,
+        targetUserId: outfit.userId,
+        reason,
+        snapshot: {
+          contentType: "Outfit",
+          title: outfit.name,
+          preview: outfit.description || outfit.story || "Outfit image",
+        },
+      });
+      return true;
+    });
+    if (!changed) return res.status(404).json({ error: "Outfit not found" });
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Admin unhide outfit failed");
@@ -527,16 +923,45 @@ router.put("/admin/content/outfits/:id/unhide", requireAdmin, async (req: Reques
 router.delete("/admin/content/outfits/:id", requireAdmin, async (req: Request, res: Response) => {
   const id = String(req.params.id);
   try {
-    // Fetch author before deleting so we can notify them
-    const [outfit] = await db
-      .select({ userId: outfitsTable.userId })
-      .from(outfitsTable)
-      .where(eq(outfitsTable.id, id))
-      .limit(1);
+    const adminId = getUserId(req);
+    const reason = moderationReason(req, "Removed from the Admin Content page.");
+    const outfit = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({
+          userId: outfitsTable.userId,
+          name: outfitsTable.name,
+          description: outfitsTable.description,
+          story: outfitsTable.story,
+          userName: characterTable.name,
+          username: characterTable.username,
+        })
+        .from(outfitsTable)
+        .leftJoin(characterTable, eq(characterTable.userId, outfitsTable.userId))
+        .where(eq(outfitsTable.id, id))
+        .limit(1);
+
+      if (!row) return null;
+
+      await tx.delete(outfitsTable).where(eq(outfitsTable.id, id));
+      await tx.insert(moderationLogsTable).values({
+        adminId,
+        action: "remove",
+        targetType: "outfit",
+        targetId: id,
+        targetUserId: row.userId,
+        reason,
+        snapshot: {
+          contentType: "Outfit",
+          title: row.name,
+          preview: row.description || row.story || "Outfit image",
+          userName: row.userName,
+          username: row.username,
+        },
+      });
+      return row;
+    });
 
     if (!outfit) return res.status(404).json({ error: "Outfit not found" });
-
-    await db.delete(outfitsTable).where(eq(outfitsTable.id, id));
 
     // Notify the author
     await db.insert(notificationsTable).values({

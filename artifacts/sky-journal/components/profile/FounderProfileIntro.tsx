@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     elevation: 16,
   },
   plaqueInner: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     margin: 5,
     borderWidth: 1,
     borderColor: 'rgba(218,178,104,0.45)',

@@ -36,6 +36,7 @@ vi.mock("../../services/constellationService", () => ({
 
 vi.mock("../../services/pushService", () => ({
   sendPushNotification: vi.fn().mockResolvedValue(undefined),
+  sendPushToTokens: vi.fn().mockResolvedValue(undefined),
 }));
 
 /**
@@ -43,10 +44,19 @@ vi.mock("../../services/pushService", () => ({
  * (avoids cached results bleeding between tests).
  */
 vi.mock("../../lib/cache", () => {
-  const store = new Map<string, unknown>();
+  const store = new Map<string, { value: unknown; expiresAt: number }>();
   return {
-    get:       (_key: string) => undefined,
-    set:       vi.fn(),
+    get:       (key: string) => {
+      const entry = store.get(key);
+      if (!entry || Date.now() > entry.expiresAt) {
+        store.delete(key);
+        return undefined;
+      }
+      return entry.value;
+    },
+    set:       vi.fn((key: string, value: unknown, ttlMs: number) => {
+      store.set(key, { value, expiresAt: Date.now() + ttlMs });
+    }),
     invalidate: (prefix: string) => {
       for (const k of store.keys()) if (k.startsWith(prefix)) store.delete(k);
     },
@@ -55,10 +65,12 @@ vi.mock("../../lib/cache", () => {
 });
 
 import socialRouter from "../../routes/social";
+import storiesRouter from "../../routes/stories";
 
 export function createTestApp() {
   const app = express();
   app.use(express.json());
   app.use("/api", socialRouter);
+  app.use("/api", storiesRouter);
   return app;
 }

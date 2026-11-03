@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SecureImage as Image } from '@/components/SecureImage';
-import { Video, ResizeMode } from 'expo-av';
+import { ResizeMode, VideoSurface as Video, type VideoSurfaceHandle } from '@/components/VideoSurface';
 import Constants from 'expo-constants';
 import {
   PanResponder,
@@ -117,7 +117,7 @@ function useAudioPreview(
         return;
       }
       try {
-        const { Audio } = await import('expo-av');
+        const { Audio } = await import('@/utils/audioCompat');
         const result = await Audio.Sound.createAsync(
           { uri: track.streamUrl },
           { shouldPlay: false, isLooping: false, positionMillis: startSeconds * 1000 },
@@ -151,7 +151,7 @@ function useAudioPreview(
 
 export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, onMetadata, publishing = false, progress, error }: Props) {
   const { t } = useTranslation();
-  const videoRef = useRef<any>(null);
+  const videoRef = useRef<VideoSurfaceHandle>(null);
   const [playing, setPlaying] = useState(false);
   const [currentSeconds, setCurrentSeconds] = useState(0);
   const [timelineWidth, setTimelineWidth] = useState(1);
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   rangeText: { color: '#F6F1FF', fontSize: 21, fontFamily: 'Satoshi-Bold' },
   rangeSub: { color: '#C89BFF', fontSize: 14 },
   timeline: { height: 58, borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: '#1A1234' },
-  thumbRow: { ...StyleSheet.absoluteFillObject, flexDirection: 'row' },
+  thumbRow: { ...StyleSheet.absoluteFill, flexDirection: 'row' },
   thumb: { flex: 1, height: '100%', opacity: 0.72 },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#261A4A', borderRightWidth: 1, borderRightColor: 'rgba(230,215,255,0.08)' },
   selection: { position: 'absolute', top: 0, bottom: 0, borderTopWidth: 3, borderBottomWidth: 3, borderColor: '#E3C55A' },

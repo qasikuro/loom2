@@ -18,6 +18,9 @@ const en = {
       friendPreview: 'A friend in your orbit',
       onlineNow: 'Online now',
       openProfile: 'Visit profile',
+      sendReactionBack: 'Send a reaction back',
+      reactionSent: 'Sent {{mood}}',
+      reactionFailed: "Couldn't send. Tap a sticker to retry.",
     },
   },
 };
@@ -42,6 +45,9 @@ const ja = {
       friendPreview: 'あなたの輪の中の友だち',
       onlineNow: 'オンライン',
       openProfile: 'プロフィールを見る',
+      sendReactionBack: 'リアクションを返す',
+      reactionSent: '{{mood}}を送りました',
+      reactionFailed: '送信できませんでした。ステッカーをタップして再試行してください。',
     },
   },
 };
@@ -66,6 +72,9 @@ const es = {
       friendPreview: 'Una amistad en tu órbita',
       onlineNow: 'En línea ahora',
       openProfile: 'Visitar perfil',
+      sendReactionBack: 'Responder con una reacción',
+      reactionSent: 'Enviaste {{mood}}',
+      reactionFailed: 'No se pudo enviar. Toca un sticker para reintentar.',
     },
   },
 };
@@ -90,6 +99,9 @@ const tr = {
       friendPreview: 'Çevrenden bir arkadaş',
       onlineNow: 'Şu an çevrimiçi',
       openProfile: 'Profili ziyaret et',
+      sendReactionBack: 'Bir tepki gönder',
+      reactionSent: '{{mood}} gönderildi',
+      reactionFailed: 'Gönderilemedi. Yeniden denemek için bir çıkartmaya dokun.',
     },
   },
 };
@@ -114,6 +126,9 @@ const fr = {
       friendPreview: 'Un ami dans votre orbite',
       onlineNow: 'En ligne',
       openProfile: 'Voir le profil',
+      sendReactionBack: 'Répondre avec une réaction',
+      reactionSent: '{{mood}} envoyé',
+      reactionFailed: 'Envoi impossible. Touchez un sticker pour réessayer.',
     },
   },
 };
@@ -138,6 +153,9 @@ const de = {
       friendPreview: 'Ein Freund in deinem Orbit',
       onlineNow: 'Jetzt online',
       openProfile: 'Profil ansehen',
+      sendReactionBack: 'Mit einer Reaktion antworten',
+      reactionSent: '{{mood}} gesendet',
+      reactionFailed: 'Senden fehlgeschlagen. Tippe zum erneuten Versuch auf einen Sticker.',
     },
   },
 };
@@ -162,6 +180,9 @@ const pt = {
       friendPreview: 'Uma amizade no seu mundo',
       onlineNow: 'Online agora',
       openProfile: 'Ver perfil',
+      sendReactionBack: 'Responder com uma reação',
+      reactionSent: '{{mood}} enviado',
+      reactionFailed: 'Não foi possível enviar. Toque em um adesivo para tentar novamente.',
     },
   },
 };
@@ -186,6 +207,9 @@ const ko = {
       friendPreview: '내 주변의 친구',
       onlineNow: '온라인',
       openProfile: '프로필 보기',
+      sendReactionBack: '반응 보내기',
+      reactionSent: '{{mood}}을 보냈어요',
+      reactionFailed: '보내지 못했어요. 스티커를 눌러 다시 시도하세요.',
     },
   },
 };
@@ -210,6 +234,9 @@ const zh = {
       friendPreview: '你世界中的好友',
       onlineNow: '当前在线',
       openProfile: '查看主页',
+      sendReactionBack: '回送一个回应',
+      reactionSent: '已发送{{mood}}',
+      reactionFailed: '发送失败。点击贴纸重试。',
     },
   },
 };
@@ -234,6 +261,9 @@ const ru = {
       friendPreview: 'Друг рядом с тобой',
       onlineNow: 'Сейчас в сети',
       openProfile: 'Открыть профиль',
+      sendReactionBack: 'Ответить реакцией',
+      reactionSent: 'Отправлено: {{mood}}',
+      reactionFailed: 'Не удалось отправить. Нажми на стикер, чтобы повторить.',
     },
   },
 };
@@ -258,6 +288,9 @@ const ar = {
       friendPreview: 'صديق من عالمك',
       onlineNow: 'متصل الآن',
       openProfile: 'زيارة الملف الشخصي',
+      sendReactionBack: 'أرسل تفاعلاً بالمثل',
+      reactionSent: 'تم إرسال {{mood}}',
+      reactionFailed: 'تعذر الإرسال. اضغط على ملصق لإعادة المحاولة.',
     },
   },
 };
@@ -282,6 +315,9 @@ const it = {
       friendPreview: 'Un amico nel tuo mondo',
       onlineNow: 'Online ora',
       openProfile: 'Visita il profilo',
+      sendReactionBack: 'Rispondi con una reazione',
+      reactionSent: 'Hai inviato {{mood}}',
+      reactionFailed: 'Invio non riuscito. Tocca uno sticker per riprovare.',
     },
   },
 };

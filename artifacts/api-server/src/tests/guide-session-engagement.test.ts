@@ -34,6 +34,7 @@ const guideId = `test-engagement-guide-${suffix}`;
 const firstAttendeeId = `test-engagement-first-${suffix}`;
 const secondAttendeeId = `test-engagement-second-${suffix}`;
 const outsiderId = `test-engagement-outsider-${suffix}`;
+const joiningAttendeeId = `test-engagement-joining-${suffix}`;
 const mediaPath = `/api/images/guide-session-test-${suffix}.jpg`;
 let tutorialId: string | null = null;
 let followerTutorialId: string | null = null;
@@ -47,6 +48,7 @@ beforeAll(async () => {
     { userId: firstAttendeeId, name: "First Attendee", isPublic: true, isBanned: false, isHidden: false },
     { userId: secondAttendeeId, name: "Second Attendee", isPublic: true, isBanned: false, isHidden: false },
     { userId: outsiderId, name: "Session Outsider", isPublic: true, isBanned: false, isHidden: false },
+    { userId: joiningAttendeeId, name: "New Participant", isPublic: true, isBanned: false, isHidden: false },
   ]);
   const [room] = await db.insert(campfireRoomsTable).values({
     name: "Engagement verification",
@@ -155,11 +157,54 @@ afterAll(async () => {
     eq(blocksTable.blockedId, guideId),
   ));
   await db.delete(characterTable).where(inArray(characterTable.userId, [
-    guideId, firstAttendeeId, secondAttendeeId, outsiderId,
+    guideId, firstAttendeeId, secondAttendeeId, outsiderId, joiningAttendeeId,
   ]));
 });
 
 describe("guide session participation and tutorial privacy", () => {
+  it("updates the guide's session lists, details and roster after another account joins", async () => {
+    expect(sessionId).toBeTruthy();
+    setTestUserId(guideId);
+    const before = await request(app).get(`/api/guide-sessions/${sessionId}`);
+    const beforeList = await request(app).get("/api/guide-sessions").query({ guideId });
+    const beforeRoster = await request(app).get(`/api/guide-sessions/${sessionId}/participants`);
+    expect(before.status).toBe(200);
+    expect(beforeList.status).toBe(200);
+    expect(beforeRoster.status).toBe(200);
+
+    try {
+      setTestUserId(joiningAttendeeId);
+      const joined = await request(app).post(`/api/guide-sessions/${sessionId}/join`);
+      expect(joined.status).toBe(200);
+      expect(joined.body.isJoined).toBe(true);
+      expect(joined.body.attendeeCount).toBe(before.body.attendeeCount + 1);
+      const joinedAgain = await request(app).post(`/api/guide-sessions/${sessionId}/join`);
+      expect(joinedAgain.body.attendeeCount).toBe(joined.body.attendeeCount);
+      const privateRoster = await request(app).get(`/api/guide-sessions/${sessionId}/participants`);
+      expect(privateRoster.status).toBe(404);
+
+      setTestUserId(guideId);
+      const detail = await request(app).get(`/api/guide-sessions/${sessionId}`)
+        .set("If-None-Match", before.headers.etag);
+      const list = await request(app).get("/api/guide-sessions").query({ guideId })
+        .set("If-None-Match", beforeList.headers.etag);
+      const roster = await request(app).get(`/api/guide-sessions/${sessionId}/participants`)
+        .set("If-None-Match", beforeRoster.headers.etag);
+      expect(detail.status).toBe(200);
+      expect(list.status).toBe(200);
+      expect(roster.status).toBe(200);
+      expect(detail.body.attendeeCount).toBe(joined.body.attendeeCount);
+      expect(list.body.find((item: { id: string }) => item.id === sessionId)?.attendeeCount).toBe(joined.body.attendeeCount);
+      expect(roster.body.map((person: { userId: string }) => person.userId)).toContain(joiningAttendeeId);
+      expect(roster.body).toHaveLength(beforeRoster.body.length + 1);
+    } finally {
+      await db.delete(guideSessionAttendeesTable).where(and(
+        eq(guideSessionAttendeesTable.sessionId, sessionId!),
+        eq(guideSessionAttendeesTable.userId, joiningAttendeeId),
+      ));
+    }
+  });
+
   it("keeps attendee progress private while showing each account's own saved progress", async () => {
     expect(sessionId).toBeTruthy();
     setTestUserId(firstAttendeeId);

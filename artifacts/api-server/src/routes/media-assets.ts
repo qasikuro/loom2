@@ -11,6 +11,9 @@ import { getObjectAclPolicy } from "../lib/objectAcl";
 import { isPendingBadgeUploadOwner } from "../lib/badgeUploadRegistry";
 import {
   getMediaOwner,
+  canReadChatMedia,
+  canReadFriendsMedia,
+  canReadGuideTutorialMedia,
   isPubliclyReadableMedia,
   normalizeManagedMediaPath,
   signOwnerMediaUrl,
@@ -65,8 +68,8 @@ function errorStatus(error: unknown): number | undefined {
     : undefined;
 }
 
-async function authorizeMedia(req: Request, path: string): Promise<{ owner: string; public: boolean } | null> {
-  const actualOwner = await getMediaOwner(path, await storageOwner(path));
+async function authorizeMedia(req: Request, path: string, knownStorageOwner?: string | null): Promise<{ owner: string; public: boolean } | null> {
+  const actualOwner = await getMediaOwner(path, knownStorageOwner === undefined ? await storageOwner(path) : knownStorageOwner);
   if (!actualOwner) return null;
   const userId = currentUserId(req);
   const ticketUserId = validateOwnerMediaTicket(req.query.ticket, path);
@@ -81,6 +84,16 @@ async function authorizeMedia(req: Request, path: string): Promise<{ owner: stri
     return { owner: actualOwner, public: false };
   }
   if (await isPubliclyReadableMedia(path, actualOwner)) return { owner: actualOwner, public: true };
+  const reader = userId ?? ticketUserId;
+  if (reader && await canReadChatMedia(path, reader, actualOwner)) {
+    return { owner: actualOwner, public: false };
+  }
+  if (reader && await canReadGuideTutorialMedia(path, reader, actualOwner)) {
+    return { owner: actualOwner, public: false };
+  }
+  if (reader && await canReadFriendsMedia(path, reader, actualOwner)) {
+    return { owner: actualOwner, public: false };
+  }
   return null;
 }
 
@@ -114,19 +127,57 @@ function parseByteRange(header: string | undefined, size: number): { start: numb
 
 async function streamUploadedMedia(req: Request, res: Response, kind: "images" | "videos"): Promise<void> {
   applyPrivateHeaders(res);
+  const startedAt = performance.now();
+  let metadataMs = 0;
+  let accessMs = 0;
+  let preparedMs: number | null = null;
+  let storageFirstChunkMs: number | null = null;
+  let outcome = "preparing";
+  const diagnosticHeader = req.get("X-Storigam-Reel-Trace");
+  const diagnosticTraceId = diagnosticHeader && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(diagnosticHeader)
+    ? diagnosticHeader : undefined;
+  if (kind === "videos") {
+    let reported = false;
+    const report = () => {
+      if (reported) return;
+      reported = true;
+      // Separate preparation/first storage chunk from full stream duration.
+      // A long download is not evidence of a slow first frame.
+      req.log?.info({
+        diagnosticTraceId,
+        method: req.method,
+        range: typeof req.headers.range === "string" && /^bytes=\d*-\d*$/.test(req.headers.range)
+          ? req.headers.range : null,
+        contentRange: res.getHeader("Content-Range") ?? null,
+        statusCode: res.statusCode,
+        rangeRequested: typeof req.headers.range === "string",
+        completed: res.writableFinished,
+        outcome,
+        metadataMs: Math.round(metadataMs),
+        accessMs: Math.round(accessMs),
+        preparedMs: preparedMs === null ? null : Math.round(preparedMs),
+        storageFirstChunkMs: storageFirstChunkMs === null ? null : Math.round(storageFirstChunkMs),
+        totalMs: Math.round(performance.now() - startedAt),
+      }, "Video read timing");
+    };
+    res.once("finish", report);
+    res.once("close", report);
+  }
+  const markPrepared = () => {
+    preparedMs = performance.now() - startedAt;
+    if (kind === "videos") {
+      res.setHeader("Server-Timing",
+        `media_metadata;dur=${metadataMs.toFixed(1)}, media_access;dur=${accessMs.toFixed(1)}, media_prepare;dur=${preparedMs.toFixed(1)}`);
+    }
+  };
   const filename = String(req.params.filename ?? "");
   if (!/^[\w.-]+$/.test(filename)) {
+    outcome = "invalid_filename";
     res.status(400).end();
     return;
   }
   const path = `/api/${kind}/${filename}`;
   try {
-    const authorization = await authorizeMedia(req, path);
-    if (!authorization) {
-      res.status(404).end();
-      return;
-    }
-
     let file: File | null = null;
     let metadata: Record<string, unknown> | null = null;
     if (BUCKET_ID) {
@@ -137,6 +188,21 @@ async function streamUploadedMedia(req: Request, res: Response, kind: "images" |
       } catch (error) {
         if ((error as { code?: number | string })?.code !== 404 && (error as { code?: number | string })?.code !== "404") throw error;
       }
+    }
+    metadataMs = performance.now() - startedAt;
+
+    // Share this request's storage metadata with authorization. Each player
+    // makes multiple range requests; fetching it twice delays every one.
+    const custom = metadata?.metadata as Record<string, string> | undefined;
+    const storageUser = custom?.ownerUserId ?? metadata?.ownerUserId;
+    const accessStartedAt = performance.now();
+    const authorization = await authorizeMedia(req, path, typeof storageUser === "string" ? storageUser : null);
+    accessMs = performance.now() - accessStartedAt;
+    if (!authorization) {
+      outcome = "not_authorized";
+      markPrepared();
+      res.status(404).end();
+      return;
     }
 
     let localPath: string | null = null;
@@ -158,6 +224,8 @@ async function streamUploadedMedia(req: Request, res: Response, kind: "images" |
         } catch { /* local legacy file does not exist */ }
       }
       if (!localPath) {
+        outcome = "not_found";
+        markPrepared();
         res.status(404).end();
         return;
       }
@@ -168,6 +236,8 @@ async function streamUploadedMedia(req: Request, res: Response, kind: "images" |
     if (localLastModified) res.setHeader("Last-Modified", localLastModified.toUTCString());
     const ifNoneMatch = req.headers["if-none-match"]?.split(",").map(value => value.trim()) ?? [];
     if (etag && (ifNoneMatch.includes("*") || ifNoneMatch.includes(etag))) {
+      outcome = "not_modified";
+      markPrepared();
       res.status(304).end();
       return;
     }
@@ -184,6 +254,8 @@ async function streamUploadedMedia(req: Request, res: Response, kind: "images" |
         ifRangeDate >= Math.floor(localLastModified.getTime() / 1000) * 1000);
     const range = ifRangeMatches ? parseByteRange(req.headers.range, size) : null;
     if (range === false) {
+      outcome = "invalid_range";
+      markPrepared();
       res.setHeader("Content-Range", `bytes */${size}`);
       res.status(416).end();
       return;
@@ -195,6 +267,8 @@ async function streamUploadedMedia(req: Request, res: Response, kind: "images" |
       res.setHeader("Content-Length", String(range.end - range.start + 1));
     }
     if (req.method === "HEAD") {
+      outcome = "headers_only";
+      markPrepared();
       res.end();
       return;
     }
@@ -202,13 +276,25 @@ async function streamUploadedMedia(req: Request, res: Response, kind: "images" |
     const stream = localPath
       ? createReadStream(localPath, options)
       : file!.createReadStream(options);
+    outcome = "streaming";
+    markPrepared();
+    if (kind === "videos") {
+      stream.once("data", () => { storageFirstChunkMs = performance.now() - startedAt; });
+    }
+    // Stop the upstream transfer when a player swipes away or cancels loading.
+    // Otherwise abandoned videos keep competing with the visible reel.
+    const cancelTransfer = () => { stream.destroy(); };
+    res.once("close", cancelTransfer);
+    stream.once("close", () => { res.off("close", cancelTransfer); });
     stream.on("error", error => {
+      outcome = "stream_error";
       req.log.error({ err: error, path }, "Uploaded media stream failed");
       if (!res.headersSent) res.status(404).end();
       else res.destroy(error);
     });
     stream.pipe(res);
   } catch (error) {
+    outcome = "request_error";
     req.log.error({ err: error, path }, "Uploaded media request failed");
     if (!res.headersSent) res.status(404).end();
     else res.destroy(error as Error);
@@ -255,6 +341,12 @@ router.post("/media/read-urls", requireAuth, async (req, res) => {
           // Missing signing configuration is a deny for this path; never log
           // secret/configuration exceptions or return an unsigned private URL.
         }
+      } else if (await canReadGuideTutorialMedia(path, userId, owner)) {
+        urls[path] = signOwnerMediaUrl(path, userId);
+      } else if (await canReadChatMedia(path, userId, owner)) {
+        urls[path] = signOwnerMediaUrl(path, userId);
+      } else if (await canReadFriendsMedia(path, userId, owner)) {
+        urls[path] = signOwnerMediaUrl(path, userId);
       } else if (await isPubliclyReadableMedia(path, owner)) {
         urls[path] = path;
       }

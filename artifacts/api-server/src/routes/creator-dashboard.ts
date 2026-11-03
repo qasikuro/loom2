@@ -2,6 +2,7 @@ import { Router } from "express";
 import { and, count, eq, gt, sql, sum } from "drizzle-orm";
 import { db, booksTable, chaptersTable, bookFollowsTable, bookCommentsTable } from "@workspace/db";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { withOwnerMediaUrls } from "../lib/mediaAccess";
 
 const router = Router();
 
@@ -137,14 +138,14 @@ router.get("/creator/dashboard", requireAuth, async (req, res) => {
         newFollowers: Number(newFollowersRow[0]?.total ?? 0),
         newComments:  Number(newCommentsRow[0]?.total  ?? 0),
       },
-      topBooks: topBooksRows.map(b => ({
+      topBooks: withOwnerMediaUrls(topBooksRows.map(b => ({
         id:           b.id,
         title:        b.title,
         coverImageUri:b.coverImageUri ?? null,
         updatedAt:    b.updatedAt,
         chapterCount: Number(b.chapterCount),
         totalReads:   Number(b.totalReads),
-      })),
+      })), userId),
       engagementTrend: trend,
     });
   } catch (err) {

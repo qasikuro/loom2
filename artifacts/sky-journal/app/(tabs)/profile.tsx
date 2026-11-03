@@ -276,7 +276,8 @@ export default function CharacterScreen() {
               />
               <ProfileStyleSection
                 userId={userId}
-                outfits={outfits} stories={stories} openOutfit={openOutfit} deleteStory={deleteStory}
+                outfits={outfits} stories={stories} openOutfit={openOutfit}
+                deleteOutfit={deleteOutfit} deleteStory={deleteStory} deleteGalleryPhoto={deleteGalleryPhoto}
                 gallery={gallery} openPhoto={openPhoto} handleAddGalleryPhoto={handleAddGalleryPhoto}
                 galleryUploading={galleryUploading} galleryError={galleryError}
                 activeOutfitId={activeOutfitId}

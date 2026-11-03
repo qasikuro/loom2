@@ -3,8 +3,11 @@ import { Icon } from '@/components/Icon';
 import { VibeMotion, VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 import { ReportSheet } from '@/components/ReportSheet';
+import { Button as DesignSystemButton } from '@workspace/storigam-kindness/components/native/button';
+import type { NativeThemeMode } from '@workspace/storigam-kindness/lib/native-theme';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -95,12 +98,14 @@ function visibleTags(tags: string[]): string[] {
 }
 
 export default function UserOutfitScreen() {
+  const { isDark } = useTheme();
+  const mode: NativeThemeMode = isDark ? 'dark' : 'light';
   const colors    = useColors();
   const { t, i18n } = useTranslation();
   const insets    = useSafeAreaInsets();
   const { width: windowWidth, height: screenHeight } = useWindowDimensions();
   const { followingIds, followUser, unfollowUser } = useApp();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
   const params = useLocalSearchParams<{
     outfitName:     string;
@@ -481,8 +486,12 @@ export default function UserOutfitScreen() {
                     if (Platform.OS === 'web') {
                       const audio = webAudioRef.current;
                       if (audio) {
+                        const generation = audioGeneration.current;
                         audio.muted = false;
-                        audio.play().then(() => setMusicPlaying(true)).catch(() => setMusicPlaying(false));
+                        const isCurrent = () => generation === audioGeneration.current && webAudioRef.current === audio;
+                        audio.play()
+                          .then(() => { if (isCurrent()) setMusicPlaying(true); })
+                          .catch(() => { if (isCurrent()) setMusicPlaying(false); });
                         setMusicMuted(false);
                       }
                     } else {
@@ -790,6 +799,28 @@ export default function UserOutfitScreen() {
             </View>
           </View>
 
+          {outfit?.id ? (
+            <DesignSystemButton
+              label="Leave a little kindness"
+              variant="secondary"
+              size="medium"
+              mode={mode}
+              style={{ marginHorizontal: 16, marginBottom: 12, alignSelf: 'stretch' }}
+              onPress={() => {
+                void Haptics.selectionAsync();
+                router.push({
+                  pathname: '/content-comments',
+                  params: {
+                    contentType: 'outfit',
+                    contentId: outfit.id,
+                    title: outfit.name,
+                  },
+                } as never);
+              }}
+              accessibilityLabel="Leave a kind comment on this outfit"
+            />
+          ) : null}
+
           {/* Notes */}
           {!!outfit?.description && (
             <View style={[styles.contentCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
@@ -995,7 +1026,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   charAvatarImageClip: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     top: 2, right: 2, bottom: 2, left: 2,
     borderRadius: 28, overflow: 'hidden',
   },
@@ -1018,7 +1049,6 @@ const styles = StyleSheet.create({
   traitText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
   charDivider: { height: StyleSheet.hairlineWidth, marginBottom: 12 },
   charActions:  { flexDirection: 'row', alignItems: 'stretch', gap: 9 },
-
   followBtn: {
     flex: 1, minWidth: 0, minHeight: 52, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 6,

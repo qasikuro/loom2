@@ -132,7 +132,7 @@ export function CompletionMoment({ visible, variant, onFinish }: Props) {
 }
 
 const styles = StyleSheet.create({
-  overlay:     { ...StyleSheet.absoluteFillObject, zIndex: 999, justifyContent: 'center', alignItems: 'center' },
+  overlay:     { ...StyleSheet.absoluteFill, zIndex: 999, justifyContent: 'center', alignItems: 'center' },
   sparkle:     { position: 'absolute', color: 'rgba(200,184,232,0.9)', fontFamily: Platform.OS === 'ios' ? 'System' : undefined },
   card:        { alignItems: 'center', paddingHorizontal: 32, paddingTop: 16 },
   iconGlyph:   { fontSize: 36, color: 'rgba(200,184,232,0.85)', marginBottom: 18, letterSpacing: 2 },

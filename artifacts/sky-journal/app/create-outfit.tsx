@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   tipRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tipText: { color: '#D2C8E6', fontSize: 11, fontFamily: 'Satoshi-Medium', flexShrink: 1 },
   outfitImage: { width: '100%', height: '100%' },
-  changeOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 10 },
+  changeOverlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 10 },
   changeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: '#24173F' },
   changeChipText: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: '#fff' },
   imagePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5, padding: 8 },

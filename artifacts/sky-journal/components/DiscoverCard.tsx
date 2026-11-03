@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { useSecureMediaUri } from '@/hooks/useSecureMediaUri';
-import { Video, ResizeMode } from 'expo-av';
+import { ResizeMode, VideoSurface as Video } from '@/components/VideoSurface';
 import { Animated, Easing, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports

@@ -23,14 +23,28 @@ interface PendingEntry {
   /** Raw GCS path, e.g. "images/1234_abc.jpeg" */
   storagePath: string;
   uploadedAt:  number;
+  ownerUserId: string;
 }
 
 // Keyed by the /api/images/... path returned to the client.
 const pending = new Map<string, PendingEntry>();
 
 /** Called by the upload route immediately after a successful file save. */
-export function registerPendingUpload(apiPath: string, storagePath: string): void {
-  pending.set(apiPath, { storagePath, uploadedAt: Date.now() });
+export function registerPendingUpload(apiPath: string, storagePath: string, ownerUserId: string): void {
+  pending.set(apiPath, { storagePath, uploadedAt: Date.now(), ownerUserId });
+}
+
+/** Immediately remove an unused upload only while it is still pending and owned by the requester. */
+export async function discardPendingUpload(
+  apiPath: string,
+  ownerUserId: string,
+  deleteFile: (storagePath: string) => Promise<void>,
+): Promise<boolean> {
+  const entry = pending.get(apiPath);
+  if (!entry || entry.ownerUserId !== ownerUserId) return false;
+  await deleteFile(entry.storagePath);
+  if (pending.get(apiPath) === entry) pending.delete(apiPath);
+  return true;
 }
 
 /**

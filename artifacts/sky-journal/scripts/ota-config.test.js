@@ -16,6 +16,34 @@ test('Home notification tap handler is declared and its routing helper ships', (
   assert.match(routing, /export function resolveNotificationRoute/);
 });
 
+test('Create sheet destinations exist in the OTA release source', () => {
+  const appRoot = path.resolve(__dirname, '../app');
+  const create = fs.readFileSync(path.join(appRoot, '(tabs)/create.tsx'), 'utf8');
+  const destinations = [
+    { label: 'story editor', route: '/chapter-editor', source: "selectMode('/chapter-editor')", file: 'chapter-editor.tsx' },
+    { label: 'video creator', route: '/post-video', source: "route: '/post-video'", file: 'post-video.tsx' },
+    { label: 'journal', route: '/(tabs)/log', source: "route: '/(tabs)/log'", file: '(tabs)/log.tsx' },
+    { label: 'books', route: '/my-books', source: "route: '/my-books'", file: 'my-books.tsx' },
+    { label: 'creator dashboard', route: '/creator-dashboard', source: "route: '/creator-dashboard'", file: 'creator-dashboard.tsx' },
+    { label: 'quick moment editor', route: '/quick-moment', source: "route: '/quick-moment'", file: 'quick-moment.tsx' },
+  ];
+
+  for (const destination of destinations) {
+    assert.ok(create.includes(destination.source), `Create sheet must route to ${destination.label}`);
+    assert.ok(fs.existsSync(path.join(appRoot, destination.file)), `OTA release must include ${destination.file}`);
+    assert.ok(destination.route.startsWith('/'), `${destination.label} route must be absolute`);
+  }
+});
+
+test('draft resume helper is included and connected to the Create sheet', () => {
+  const create = fs.readFileSync(path.resolve(__dirname, '../app/(tabs)/create.tsx'), 'utf8');
+  const drafts = fs.readFileSync(path.resolve(__dirname, '../utils/entryDraftStore.ts'), 'utf8');
+  assert.match(create, /getDraftResumeDestination\(\s*draft,/);
+  assert.match(create, /getCreateDestination\(/);
+  assert.match(drafts, /export function getDraftResumeDestination\(/);
+  assert.match(drafts, /export function getCreateDestination\(/);
+});
+
 test('startup error releases the loading layer above the recovery button', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../app/_layout.tsx'), 'utf8');
   assert.match(source, /<ErrorBoundary onError=\{handleStartupError\}>/);
@@ -25,6 +53,19 @@ test('startup error releases the loading layer above the recovery button', () =>
   assert.match(handler[1], /setSplashDone\(true\)/);
   const loader = fs.readFileSync(path.resolve(__dirname, '../components/SkyLoading.tsx'), 'utf8');
   assert.match(loader, /pointerEvents=\{transparent \? 'none' : 'auto'\}/);
+});
+
+test('notification details reveal real reactors and the tapped friend profile', () => {
+  const root = path.resolve(__dirname, '..');
+  const screen = fs.readFileSync(path.join(root, 'components/home/NotificationsExperience.tsx'), 'utf8');
+  const home = fs.readFileSync(path.join(root, 'app/(tabs)/index.tsx'), 'utf8');
+  const translations = fs.readFileSync(path.join(root, 'i18n/notificationCenterTranslations.ts'), 'utf8');
+  assert.match(translations, /storyLoved: 'Your story found some love'/);
+  assert.match(screen, /relatedReactors/);
+  assert.match(screen, /setPreviewFriend\(friend\)/);
+  assert.match(screen, /onOpenFriend\(previewFriend\.userId\)/);
+  assert.match(home, /pathname: '\/user\/\[userId\]'/);
+  assert.match(screen, /duration: 360/);
 });
 
 test('guide screens ship with every API client export they import', () => {

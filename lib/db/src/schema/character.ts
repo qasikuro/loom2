@@ -24,6 +24,8 @@ export const characterTable = pgTable("character", {
   links:          jsonb("links").$type<ProfileLink[]>().default([]),
   isAdmin:           boolean("is_admin").notNull().default(false),
   isBanned:          boolean("is_banned").notNull().default(false),
+  isHidden:          boolean("is_hidden").notNull().default(false),
+  suspendedUntil:    timestamp("suspended_until", { withTimezone: true }),
   isFounder:         boolean("is_founder").notNull().default(false),
   isBetaTester:      boolean("is_beta_tester").notNull().default(false),
   galleryLimit:      integer("gallery_limit").notNull().default(200),

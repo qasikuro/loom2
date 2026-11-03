@@ -312,7 +312,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
     async function load() {
       try {
-        const { Audio } = await import('expo-av');
+        const { Audio } = await import('@/utils/audioCompat');
         await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -325,7 +325,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
           } catch { /* skip silently */ }
         }
 
-      } catch { /* expo-av unavailable */ }
+      } catch { /* optional audio unavailable on this runtime */ }
     }
 
     load();
@@ -333,9 +333,8 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
       providerDisposedRef.current = true;
-      // Unload every registered sound (covers SoundContext + VibeStickerPicker
-      // module-level cache) so AVManager.onHostDestroy finds nothing to release
-      // on the ThreadPoolExecutor thread — preventing the ExoPlayer wrong-thread crash.
+      // Release every registered Expo Audio player (covers SoundContext +
+      // VibeStickerPicker's module-level cache) before the screen tree is torn down.
       unloadAllNativeSounds();
     };
   }, []);
@@ -382,7 +381,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         let pending = stickerSoundLoadsRef.current[stickerId];
         if (!pending) {
           pending = (async () => {
-            const { Audio } = await import('expo-av');
+            const { Audio } = await import('@/utils/audioCompat');
             const created = await Audio.Sound.createAsync(asset, {
               volume: STICKER_NATIVE_VOLUME[stickerId] ?? 0.45,
             });

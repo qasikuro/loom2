@@ -183,15 +183,15 @@ export function useAudiusPreview(options?: { retainOnPause?: boolean }) {
     }
 
     try {
-      const { Audio } = await import('expo-av');
+      const { Audio } = await import('@/utils/audioCompat');
       if (!isCurrent()) return;
       const result = await Audio.Sound.createAsync(
         { uri: track.streamUrl },
         { shouldPlay: false, volume: 0.45 },
       );
       const sound = result.sound as unknown as PlayerSound;
-      // Register before checking cancellation so every created native sound
-      // remains visible to coordinated ExoPlayer cleanup.
+      // Register before checking cancellation so every created player can be
+      // released by the shared audio cleanup path.
       registerNativeSound(sound);
       if (!isCurrent()) {
         unregisterNativeSound(sound);

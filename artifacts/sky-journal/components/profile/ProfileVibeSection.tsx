@@ -140,7 +140,7 @@ export function ProfileVibeSection({ character, setCharacter, onOpenMoodPicker }
 }
 
 const s = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 12, gap: 10, marginBottom: 10 },
+  card: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 13, paddingVertical: 11, gap: 9, marginBottom: 10 },
   head: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: 8, rowGap: 8, minHeight: 34 },
   heading: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1, minWidth: 96 },
   label: { flexShrink: 1, fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },

@@ -136,7 +136,8 @@ describe("record ownership and managed media", () => {
         title: "Audius track",
         artist: "Audius artist",
         artworkUrl: null,
-        duration: 42,
+        // Full songs longer than 75 seconds must still persist through public profiles.
+        duration: 180,
         genre: null,
         mood: null,
         streamUrl,
@@ -189,8 +190,8 @@ describe("record ownership and managed media", () => {
 
       const [storedOutfit] = await db.select().from(outfitsTable).where(eq(outfitsTable.id, outfitId));
       const [storedStory] = await db.select().from(storiesTable).where(eq(storiesTable.id, storyId));
-      expect(storedOutfit.music).toMatchObject({ streamUrl: audiusUpdateStream });
-      expect(storedStory.music).toMatchObject({ streamUrl: audiusUpdateStream });
+      expect(storedOutfit.music).toMatchObject({ streamUrl: audiusUpdateStream, duration: 180 });
+      expect(storedStory.music).toMatchObject({ streamUrl: audiusUpdateStream, duration: 180 });
     } finally {
       if (storyId) await db.delete(storiesTable).where(eq(storiesTable.id, storyId));
       if (outfitId) await db.delete(outfitsTable).where(eq(outfitsTable.id, outfitId));

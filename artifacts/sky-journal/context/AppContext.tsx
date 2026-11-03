@@ -25,7 +25,11 @@ import {
   ApiFriendsSchema,
   ApiFollowingSchema,
 } from '@workspace/api-zod';
-import { setAuthTokenGetter as setApiClientAuthTokenGetter } from '@workspace/api-client-react';
+import {
+  replyToStoryReaction,
+  setAuthTokenGetter as setApiClientAuthTokenGetter,
+  type ReplyToStoryReactionBodyStickerType,
+} from '@workspace/api-client-react';
 import { getApiBase } from '@/utils/apiBase';
 import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
@@ -276,8 +280,8 @@ export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme' 
   'frame_moonlight':    'frame',
   'frame_fire':         'frame',
   'frame_celestial_wings': 'frame',
-  'frame_ember_fox_ears': 'frame',
-  'frame_moonhare_ears': 'frame',
+  'frame_ember_fox_ears':  'frame',
+  'frame_moonhare_ears':   'frame',
   'frame_frost_lynx_ears': 'frame',
   'accent_aura':        'accent',
   'theme_locket':       'theme',
@@ -338,7 +342,7 @@ export interface ServerNotification {
   id:        string;
   actorId:   string;
   actorName: string;
-  type:      'new_story' | 'new_chapter' | 'new_outfit' | 'witness' | 'save' | 'follow' | 'friend_request' | 'friend_accepted' | 'message' | 'resonate' | 'badge_granted' | 'badge_removed' | 'guide_session_rescheduled' | 'guide_session_cancelled';
+  type:      'new_story' | 'new_chapter' | 'new_outfit' | 'witness' | 'save' | 'follow' | 'friend_request' | 'friend_accepted' | 'message' | 'resonate' | 'badge_granted' | 'badge_removed' | 'guide_session_rescheduled' | 'guide_session_cancelled' | 'content_comment' | 'content_reply';
   refId:     string;
   title:     string;
   isRead:    boolean;
@@ -466,8 +470,10 @@ interface AppContextValue {
   reloadConstellation: () => Promise<void>;
 
   serverNotifications:         ServerNotification[];
+  refreshServerNotifications:  () => Promise<void>;
   markServerNotificationsRead: () => void;
   deleteServerNotification:    (id: string) => void;
+  sendNotificationReaction:    (notificationId: string, storyId: string, stickerType: ReplyToStoryReactionBodyStickerType) => Promise<void>;
 
   campfireUnread:       number;
   unreadCampfireRooms:  { id: string; name: string; mood: string; lastAt: string }[];
@@ -616,6 +622,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [blockedIds, setBlockedIds]                   = useState<string[]>([]);
   const [friends, setFriends]                         = useState<FriendSummary[]>([]);
   const [serverNotifications, setServerNotifications] = useState<ServerNotification[]>([]);
+  const serverNotificationsRef = useRef<ServerNotification[]>([]);
+  useEffect(() => {
+    serverNotificationsRef.current = serverNotifications;
+  }, [serverNotifications]);
   const [myGuides, setMyGuides]                       = useState<GuideProfile[]>([]);
 
   const [campfireUnread, setCampfireUnread]           = useState(0);
@@ -838,6 +848,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDmBadgeSeenAt(null);
     setActiveOutfitIdState(null);
     setServerNotifications([]);
+    serverNotificationsRef.current = [];
     setSavedStoryIds(new Set());
     setRewardBalance(null);
     setRewards([]);
@@ -1668,7 +1679,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Re-fetch from the API every time the app comes to the foreground so that
   // admin amendments (removed stories, account changes) are reflected without
   // requiring a full sign-out / sign-in cycle.
-  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const appStateRef = useRef<AppStateStatus | null>((AppState.currentState ?? null) as AppStateStatus | null);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       if (appStateRef.current !== 'active' && nextState === 'active') {
@@ -2478,23 +2489,89 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const showRewardToast = fireToast;
 
-  const markServerNotificationsRead = useCallback(() => {
-    setServerNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    apiFetch('/notifications/read-all', { method: 'PUT' }).catch(() => {
-      showToastGlobal("Couldn't mark notifications read", 'warning', () => {
-        apiFetch('/notifications/read-all', { method: 'PUT' }).catch(() => null);
-      });
-    });
+  const refreshServerNotifications = useCallback(async () => {
+    const ownerId = cacheUserIdRef.current;
+    if (!ownerId) return;
+    const raw = await apiFetch<unknown>('/notifications');
+    const parsed = ApiNotificationsSchema.safeParse(raw);
+    if (!parsed.success || cacheUserIdRef.current !== ownerId) return;
+    const notifications = parsed.data.map((row): ServerNotification => ({
+      id: row.id,
+      actorId: row.actorId,
+      actorName: row.actorName,
+      type: row.type as ServerNotification['type'],
+      refId: row.refId ?? "",
+      title: row.title ?? "",
+      isRead: row.isRead,
+      createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+    }));
+    serverNotificationsRef.current = notifications;
+    setServerNotifications(notifications);
+    await setCacheItem('notifications_v1', JSON.stringify(notifications), ownerId);
   }, []);
 
-  const deleteServerNotification = useCallback((id: string) => {
-    setServerNotifications(prev => prev.filter(n => n.id !== id));
-    apiFetch(`/notifications/${id}`, { method: 'DELETE' }).catch(() => {
-      showToastGlobal("Couldn't remove notification", 'warning', () => {
-        apiFetch(`/notifications/${id}`, { method: 'DELETE' }).catch(() => null);
+  const sendNotificationReaction = useCallback(async (
+    notificationId: string,
+    storyId: string,
+    stickerType: ReplyToStoryReactionBodyStickerType,
+  ) => {
+    const result = await replyToStoryReaction(storyId, { notificationId, stickerType });
+    if (!result.ok || result.stickerType !== stickerType) {
+      throw new Error('Reaction was not confirmed by the server');
+    }
+  }, []);
+
+  const markServerNotificationsRead = useCallback(() => {
+    const current = serverNotificationsRef.current;
+    const unreadIds = new Set(current.filter(notification => !notification.isRead).map(notification => notification.id));
+    if (!unreadIds.size) return;
+    const optimistic = current.map(notification => ({ ...notification, isRead: true }));
+    serverNotificationsRef.current = optimistic;
+    setServerNotifications(optimistic);
+    const ownerId = cacheUserIdRef.current;
+    if (ownerId) void setCacheItem('notifications_v1', JSON.stringify(optimistic), ownerId);
+
+    void apiFetch('/notifications/read-all', { method: 'PUT' }).catch(() => {
+      const latest = serverNotificationsRef.current;
+      const restored = latest.map(notification => unreadIds.has(notification.id)
+        ? { ...notification, isRead: false }
+        : notification);
+      serverNotificationsRef.current = restored;
+      setServerNotifications(restored);
+      if (ownerId) void setCacheItem('notifications_v1', JSON.stringify(restored), ownerId);
+      showToastGlobal("Couldn't mark notifications read", 'warning', () => {
+        void apiFetch('/notifications/read-all', { method: 'PUT' })
+          .then(() => refreshServerNotifications())
+          .catch(() => null);
       });
     });
-  }, []);
+  }, [refreshServerNotifications]);
+
+  const deleteServerNotification = useCallback((id: string) => {
+    const current = serverNotificationsRef.current;
+    const removed = current.find(notification => notification.id === id);
+    if (!removed) return;
+    const optimistic = current.filter(notification => notification.id !== id);
+    serverNotificationsRef.current = optimistic;
+    setServerNotifications(optimistic);
+    const ownerId = cacheUserIdRef.current;
+    if (ownerId) void setCacheItem('notifications_v1', JSON.stringify(optimistic), ownerId);
+
+    void apiFetch(`/notifications/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {
+      const latest = serverNotificationsRef.current;
+      const restored = latest.some(notification => notification.id === id)
+        ? latest
+        : [...latest, removed].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      serverNotificationsRef.current = restored;
+      setServerNotifications(restored);
+      if (ownerId) void setCacheItem('notifications_v1', JSON.stringify(restored), ownerId);
+      showToastGlobal("Couldn't remove notification", 'warning', () => {
+        void apiFetch(`/notifications/${encodeURIComponent(id)}`, { method: 'DELETE' })
+          .then(() => refreshServerNotifications())
+          .catch(() => null);
+      });
+    });
+  }, [refreshServerNotifications]);
 
   const reloadData = useCallback(async () => {
     await loadData();
@@ -2527,7 +2604,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     rewards, dismissReward, showRewardToast,
     rewardBalance, constellation, reloadRewards, reloadConstellation,
     shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
-    serverNotifications, markServerNotificationsRead, deleteServerNotification,
+    serverNotifications, refreshServerNotifications, markServerNotificationsRead, deleteServerNotification, sendNotificationReaction,
     campfireUnread, unreadCampfireRooms, markCampfireRoomRead, campfireBadgeSeenAt,
     dmUnread: unreadDmThreads.filter(thread => !blockedIds.includes(thread.partnerId)).length,
     dmThreads, dmThreadsLoading, dmThreadsError, refreshDmThreads: pollDmUnread,
@@ -2551,7 +2628,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     rewards, dismissReward, showRewardToast,
     rewardBalance, constellation, reloadRewards, reloadConstellation,
     shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
-    serverNotifications, markServerNotificationsRead, deleteServerNotification,
+    serverNotifications, refreshServerNotifications, markServerNotificationsRead, deleteServerNotification, sendNotificationReaction,
     campfireUnread, unreadCampfireRooms, markCampfireRoomRead, campfireBadgeSeenAt,
     dmUnread, dmThreads, dmThreadsLoading, dmThreadsError, pollDmUnread,
     unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,

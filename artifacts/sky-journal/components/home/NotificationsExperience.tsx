@@ -16,11 +16,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { FriendAvatar } from '@/components/FriendAvatar';
 import { Icon, type IconName } from '@/components/Icon';
+import { STICKERS, type StickerType } from '@/components/vibeStickers';
 import type {
   FriendSummary,
   Reward,
   ServerNotification,
 } from '@/context/AppContext';
+import type { ReplyToStoryReactionBodyStickerType } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 
 type UnreadMessageThread = {
@@ -55,6 +57,7 @@ interface NotificationsExperienceProps {
   onClose: () => void;
   onVisible: () => void;
   onOpenNotification: (notification: ServerNotification) => void;
+  onSendReaction: (notificationId: string, storyId: string, stickerType: ReplyToStoryReactionBodyStickerType) => Promise<void>;
   onOpenFriend: (userId: string) => void;
   onOpenMessage: (thread: UnreadMessageThread) => void;
   onOpenCampfire: (room: UnreadCampfireRoom) => void;
@@ -84,6 +87,9 @@ function notificationIcon(type: ServerNotification['type']): IconName {
     case 'friend_accepted':
       return 'user-check';
     case 'message':
+      return 'message-circle';
+    case 'content_comment':
+    case 'content_reply':
       return 'message-circle';
     case 'new_outfit':
       return 'image';
@@ -232,6 +238,7 @@ export function NotificationsExperience({
   onClose,
   onVisible,
   onOpenNotification,
+  onSendReaction,
   onOpenFriend,
   onOpenMessage,
   onOpenCampfire,
@@ -245,6 +252,12 @@ export function NotificationsExperience({
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
   const [activeNotification, setActiveNotification] = useState<ServerNotification | null>(null);
   const [previewFriend, setPreviewFriend] = useState<FriendSummary | null>(null);
+  const [previewNotification, setPreviewNotification] = useState<ServerNotification | null>(null);
+  const [reactionStatusByNotification, setReactionStatusByNotification] = useState<Record<string, {
+    pending?: StickerType;
+    sent?: StickerType;
+    failed?: boolean;
+  }>>({});
   const [showReactors, setShowReactors] = useState(false);
   const detailProgress = useRef(new Animated.Value(0)).current;
 
@@ -326,7 +339,89 @@ export function NotificationsExperience({
   const returnToInbox = () => {
     setShowReactors(false);
     setPreviewFriend(null);
+    setPreviewNotification(null);
     setActiveNotification(null);
+  };
+
+  const sendReaction = async (notification: ServerNotification, stickerType: StickerType) => {
+    setReactionStatusByNotification(current => ({
+      ...current,
+      [notification.id]: { pending: stickerType },
+    }));
+    try {
+      await onSendReaction(notification.id, notification.refId, stickerType);
+      setReactionStatusByNotification(current => ({
+        ...current,
+        [notification.id]: { sent: stickerType },
+      }));
+    } catch {
+      setReactionStatusByNotification(current => ({
+        ...current,
+        [notification.id]: { failed: true },
+      }));
+    }
+  };
+
+  const renderReactionReply = (notification: ServerNotification | null) => {
+    if (!notification || !['witness', 'resonate'].includes(notification.type)) return null;
+    const status = reactionStatusByNotification[notification.id];
+    return (
+      <View style={[styles.reactionReply, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.reactionReplyTitle, { color: colors.foreground }]}>
+          {t('feature.notificationCenter.sendReactionBack')}
+        </Text>
+        {status?.sent ? (
+          <Text style={[styles.reactionReplyStatus, { color: accent }]}>
+            {STICKERS.find(sticker => sticker.type === status.sent)?.emoji}{' '}
+            {t('feature.notificationCenter.reactionSent', {
+              mood: t(`components.moods.${status.sent.toLowerCase()}`),
+            })}
+          </Text>
+        ) : (
+          <>
+            {status?.failed ? (
+              <Text style={[styles.reactionReplyStatus, { color: colors.mutedForeground }]}>
+                {t('feature.notificationCenter.reactionFailed')}
+              </Text>
+            ) : null}
+            <View style={styles.reactionOptions}>
+              {STICKERS.map(sticker => {
+                const pending = status?.pending === sticker.type;
+                const busy = !!status?.pending;
+                return (
+                  <Pressable
+                    key={sticker.type}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t('feature.notificationCenter.sendReactionBack')}: ${t(`components.moods.${sticker.type.toLowerCase()}`)}`}
+                    accessibilityState={{ disabled: busy }}
+                    disabled={busy}
+                    testID={`notification-reply-reaction-${notification.id}-${sticker.type.toLowerCase()}`}
+                    onPress={() => { void sendReaction(notification, sticker.type); }}
+                    style={({ pressed }) => [
+                      styles.reactionOption,
+                      {
+                        backgroundColor: pending ? `${accent}24` : colors.background,
+                        borderColor: pending ? accent : colors.border,
+                      },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    {pending ? (
+                      <Text style={[styles.reactionOptionEmoji, { color: accent }]}>…</Text>
+                    ) : (
+                      <Text style={styles.reactionOptionEmoji}>{sticker.emoji}</Text>
+                    )}
+                    <Text style={[styles.reactionOptionLabel, { color: colors.mutedForeground }]} numberOfLines={1}>
+                      {t(`components.moods.${sticker.type.toLowerCase()}`)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        )}
+      </View>
+    );
   };
 
   return (
@@ -358,6 +453,7 @@ export function NotificationsExperience({
                 onPress={() => {
                   if (previewFriend) {
                     setPreviewFriend(null);
+                    setPreviewNotification(null);
                     return;
                   }
                   returnToInbox();
@@ -477,6 +573,7 @@ export function NotificationsExperience({
                       <Text style={styles.storyActionText}>{t('feature.notificationCenter.openProfile')}</Text>
                       <Icon name="chevron-right" size={18} color="#fff" />
                     </Pressable>
+                    {renderReactionReply(previewNotification)}
                   </View>
                 ) : (
                 <>
@@ -581,6 +678,7 @@ export function NotificationsExperience({
                             key={notification.id}
                             accessibilityRole="button"
                             onPress={() => {
+                              setPreviewNotification(notification);
                               if (friend) setPreviewFriend(friend);
                               else onOpenFriend(notification.actorId);
                             }}
@@ -610,6 +708,7 @@ export function NotificationsExperience({
                       })}
                     </View>
                   ) : null}
+                  {renderReactionReply(activeNotification)}
                 </View>
 
                 <Pressable
@@ -777,6 +876,8 @@ export function NotificationsExperience({
                           dismissLabel={t('feature.notificationCenter.dismiss')}
                           onPress={() => {
                             setShowReactors(false);
+                            setPreviewFriend(null);
+                            setPreviewNotification(null);
                             setActiveNotification(notification);
                           }}
                           onDismiss={() => onDeleteNotification(notification.id)}
@@ -914,7 +1015,7 @@ const styles = StyleSheet.create({
     paddingBottom: 22,
     gap: 12,
   },
-  friendPreviewGlow: { ...StyleSheet.absoluteFillObject, height: 230 },
+  friendPreviewGlow: { ...StyleSheet.absoluteFill, height: 230 },
   friendAvatarHalo: {
     width: 138,
     height: 138,
@@ -991,6 +1092,28 @@ const styles = StyleSheet.create({
   actorHeadingCopy: { flex: 1, minWidth: 0, gap: 3 },
   actorTitle: { fontFamily: 'Satoshi-Bold', fontSize: 15 },
   actorSubtitle: { fontFamily: 'Satoshi-Regular', fontSize: 11 },
+  reactionReply: {
+    borderRadius: 17,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 12,
+    gap: 9,
+  },
+  reactionReplyTitle: { fontFamily: 'Satoshi-Bold', fontSize: 12.5 },
+  reactionReplyStatus: { fontFamily: 'Satoshi-Medium', fontSize: 12, lineHeight: 18 },
+  reactionOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  reactionOption: {
+    width: '23%',
+    minHeight: 59,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    paddingVertical: 5,
+    gap: 2,
+  },
+  reactionOptionEmoji: { fontSize: 20, lineHeight: 24 },
+  reactionOptionLabel: { fontFamily: 'Satoshi-Medium', fontSize: 8.5 },
   reactorsButton: {
     minHeight: 53,
     borderRadius: 17,

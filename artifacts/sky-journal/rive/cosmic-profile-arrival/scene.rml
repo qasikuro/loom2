@@ -1,0 +1,1638 @@
+<Rive version="1" kind="fragment">
+  <Artboard x="0" y="0" defaultStateMachineId="0:4" styleId="0:3" width="430" height="900" name="Cosmic Profile Arrival" id="0:2">
+    <LayoutComponentStyle name="Arrival Artboard Style" id="0:3"/>
+
+<Node x="44" y="40" rotation="-0.2" scaleX="0.76" scaleY="0.76" opacity="0" name="01 Falling star" id="0:9">
+<Node x="0" y="0" rotation="0" scaleX="0.9" scaleY="0.9" opacity="1" name="01 Falling star luminous core" id="0:8">
+<Shape x="0" y="0" rotation="0" opacity="0.96" name="01 Falling star stellar heart" id="0:35">
+  <Ellipse width="35" height="35" originX="0.5" originY="0.5" name="01 Falling star stellar heart form" id="0:36"/>
+  <Fill name="01 Falling star stellar heart volume" id="0:37">
+    <RadialGradient startX="0" startY="0" endX="19.6" endY="0" name="01 Falling star stellar heart light" id="0:38">
+      <GradientStop colorValue="FFFFFFFF" position="0" id="0:39"/>
+      <GradientStop colorValue="E8FFF4C5" position="0.36" id="0:40"/>
+      <GradientStop colorValue="76FFE383" position="0.72" id="0:41"/>
+      <GradientStop colorValue="00FFE383" position="1" id="0:42"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape opacity="0.62" name="01 Falling star vertical flare" id="0:43">
+  <Star width="24" height="118" points="4" innerRadius="0.045" originX="0.5" originY="0.5" name="Four point flare" id="0:44"/>
+  <Fill name="flare paint" id="0:45"><LinearGradient startX="0" startY="-58" endX="0" endY="58" name="flare light" id="0:46">
+    <GradientStop colorValue="00FFFFFF" position="0" id="0:47"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.42" id="0:48"/>
+    <GradientStop colorValue="F8FFF8D6" position="0.5" id="0:49"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.58" id="0:50"/>
+    <GradientStop colorValue="00FFFFFF" position="1" id="0:51"/>
+  </LinearGradient></Fill>
+</Shape>
+<Shape opacity="0.46" name="01 Falling star horizontal flare" id="0:52">
+  <Star width="118" height="24" points="4" innerRadius="0.045" originX="0.5" originY="0.5" name="Four point flare" id="0:53"/>
+  <Fill name="flare paint" id="0:54"><LinearGradient startX="-58" startY="0" endX="58" endY="0" name="flare light" id="0:55">
+    <GradientStop colorValue="00FFFFFF" position="0" id="0:56"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.42" id="0:57"/>
+    <GradientStop colorValue="F8FFF8D6" position="0.5" id="0:58"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.58" id="0:59"/>
+    <GradientStop colorValue="00FFFFFF" position="1" id="0:60"/>
+  </LinearGradient></Fill>
+</Shape>
+<Shape x="-12" y="-15" rotation="-0.18" opacity="0.72" name="01 Falling star crystal face" id="0:61">
+  <Triangle width="30" height="38" originX="0.5" originY="0.5" name="Facet" id="0:62"/>
+  <Fill name="Facet light" id="0:63"><LinearGradient startX="-12" startY="-18" endX="12" endY="16" name="Facet gold" id="0:64">
+    <GradientStop colorValue="F7FFFFE9" position="0" id="0:65"/>
+    <GradientStop colorValue="BFFFF2A1" position="1" id="0:66"/>
+  </LinearGradient></Fill>
+</Shape>
+<Shape name="01 Falling star five point star" id="0:67">
+  <Star width="88" height="88" points="5" innerRadius="0.4" cornerRadius="1.8" originX="0.5" originY="0.5" name="Faceted star" id="0:68"/>
+  <Fill name="Gold body" id="0:69"><LinearGradient startX="-40" startY="-43" endX="40" endY="42" name="Sunlit gold" id="0:70">
+    <GradientStop colorValue="FFFFFCEB" position="0" id="0:71"/>
+    <GradientStop colorValue="FFFFF2A1" position="0.22" id="0:72"/>
+    <GradientStop colorValue="FFFFD952" position="0.56" id="0:73"/>
+    <GradientStop colorValue="FFFFB92E" position="0.82" id="0:74"/>
+    <GradientStop colorValue="FFDE8625" position="1" id="0:75"/>
+  </LinearGradient></Fill>
+  <Stroke thickness="1.8" join="round" name="Warm rim" id="0:76"><SolidColor colorValue="FFFFED9A" name="Rim gold" id="0:77"/></Stroke>
+</Shape>
+<Shape x="0" y="4" opacity="0.42" name="01 Falling star amber undercut" id="0:78">
+  <Star width="92" height="92" points="5" innerRadius="0.4" originX="0.5" originY="0.5" name="Undercut" id="0:79"/>
+  <Fill name="Shadow" id="0:80"><SolidColor colorValue="FF8C4B1D" name="Amber" id="0:81"/></Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.66" name="01 Falling star gold corona" id="0:82">
+  <Ellipse width="118" height="118" originX="0.5" originY="0.5" name="01 Falling star gold corona form" id="0:83"/>
+  <Fill name="01 Falling star gold corona volume" id="0:84">
+    <RadialGradient startX="0" startY="0" endX="66.08" endY="0" name="01 Falling star gold corona light" id="0:85">
+      <GradientStop colorValue="BFFFF4C9" position="0" id="0:86"/>
+      <GradientStop colorValue="68FFE07C" position="0.34" id="0:87"/>
+      <GradientStop colorValue="28FFB83E" position="0.7" id="0:88"/>
+      <GradientStop colorValue="00FFB83E" position="1" id="0:89"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.42" name="01 Falling star outer atmosphere" id="0:90">
+  <Ellipse width="174" height="174" originX="0.5" originY="0.5" name="01 Falling star outer atmosphere form" id="0:91"/>
+  <Fill name="01 Falling star outer atmosphere volume" id="0:92">
+    <RadialGradient startX="0" startY="0" endX="97.44" endY="0" name="01 Falling star outer atmosphere light" id="0:93">
+      <GradientStop colorValue="56FFED9A" position="0" id="0:94"/>
+      <GradientStop colorValue="26FFE062" position="0.48" id="0:95"/>
+      <GradientStop colorValue="00FFD353" position="1" id="0:96"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+</Node>
+<Node x="14" y="-8" rotation="0.15" scaleX="0.32" scaleY="0.32" opacity="0" name="02 Distant star" id="0:11">
+<Node x="0" y="0" rotation="0" scaleX="0.9" scaleY="0.9" opacity="1" name="02 Distant star luminous core" id="0:10">
+<Shape x="0" y="0" rotation="0" opacity="0.96" name="02 Distant star stellar heart" id="0:97">
+  <Ellipse width="35" height="35" originX="0.5" originY="0.5" name="02 Distant star stellar heart form" id="0:98"/>
+  <Fill name="02 Distant star stellar heart volume" id="0:99">
+    <RadialGradient startX="0" startY="0" endX="19.6" endY="0" name="02 Distant star stellar heart light" id="0:100">
+      <GradientStop colorValue="FFFFFFFF" position="0" id="0:101"/>
+      <GradientStop colorValue="E8FFF4C5" position="0.36" id="0:102"/>
+      <GradientStop colorValue="76FFE383" position="0.72" id="0:103"/>
+      <GradientStop colorValue="00FFE383" position="1" id="0:104"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape opacity="0.62" name="02 Distant star vertical flare" id="0:105">
+  <Star width="24" height="118" points="4" innerRadius="0.045" originX="0.5" originY="0.5" name="Four point flare" id="0:106"/>
+  <Fill name="flare paint" id="0:107"><LinearGradient startX="0" startY="-58" endX="0" endY="58" name="flare light" id="0:108">
+    <GradientStop colorValue="00FFFFFF" position="0" id="0:109"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.42" id="0:110"/>
+    <GradientStop colorValue="F8FFF8D6" position="0.5" id="0:111"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.58" id="0:112"/>
+    <GradientStop colorValue="00FFFFFF" position="1" id="0:113"/>
+  </LinearGradient></Fill>
+</Shape>
+<Shape opacity="0.46" name="02 Distant star horizontal flare" id="0:114">
+  <Star width="118" height="24" points="4" innerRadius="0.045" originX="0.5" originY="0.5" name="Four point flare" id="0:115"/>
+  <Fill name="flare paint" id="0:116"><LinearGradient startX="-58" startY="0" endX="58" endY="0" name="flare light" id="0:117">
+    <GradientStop colorValue="00FFFFFF" position="0" id="0:118"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.42" id="0:119"/>
+    <GradientStop colorValue="F8FFF8D6" position="0.5" id="0:120"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.58" id="0:121"/>
+    <GradientStop colorValue="00FFFFFF" position="1" id="0:122"/>
+  </LinearGradient></Fill>
+</Shape>
+<Shape x="-12" y="-15" rotation="-0.18" opacity="0.72" name="02 Distant star crystal face" id="0:123">
+  <Triangle width="30" height="38" originX="0.5" originY="0.5" name="Facet" id="0:124"/>
+  <Fill name="Facet light" id="0:125"><LinearGradient startX="-12" startY="-18" endX="12" endY="16" name="Facet gold" id="0:126">
+    <GradientStop colorValue="F7FFFFE9" position="0" id="0:127"/>
+    <GradientStop colorValue="BFFFF2A1" position="1" id="0:128"/>
+  </LinearGradient></Fill>
+</Shape>
+<Shape name="02 Distant star five point star" id="0:129">
+  <Star width="88" height="88" points="5" innerRadius="0.4" cornerRadius="1.8" originX="0.5" originY="0.5" name="Faceted star" id="0:130"/>
+  <Fill name="Gold body" id="0:131"><LinearGradient startX="-40" startY="-43" endX="40" endY="42" name="Sunlit gold" id="0:132">
+    <GradientStop colorValue="FFFFFCEB" position="0" id="0:133"/>
+    <GradientStop colorValue="FFFFF2A1" position="0.22" id="0:134"/>
+    <GradientStop colorValue="FFFFD952" position="0.56" id="0:135"/>
+    <GradientStop colorValue="FFFFB92E" position="0.82" id="0:136"/>
+    <GradientStop colorValue="FFDE8625" position="1" id="0:137"/>
+  </LinearGradient></Fill>
+  <Stroke thickness="1.8" join="round" name="Warm rim" id="0:138"><SolidColor colorValue="FFFFED9A" name="Rim gold" id="0:139"/></Stroke>
+</Shape>
+<Shape x="0" y="4" opacity="0.42" name="02 Distant star amber undercut" id="0:140">
+  <Star width="92" height="92" points="5" innerRadius="0.4" originX="0.5" originY="0.5" name="Undercut" id="0:141"/>
+  <Fill name="Shadow" id="0:142"><SolidColor colorValue="FF8C4B1D" name="Amber" id="0:143"/></Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.66" name="02 Distant star gold corona" id="0:144">
+  <Ellipse width="118" height="118" originX="0.5" originY="0.5" name="02 Distant star gold corona form" id="0:145"/>
+  <Fill name="02 Distant star gold corona volume" id="0:146">
+    <RadialGradient startX="0" startY="0" endX="66.08" endY="0" name="02 Distant star gold corona light" id="0:147">
+      <GradientStop colorValue="BFFFF4C9" position="0" id="0:148"/>
+      <GradientStop colorValue="68FFE07C" position="0.34" id="0:149"/>
+      <GradientStop colorValue="28FFB83E" position="0.7" id="0:150"/>
+      <GradientStop colorValue="00FFB83E" position="1" id="0:151"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.42" name="02 Distant star outer atmosphere" id="0:152">
+  <Ellipse width="174" height="174" originX="0.5" originY="0.5" name="02 Distant star outer atmosphere form" id="0:153"/>
+  <Fill name="02 Distant star outer atmosphere volume" id="0:154">
+    <RadialGradient startX="0" startY="0" endX="97.44" endY="0" name="02 Distant star outer atmosphere light" id="0:155">
+      <GradientStop colorValue="56FFED9A" position="0" id="0:156"/>
+      <GradientStop colorValue="26FFE062" position="0.48" id="0:157"/>
+      <GradientStop colorValue="00FFD353" position="1" id="0:158"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+</Node>
+<Node x="122" y="-24" rotation="-0.12" scaleX="0.22" scaleY="0.22" opacity="0" name="03 Blue-white spark" id="0:13">
+<Node x="0" y="0" rotation="0" scaleX="0.9" scaleY="0.9" opacity="1" name="03 Blue-white spark luminous core" id="0:12">
+<Shape x="0" y="0" rotation="0" opacity="0.96" name="03 Blue-white spark stellar heart" id="0:159">
+  <Ellipse width="35" height="35" originX="0.5" originY="0.5" name="03 Blue-white spark stellar heart form" id="0:160"/>
+  <Fill name="03 Blue-white spark stellar heart volume" id="0:161">
+    <RadialGradient startX="0" startY="0" endX="19.6" endY="0" name="03 Blue-white spark stellar heart light" id="0:162">
+      <GradientStop colorValue="FFFFFFFF" position="0" id="0:163"/>
+      <GradientStop colorValue="E8FFF4C5" position="0.36" id="0:164"/>
+      <GradientStop colorValue="76FFE383" position="0.72" id="0:165"/>
+      <GradientStop colorValue="00FFE383" position="1" id="0:166"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape opacity="0.62" name="03 Blue-white spark vertical flare" id="0:167">
+  <Star width="24" height="118" points="4" innerRadius="0.045" originX="0.5" originY="0.5" name="Four point flare" id="0:168"/>
+  <Fill name="flare paint" id="0:169"><LinearGradient startX="0" startY="-58" endX="0" endY="58" name="flare light" id="0:170">
+    <GradientStop colorValue="00FFFFFF" position="0" id="0:171"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.42" id="0:172"/>
+    <GradientStop colorValue="F8FFF8D6" position="0.5" id="0:173"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.58" id="0:174"/>
+    <GradientStop colorValue="00FFFFFF" position="1" id="0:175"/>
+  </LinearGradient></Fill>
+</Shape>
+<Shape opacity="0.46" name="03 Blue-white spark horizontal flare" id="0:176">
+  <Star width="118" height="24" points="4" innerRadius="0.045" originX="0.5" originY="0.5" name="Four point flare" id="0:177"/>
+  <Fill name="flare paint" id="0:178"><LinearGradient startX="-58" startY="0" endX="58" endY="0" name="flare light" id="0:179">
+    <GradientStop colorValue="00FFFFFF" position="0" id="0:180"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.42" id="0:181"/>
+    <GradientStop colorValue="F8FFF8D6" position="0.5" id="0:182"/>
+    <GradientStop colorValue="CFFFFFFF" position="0.58" id="0:183"/>
+    <GradientStop colorValue="00FFFFFF" position="1" id="0:184"/>
+  </LinearGradient></Fill>
+</Shape>
+<Shape x="-12" y="-15" rotation="-0.18" opacity="0.72" name="03 Blue-white spark crystal face" id="0:185">
+  <Triangle width="30" height="38" originX="0.5" originY="0.5" name="Facet" id="0:186"/>
+  <Fill name="Facet light" id="0:187"><LinearGradient startX="-12" startY="-18" endX="12" endY="16" name="Facet gold" id="0:188">
+    <GradientStop colorValue="F7FFFFE9" position="0" id="0:189"/>
+    <GradientStop colorValue="BFFFF2A1" position="1" id="0:190"/>
+  </LinearGradient></Fill>
+</Shape>
+<Shape name="03 Blue-white spark five point star" id="0:191">
+  <Star width="88" height="88" points="5" innerRadius="0.4" cornerRadius="1.8" originX="0.5" originY="0.5" name="Faceted star" id="0:192"/>
+  <Fill name="Gold body" id="0:193"><LinearGradient startX="-40" startY="-43" endX="40" endY="42" name="Sunlit gold" id="0:194">
+    <GradientStop colorValue="FFFFFCEB" position="0" id="0:195"/>
+    <GradientStop colorValue="FFFFF2A1" position="0.22" id="0:196"/>
+    <GradientStop colorValue="FFFFD952" position="0.56" id="0:197"/>
+    <GradientStop colorValue="FFFFB92E" position="0.82" id="0:198"/>
+    <GradientStop colorValue="FFDE8625" position="1" id="0:199"/>
+  </LinearGradient></Fill>
+  <Stroke thickness="1.8" join="round" name="Warm rim" id="0:200"><SolidColor colorValue="FFFFED9A" name="Rim gold" id="0:201"/></Stroke>
+</Shape>
+<Shape x="0" y="4" opacity="0.42" name="03 Blue-white spark amber undercut" id="0:202">
+  <Star width="92" height="92" points="5" innerRadius="0.4" originX="0.5" originY="0.5" name="Undercut" id="0:203"/>
+  <Fill name="Shadow" id="0:204"><SolidColor colorValue="FF8C4B1D" name="Amber" id="0:205"/></Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.66" name="03 Blue-white spark gold corona" id="0:206">
+  <Ellipse width="118" height="118" originX="0.5" originY="0.5" name="03 Blue-white spark gold corona form" id="0:207"/>
+  <Fill name="03 Blue-white spark gold corona volume" id="0:208">
+    <RadialGradient startX="0" startY="0" endX="66.08" endY="0" name="03 Blue-white spark gold corona light" id="0:209">
+      <GradientStop colorValue="BFFFF4C9" position="0" id="0:210"/>
+      <GradientStop colorValue="68FFE07C" position="0.34" id="0:211"/>
+      <GradientStop colorValue="28FFB83E" position="0.7" id="0:212"/>
+      <GradientStop colorValue="00FFB83E" position="1" id="0:213"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.42" name="03 Blue-white spark outer atmosphere" id="0:214">
+  <Ellipse width="174" height="174" originX="0.5" originY="0.5" name="03 Blue-white spark outer atmosphere form" id="0:215"/>
+  <Fill name="03 Blue-white spark outer atmosphere volume" id="0:216">
+    <RadialGradient startX="0" startY="0" endX="97.44" endY="0" name="03 Blue-white spark outer atmosphere light" id="0:217">
+      <GradientStop colorValue="56FFED9A" position="0" id="0:218"/>
+      <GradientStop colorValue="26FFE062" position="0.48" id="0:219"/>
+      <GradientStop colorValue="00FFD353" position="1" id="0:220"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+</Node>
+<Node x="92" y="170" rotation="0" scaleX="0.2" scaleY="0.2" opacity="0" name="01 drifting ember" id="0:31">
+<Shape x="0" y="0" rotation="0" opacity="0.68" name="01 drifting ember haze" id="0:221">
+  <Ellipse width="47.6" height="47.6" originX="0.5" originY="0.5" name="01 drifting ember haze form" id="0:222"/>
+  <Fill name="01 drifting ember haze volume" id="0:223">
+    <RadialGradient startX="0" startY="0" endX="26.656" endY="0" name="01 drifting ember haze light" id="0:224">
+      <GradientStop colorValue="BFFFF4C9" position="0" id="0:225"/>
+      <GradientStop colorValue="68FFE07C" position="0.34" id="0:226"/>
+      <GradientStop colorValue="28FFB83E" position="0.7" id="0:227"/>
+      <GradientStop colorValue="00FFB83E" position="1" id="0:228"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="1" name="01 drifting ember point" id="0:229">
+  <Ellipse width="8.5" height="8.5" originX="0.5" originY="0.5" name="01 drifting ember point form" id="0:230"/>
+  <Fill name="01 drifting ember point volume" id="0:231">
+    <RadialGradient startX="0" startY="0" endX="4.76" endY="0" name="01 drifting ember point light" id="0:232">
+      <GradientStop colorValue="FFFFFFFF" position="0" id="0:233"/>
+      <GradientStop colorValue="E8FFF4C5" position="0.36" id="0:234"/>
+      <GradientStop colorValue="76FFE383" position="0.72" id="0:235"/>
+      <GradientStop colorValue="00FFE383" position="1" id="0:236"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="154" y="250" rotation="0" scaleX="0.2" scaleY="0.2" opacity="0" name="02 drifting ember" id="0:32">
+<Shape x="0" y="0" rotation="0" opacity="0.68" name="02 drifting ember haze" id="0:237">
+  <Ellipse width="39.2" height="39.2" originX="0.5" originY="0.5" name="02 drifting ember haze form" id="0:238"/>
+  <Fill name="02 drifting ember haze volume" id="0:239">
+    <RadialGradient startX="0" startY="0" endX="21.952" endY="0" name="02 drifting ember haze light" id="0:240">
+      <GradientStop colorValue="BFFFF4C9" position="0" id="0:241"/>
+      <GradientStop colorValue="68FFE07C" position="0.34" id="0:242"/>
+      <GradientStop colorValue="28FFB83E" position="0.7" id="0:243"/>
+      <GradientStop colorValue="00FFB83E" position="1" id="0:244"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="1" name="02 drifting ember point" id="0:245">
+  <Ellipse width="7" height="7" originX="0.5" originY="0.5" name="02 drifting ember point form" id="0:246"/>
+  <Fill name="02 drifting ember point volume" id="0:247">
+    <RadialGradient startX="0" startY="0" endX="3.92" endY="0" name="02 drifting ember point light" id="0:248">
+      <GradientStop colorValue="FFFFFFFF" position="0" id="0:249"/>
+      <GradientStop colorValue="E8FFF4C5" position="0.36" id="0:250"/>
+      <GradientStop colorValue="76FFE383" position="0.72" id="0:251"/>
+      <GradientStop colorValue="00FFE383" position="1" id="0:252"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="210" y="352" rotation="0" scaleX="0.2" scaleY="0.2" opacity="0" name="03 drifting ember" id="0:33">
+<Shape x="0" y="0" rotation="0" opacity="0.68" name="03 drifting ember haze" id="0:253">
+  <Ellipse width="50.4" height="50.4" originX="0.5" originY="0.5" name="03 drifting ember haze form" id="0:254"/>
+  <Fill name="03 drifting ember haze volume" id="0:255">
+    <RadialGradient startX="0" startY="0" endX="28.224" endY="0" name="03 drifting ember haze light" id="0:256">
+      <GradientStop colorValue="BFFFF4C9" position="0" id="0:257"/>
+      <GradientStop colorValue="68FFE07C" position="0.34" id="0:258"/>
+      <GradientStop colorValue="28FFB83E" position="0.7" id="0:259"/>
+      <GradientStop colorValue="00FFB83E" position="1" id="0:260"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="1" name="03 drifting ember point" id="0:261">
+  <Ellipse width="9" height="9" originX="0.5" originY="0.5" name="03 drifting ember point form" id="0:262"/>
+  <Fill name="03 drifting ember point volume" id="0:263">
+    <RadialGradient startX="0" startY="0" endX="5.04" endY="0" name="03 drifting ember point light" id="0:264">
+      <GradientStop colorValue="FFFFFFFF" position="0" id="0:265"/>
+      <GradientStop colorValue="E8FFF4C5" position="0.36" id="0:266"/>
+      <GradientStop colorValue="76FFE383" position="0.72" id="0:267"/>
+      <GradientStop colorValue="00FFE383" position="1" id="0:268"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="325" y="129" rotation="0" scaleX="0.2" scaleY="0.2" opacity="0" name="04 drifting ember" id="0:34">
+<Shape x="0" y="0" rotation="0" opacity="0.68" name="04 drifting ember haze" id="0:269">
+  <Ellipse width="47.6" height="47.6" originX="0.5" originY="0.5" name="04 drifting ember haze form" id="0:270"/>
+  <Fill name="04 drifting ember haze volume" id="0:271">
+    <RadialGradient startX="0" startY="0" endX="26.656" endY="0" name="04 drifting ember haze light" id="0:272">
+      <GradientStop colorValue="BFFFF4C9" position="0" id="0:273"/>
+      <GradientStop colorValue="68FFE07C" position="0.34" id="0:274"/>
+      <GradientStop colorValue="28FFB83E" position="0.7" id="0:275"/>
+      <GradientStop colorValue="00FFB83E" position="1" id="0:276"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="1" name="04 drifting ember point" id="0:277">
+  <Ellipse width="8.5" height="8.5" originX="0.5" originY="0.5" name="04 drifting ember point form" id="0:278"/>
+  <Fill name="04 drifting ember point volume" id="0:279">
+    <RadialGradient startX="0" startY="0" endX="4.76" endY="0" name="04 drifting ember point light" id="0:280">
+      <GradientStop colorValue="FFFFFFFF" position="0" id="0:281"/>
+      <GradientStop colorValue="E8FFF4C5" position="0.36" id="0:282"/>
+      <GradientStop colorValue="76FFE383" position="0.72" id="0:283"/>
+      <GradientStop colorValue="00FFE383" position="1" id="0:284"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="56" y="92" rotation="-0.18" scaleX="0.18" scaleY="0.22" opacity="0" name="Star wake 01" id="0:14">
+<Shape x="-9.52" y="-11.6" rotation="0" opacity="0.68" name="Star wake 01 cool highlight" id="0:285">
+  <Ellipse width="28.56" height="27.84" originX="0.5" originY="0.5" name="Star wake 01 cool highlight form" id="0:286"/>
+  <Fill name="Star wake 01 cool highlight volume" id="0:287">
+    <RadialGradient startX="0" startY="0" endX="15.59" endY="0" name="Star wake 01 cool highlight light" id="0:288">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:289"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:290"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:291"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="8.16" y="6.96" rotation="0" opacity="0.74" name="Star wake 01 inner fold" id="0:292">
+  <Ellipse width="51.68" height="44.08" originX="0.5" originY="0.5" name="Star wake 01 inner fold form" id="0:293"/>
+  <Fill name="Star wake 01 inner fold volume" id="0:294">
+    <RadialGradient startX="0" startY="0" endX="24.685" endY="0" name="Star wake 01 inner fold light" id="0:295">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:296"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:297"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:298"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:299"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Star wake 01 outer volume" id="0:300">
+  <Ellipse width="68" height="58" originX="0.5" originY="0.5" name="Star wake 01 outer volume form" id="0:301"/>
+  <Fill name="Star wake 01 outer volume volume" id="0:302">
+    <RadialGradient startX="0" startY="0" endX="32.48" endY="0" name="Star wake 01 outer volume light" id="0:303">
+      <GradientStop colorValue="C92794F1" position="0" id="0:304"/>
+      <GradientStop colorValue="AE267FE0" position="0.38" id="0:305"/>
+      <GradientStop colorValue="641650B8" position="0.72" id="0:306"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:307"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="67" y="144" rotation="0.14" scaleX="0.18" scaleY="0.22" opacity="0" name="Star wake 02" id="0:15">
+<Shape x="-11.48" y="-12.4" rotation="0" opacity="0.68" name="Star wake 02 cool highlight" id="0:308">
+  <Ellipse width="34.44" height="29.76" originX="0.5" originY="0.5" name="Star wake 02 cool highlight form" id="0:309"/>
+  <Fill name="Star wake 02 cool highlight volume" id="0:310">
+    <RadialGradient startX="0" startY="0" endX="16.666" endY="0" name="Star wake 02 cool highlight light" id="0:311">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:312"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:313"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:314"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="9.84" y="7.44" rotation="0" opacity="0.74" name="Star wake 02 inner fold" id="0:315">
+  <Ellipse width="62.32" height="47.12" originX="0.5" originY="0.5" name="Star wake 02 inner fold form" id="0:316"/>
+  <Fill name="Star wake 02 inner fold volume" id="0:317">
+    <RadialGradient startX="0" startY="0" endX="26.387" endY="0" name="Star wake 02 inner fold light" id="0:318">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:319"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:320"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:321"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:322"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Star wake 02 outer volume" id="0:323">
+  <Ellipse width="82" height="62" originX="0.5" originY="0.5" name="Star wake 02 outer volume form" id="0:324"/>
+  <Fill name="Star wake 02 outer volume volume" id="0:325">
+    <RadialGradient startX="0" startY="0" endX="34.72" endY="0" name="Star wake 02 outer volume light" id="0:326">
+      <GradientStop colorValue="C83B9FF4" position="0" id="0:327"/>
+      <GradientStop colorValue="A92B82E4" position="0.42" id="0:328"/>
+      <GradientStop colorValue="5D235FC7" position="0.76" id="0:329"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:330"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="87" y="198" rotation="-0.14" scaleX="0.18" scaleY="0.22" opacity="0" name="Star wake 03" id="0:16">
+<Shape x="-14.56" y="-14.4" rotation="0" opacity="0.68" name="Star wake 03 cool highlight" id="0:331">
+  <Ellipse width="43.68" height="34.56" originX="0.5" originY="0.5" name="Star wake 03 cool highlight form" id="0:332"/>
+  <Fill name="Star wake 03 cool highlight volume" id="0:333">
+    <RadialGradient startX="0" startY="0" endX="19.354" endY="0" name="Star wake 03 cool highlight light" id="0:334">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:335"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:336"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:337"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="12.48" y="8.64" rotation="0" opacity="0.74" name="Star wake 03 inner fold" id="0:338">
+  <Ellipse width="79.04" height="54.72" originX="0.5" originY="0.5" name="Star wake 03 inner fold form" id="0:339"/>
+  <Fill name="Star wake 03 inner fold volume" id="0:340">
+    <RadialGradient startX="0" startY="0" endX="30.643" endY="0" name="Star wake 03 inner fold light" id="0:341">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:342"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:343"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:344"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:345"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Star wake 03 outer volume" id="0:346">
+  <Ellipse width="104" height="72" originX="0.5" originY="0.5" name="Star wake 03 outer volume form" id="0:347"/>
+  <Fill name="Star wake 03 outer volume volume" id="0:348">
+    <RadialGradient startX="0" startY="0" endX="40.32" endY="0" name="Star wake 03 outer volume light" id="0:349">
+      <GradientStop colorValue="C92794F1" position="0" id="0:350"/>
+      <GradientStop colorValue="AE267FE0" position="0.38" id="0:351"/>
+      <GradientStop colorValue="641650B8" position="0.72" id="0:352"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:353"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="111" y="254" rotation="0.19" scaleX="0.18" scaleY="0.22" opacity="0" name="Star wake 04" id="0:17">
+<Shape x="-15.68" y="-15.6" rotation="0" opacity="0.68" name="Star wake 04 cool highlight" id="0:354">
+  <Ellipse width="47.04" height="37.44" originX="0.5" originY="0.5" name="Star wake 04 cool highlight form" id="0:355"/>
+  <Fill name="Star wake 04 cool highlight volume" id="0:356">
+    <RadialGradient startX="0" startY="0" endX="20.966" endY="0" name="Star wake 04 cool highlight light" id="0:357">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:358"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:359"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:360"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="13.44" y="9.36" rotation="0" opacity="0.74" name="Star wake 04 inner fold" id="0:361">
+  <Ellipse width="85.12" height="59.28" originX="0.5" originY="0.5" name="Star wake 04 inner fold form" id="0:362"/>
+  <Fill name="Star wake 04 inner fold volume" id="0:363">
+    <RadialGradient startX="0" startY="0" endX="33.197" endY="0" name="Star wake 04 inner fold light" id="0:364">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:365"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:366"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:367"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:368"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Star wake 04 outer volume" id="0:369">
+  <Ellipse width="112" height="78" originX="0.5" originY="0.5" name="Star wake 04 outer volume form" id="0:370"/>
+  <Fill name="Star wake 04 outer volume volume" id="0:371">
+    <RadialGradient startX="0" startY="0" endX="43.68" endY="0" name="Star wake 04 outer volume light" id="0:372">
+      <GradientStop colorValue="C83B9FF4" position="0" id="0:373"/>
+      <GradientStop colorValue="A92B82E4" position="0.42" id="0:374"/>
+      <GradientStop colorValue="5D235FC7" position="0.76" id="0:375"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:376"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="138" y="310" rotation="-0.12" scaleX="0.18" scaleY="0.22" opacity="0" name="Star wake 05" id="0:18">
+<Shape x="-17.64" y="-16.8" rotation="0" opacity="0.68" name="Star wake 05 cool highlight" id="0:377">
+  <Ellipse width="52.92" height="40.32" originX="0.5" originY="0.5" name="Star wake 05 cool highlight form" id="0:378"/>
+  <Fill name="Star wake 05 cool highlight volume" id="0:379">
+    <RadialGradient startX="0" startY="0" endX="22.579" endY="0" name="Star wake 05 cool highlight light" id="0:380">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:381"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:382"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:383"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="15.12" y="10.08" rotation="0" opacity="0.74" name="Star wake 05 inner fold" id="0:384">
+  <Ellipse width="95.76" height="63.84" originX="0.5" originY="0.5" name="Star wake 05 inner fold form" id="0:385"/>
+  <Fill name="Star wake 05 inner fold volume" id="0:386">
+    <RadialGradient startX="0" startY="0" endX="35.75" endY="0" name="Star wake 05 inner fold light" id="0:387">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:388"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:389"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:390"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:391"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Star wake 05 outer volume" id="0:392">
+  <Ellipse width="126" height="84" originX="0.5" originY="0.5" name="Star wake 05 outer volume form" id="0:393"/>
+  <Fill name="Star wake 05 outer volume volume" id="0:394">
+    <RadialGradient startX="0" startY="0" endX="47.04" endY="0" name="Star wake 05 outer volume light" id="0:395">
+      <GradientStop colorValue="C92794F1" position="0" id="0:396"/>
+      <GradientStop colorValue="AE267FE0" position="0.38" id="0:397"/>
+      <GradientStop colorValue="641650B8" position="0.72" id="0:398"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:399"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="165" y="364" rotation="0.11" scaleX="0.18" scaleY="0.22" opacity="0" name="Star wake 06" id="0:19">
+<Shape x="-18.76" y="-18" rotation="0" opacity="0.68" name="Star wake 06 cool highlight" id="0:400">
+  <Ellipse width="56.28" height="43.2" originX="0.5" originY="0.5" name="Star wake 06 cool highlight form" id="0:401"/>
+  <Fill name="Star wake 06 cool highlight volume" id="0:402">
+    <RadialGradient startX="0" startY="0" endX="24.192" endY="0" name="Star wake 06 cool highlight light" id="0:403">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:404"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:405"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:406"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="16.08" y="10.8" rotation="0" opacity="0.74" name="Star wake 06 inner fold" id="0:407">
+  <Ellipse width="101.84" height="68.4" originX="0.5" originY="0.5" name="Star wake 06 inner fold form" id="0:408"/>
+  <Fill name="Star wake 06 inner fold volume" id="0:409">
+    <RadialGradient startX="0" startY="0" endX="38.304" endY="0" name="Star wake 06 inner fold light" id="0:410">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:411"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:412"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:413"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:414"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Star wake 06 outer volume" id="0:415">
+  <Ellipse width="134" height="90" originX="0.5" originY="0.5" name="Star wake 06 outer volume form" id="0:416"/>
+  <Fill name="Star wake 06 outer volume volume" id="0:417">
+    <RadialGradient startX="0" startY="0" endX="50.4" endY="0" name="Star wake 06 outer volume light" id="0:418">
+      <GradientStop colorValue="C83B9FF4" position="0" id="0:419"/>
+      <GradientStop colorValue="A92B82E4" position="0.42" id="0:420"/>
+      <GradientStop colorValue="5D235FC7" position="0.76" id="0:421"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:422"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="194" y="414" rotation="-0.2" scaleX="0.18" scaleY="0.22" opacity="0" name="Star wake 07" id="0:20">
+<Shape x="-20.3" y="-19.2" rotation="0" opacity="0.68" name="Star wake 07 cool highlight" id="0:423">
+  <Ellipse width="60.9" height="46.08" originX="0.5" originY="0.5" name="Star wake 07 cool highlight form" id="0:424"/>
+  <Fill name="Star wake 07 cool highlight volume" id="0:425">
+    <RadialGradient startX="0" startY="0" endX="25.805" endY="0" name="Star wake 07 cool highlight light" id="0:426">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:427"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:428"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:429"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="17.4" y="11.52" rotation="0" opacity="0.74" name="Star wake 07 inner fold" id="0:430">
+  <Ellipse width="110.2" height="72.96" originX="0.5" originY="0.5" name="Star wake 07 inner fold form" id="0:431"/>
+  <Fill name="Star wake 07 inner fold volume" id="0:432">
+    <RadialGradient startX="0" startY="0" endX="40.858" endY="0" name="Star wake 07 inner fold light" id="0:433">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:434"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:435"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:436"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:437"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Star wake 07 outer volume" id="0:438">
+  <Ellipse width="145" height="96" originX="0.5" originY="0.5" name="Star wake 07 outer volume form" id="0:439"/>
+  <Fill name="Star wake 07 outer volume volume" id="0:440">
+    <RadialGradient startX="0" startY="0" endX="53.76" endY="0" name="Star wake 07 outer volume light" id="0:441">
+      <GradientStop colorValue="C92794F1" position="0" id="0:442"/>
+      <GradientStop colorValue="AE267FE0" position="0.38" id="0:443"/>
+      <GradientStop colorValue="641650B8" position="0.72" id="0:444"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:445"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="221" y="463" rotation="0.18" scaleX="0.18" scaleY="0.22" opacity="0" name="Star wake 08" id="0:21">
+<Shape x="-19.6" y="-18.4" rotation="0" opacity="0.68" name="Star wake 08 cool highlight" id="0:446">
+  <Ellipse width="58.8" height="44.16" originX="0.5" originY="0.5" name="Star wake 08 cool highlight form" id="0:447"/>
+  <Fill name="Star wake 08 cool highlight volume" id="0:448">
+    <RadialGradient startX="0" startY="0" endX="24.73" endY="0" name="Star wake 08 cool highlight light" id="0:449">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:450"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:451"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:452"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="16.8" y="11.04" rotation="0" opacity="0.74" name="Star wake 08 inner fold" id="0:453">
+  <Ellipse width="106.4" height="69.92" originX="0.5" originY="0.5" name="Star wake 08 inner fold form" id="0:454"/>
+  <Fill name="Star wake 08 inner fold volume" id="0:455">
+    <RadialGradient startX="0" startY="0" endX="39.155" endY="0" name="Star wake 08 inner fold light" id="0:456">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:457"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:458"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:459"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:460"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Star wake 08 outer volume" id="0:461">
+  <Ellipse width="140" height="92" originX="0.5" originY="0.5" name="Star wake 08 outer volume form" id="0:462"/>
+  <Fill name="Star wake 08 outer volume volume" id="0:463">
+    <RadialGradient startX="0" startY="0" endX="51.52" endY="0" name="Star wake 08 outer volume light" id="0:464">
+      <GradientStop colorValue="C83B9FF4" position="0" id="0:465"/>
+      <GradientStop colorValue="A92B82E4" position="0.42" id="0:466"/>
+      <GradientStop colorValue="5D235FC7" position="0.76" id="0:467"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:468"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="-25" y="-28" rotation="0" scaleX="0.58" scaleY="0.64" opacity="0" name="04 Blue-hour smoke aura" id="0:30">
+<Node x="-178" y="19" rotation="0.1" scaleX="1" scaleY="1" opacity="0.94" name="Aura lobe 01" id="0:22">
+<Shape x="-23.24" y="-25.2" rotation="0" opacity="0.68" name="Aura lobe 1 cool highlight" id="0:469">
+  <Ellipse width="69.72" height="60.48" originX="0.5" originY="0.5" name="Aura lobe 1 cool highlight form" id="0:470"/>
+  <Fill name="Aura lobe 1 cool highlight volume" id="0:471">
+    <RadialGradient startX="0" startY="0" endX="33.869" endY="0" name="Aura lobe 1 cool highlight light" id="0:472">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:473"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:474"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:475"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="19.92" y="15.12" rotation="0" opacity="0.74" name="Aura lobe 1 inner fold" id="0:476">
+  <Ellipse width="126.16" height="95.76" originX="0.5" originY="0.5" name="Aura lobe 1 inner fold form" id="0:477"/>
+  <Fill name="Aura lobe 1 inner fold volume" id="0:478">
+    <RadialGradient startX="0" startY="0" endX="53.626" endY="0" name="Aura lobe 1 inner fold light" id="0:479">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:480"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:481"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:482"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:483"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Aura lobe 1 outer volume" id="0:484">
+  <Ellipse width="166" height="126" originX="0.5" originY="0.5" name="Aura lobe 1 outer volume form" id="0:485"/>
+  <Fill name="Aura lobe 1 outer volume volume" id="0:486">
+    <RadialGradient startX="0" startY="0" endX="70.56" endY="0" name="Aura lobe 1 outer volume light" id="0:487">
+      <GradientStop colorValue="C92794F1" position="0" id="0:488"/>
+      <GradientStop colorValue="AE267FE0" position="0.38" id="0:489"/>
+      <GradientStop colorValue="641650B8" position="0.72" id="0:490"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:491"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="-116" y="-18" rotation="-0.08" scaleX="1" scaleY="1" opacity="0.94" name="Aura lobe 02" id="0:23">
+<Shape x="-24.36" y="-28" rotation="0" opacity="0.68" name="Aura lobe 2 cool highlight" id="0:492">
+  <Ellipse width="73.08" height="67.2" originX="0.5" originY="0.5" name="Aura lobe 2 cool highlight form" id="0:493"/>
+  <Fill name="Aura lobe 2 cool highlight volume" id="0:494">
+    <RadialGradient startX="0" startY="0" endX="37.632" endY="0" name="Aura lobe 2 cool highlight light" id="0:495">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:496"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:497"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:498"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="20.88" y="16.8" rotation="0" opacity="0.74" name="Aura lobe 2 inner fold" id="0:499">
+  <Ellipse width="132.24" height="106.4" originX="0.5" originY="0.5" name="Aura lobe 2 inner fold form" id="0:500"/>
+  <Fill name="Aura lobe 2 inner fold volume" id="0:501">
+    <RadialGradient startX="0" startY="0" endX="59.584" endY="0" name="Aura lobe 2 inner fold light" id="0:502">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:503"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:504"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:505"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:506"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Aura lobe 2 outer volume" id="0:507">
+  <Ellipse width="174" height="140" originX="0.5" originY="0.5" name="Aura lobe 2 outer volume form" id="0:508"/>
+  <Fill name="Aura lobe 2 outer volume volume" id="0:509">
+    <RadialGradient startX="0" startY="0" endX="78.4" endY="0" name="Aura lobe 2 outer volume light" id="0:510">
+      <GradientStop colorValue="C83B9FF4" position="0" id="0:511"/>
+      <GradientStop colorValue="A92B82E4" position="0.42" id="0:512"/>
+      <GradientStop colorValue="5D235FC7" position="0.76" id="0:513"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:514"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="-45" y="-31" rotation="0.04" scaleX="1" scaleY="1" opacity="0.94" name="Aura lobe 03" id="0:24">
+<Shape x="-26.04" y="-28.4" rotation="0" opacity="0.68" name="Aura lobe 3 cool highlight" id="0:515">
+  <Ellipse width="78.12" height="68.16" originX="0.5" originY="0.5" name="Aura lobe 3 cool highlight form" id="0:516"/>
+  <Fill name="Aura lobe 3 cool highlight volume" id="0:517">
+    <RadialGradient startX="0" startY="0" endX="38.17" endY="0" name="Aura lobe 3 cool highlight light" id="0:518">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:519"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:520"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:521"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="22.32" y="17.04" rotation="0" opacity="0.74" name="Aura lobe 3 inner fold" id="0:522">
+  <Ellipse width="141.36" height="107.92" originX="0.5" originY="0.5" name="Aura lobe 3 inner fold form" id="0:523"/>
+  <Fill name="Aura lobe 3 inner fold volume" id="0:524">
+    <RadialGradient startX="0" startY="0" endX="60.435" endY="0" name="Aura lobe 3 inner fold light" id="0:525">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:526"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:527"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:528"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:529"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Aura lobe 3 outer volume" id="0:530">
+  <Ellipse width="186" height="142" originX="0.5" originY="0.5" name="Aura lobe 3 outer volume form" id="0:531"/>
+  <Fill name="Aura lobe 3 outer volume volume" id="0:532">
+    <RadialGradient startX="0" startY="0" endX="79.52" endY="0" name="Aura lobe 3 outer volume light" id="0:533">
+      <GradientStop colorValue="C92794F1" position="0" id="0:534"/>
+      <GradientStop colorValue="AE267FE0" position="0.38" id="0:535"/>
+      <GradientStop colorValue="641650B8" position="0.72" id="0:536"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:537"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="35" y="-26" rotation="-0.06" scaleX="1" scaleY="1" opacity="0.94" name="Aura lobe 04" id="0:25">
+<Shape x="-27.72" y="-29.6" rotation="0" opacity="0.68" name="Aura lobe 4 cool highlight" id="0:538">
+  <Ellipse width="83.16" height="71.04" originX="0.5" originY="0.5" name="Aura lobe 4 cool highlight form" id="0:539"/>
+  <Fill name="Aura lobe 4 cool highlight volume" id="0:540">
+    <RadialGradient startX="0" startY="0" endX="39.782" endY="0" name="Aura lobe 4 cool highlight light" id="0:541">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:542"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:543"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:544"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="23.76" y="17.76" rotation="0" opacity="0.74" name="Aura lobe 4 inner fold" id="0:545">
+  <Ellipse width="150.48" height="112.48" originX="0.5" originY="0.5" name="Aura lobe 4 inner fold form" id="0:546"/>
+  <Fill name="Aura lobe 4 inner fold volume" id="0:547">
+    <RadialGradient startX="0" startY="0" endX="62.989" endY="0" name="Aura lobe 4 inner fold light" id="0:548">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:549"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:550"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:551"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:552"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Aura lobe 4 outer volume" id="0:553">
+  <Ellipse width="198" height="148" originX="0.5" originY="0.5" name="Aura lobe 4 outer volume form" id="0:554"/>
+  <Fill name="Aura lobe 4 outer volume volume" id="0:555">
+    <RadialGradient startX="0" startY="0" endX="82.88" endY="0" name="Aura lobe 4 outer volume light" id="0:556">
+      <GradientStop colorValue="C83B9FF4" position="0" id="0:557"/>
+      <GradientStop colorValue="A92B82E4" position="0.42" id="0:558"/>
+      <GradientStop colorValue="5D235FC7" position="0.76" id="0:559"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:560"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="112" y="-4" rotation="0.1" scaleX="1" scaleY="1" opacity="0.94" name="Aura lobe 05" id="0:26">
+<Shape x="-26.6" y="-28" rotation="0" opacity="0.68" name="Aura lobe 5 cool highlight" id="0:561">
+  <Ellipse width="79.8" height="67.2" originX="0.5" originY="0.5" name="Aura lobe 5 cool highlight form" id="0:562"/>
+  <Fill name="Aura lobe 5 cool highlight volume" id="0:563">
+    <RadialGradient startX="0" startY="0" endX="37.632" endY="0" name="Aura lobe 5 cool highlight light" id="0:564">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:565"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:566"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:567"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="22.8" y="16.8" rotation="0" opacity="0.74" name="Aura lobe 5 inner fold" id="0:568">
+  <Ellipse width="144.4" height="106.4" originX="0.5" originY="0.5" name="Aura lobe 5 inner fold form" id="0:569"/>
+  <Fill name="Aura lobe 5 inner fold volume" id="0:570">
+    <RadialGradient startX="0" startY="0" endX="59.584" endY="0" name="Aura lobe 5 inner fold light" id="0:571">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:572"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:573"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:574"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:575"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Aura lobe 5 outer volume" id="0:576">
+  <Ellipse width="190" height="140" originX="0.5" originY="0.5" name="Aura lobe 5 outer volume form" id="0:577"/>
+  <Fill name="Aura lobe 5 outer volume volume" id="0:578">
+    <RadialGradient startX="0" startY="0" endX="78.4" endY="0" name="Aura lobe 5 outer volume light" id="0:579">
+      <GradientStop colorValue="C92794F1" position="0" id="0:580"/>
+      <GradientStop colorValue="AE267FE0" position="0.38" id="0:581"/>
+      <GradientStop colorValue="641650B8" position="0.72" id="0:582"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:583"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="178" y="27" rotation="-0.11" scaleX="1" scaleY="1" opacity="0.94" name="Aura lobe 06" id="0:27">
+<Shape x="-23.1" y="-24.8" rotation="0" opacity="0.68" name="Aura lobe 6 cool highlight" id="0:584">
+  <Ellipse width="69.3" height="59.52" originX="0.5" originY="0.5" name="Aura lobe 6 cool highlight form" id="0:585"/>
+  <Fill name="Aura lobe 6 cool highlight volume" id="0:586">
+    <RadialGradient startX="0" startY="0" endX="33.331" endY="0" name="Aura lobe 6 cool highlight light" id="0:587">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:588"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:589"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:590"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="19.8" y="14.88" rotation="0" opacity="0.74" name="Aura lobe 6 inner fold" id="0:591">
+  <Ellipse width="125.4" height="94.24" originX="0.5" originY="0.5" name="Aura lobe 6 inner fold form" id="0:592"/>
+  <Fill name="Aura lobe 6 inner fold volume" id="0:593">
+    <RadialGradient startX="0" startY="0" endX="52.774" endY="0" name="Aura lobe 6 inner fold light" id="0:594">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:595"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:596"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:597"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:598"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Aura lobe 6 outer volume" id="0:599">
+  <Ellipse width="165" height="124" originX="0.5" originY="0.5" name="Aura lobe 6 outer volume form" id="0:600"/>
+  <Fill name="Aura lobe 6 outer volume volume" id="0:601">
+    <RadialGradient startX="0" startY="0" endX="69.44" endY="0" name="Aura lobe 6 outer volume light" id="0:602">
+      <GradientStop colorValue="C83B9FF4" position="0" id="0:603"/>
+      <GradientStop colorValue="A92B82E4" position="0.42" id="0:604"/>
+      <GradientStop colorValue="5D235FC7" position="0.76" id="0:605"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:606"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="-87" y="57" rotation="0.08" scaleX="1" scaleY="1" opacity="0.94" name="Aura lobe 07" id="0:28">
+<Shape x="-29.68" y="-21" rotation="0" opacity="0.68" name="Aura lobe 7 cool highlight" id="0:607">
+  <Ellipse width="89.04" height="50.4" originX="0.5" originY="0.5" name="Aura lobe 7 cool highlight form" id="0:608"/>
+  <Fill name="Aura lobe 7 cool highlight volume" id="0:609">
+    <RadialGradient startX="0" startY="0" endX="28.224" endY="0" name="Aura lobe 7 cool highlight light" id="0:610">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:611"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:612"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:613"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="25.44" y="12.6" rotation="0" opacity="0.74" name="Aura lobe 7 inner fold" id="0:614">
+  <Ellipse width="161.12" height="79.8" originX="0.5" originY="0.5" name="Aura lobe 7 inner fold form" id="0:615"/>
+  <Fill name="Aura lobe 7 inner fold volume" id="0:616">
+    <RadialGradient startX="0" startY="0" endX="44.688" endY="0" name="Aura lobe 7 inner fold light" id="0:617">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:618"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:619"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:620"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:621"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Aura lobe 7 outer volume" id="0:622">
+  <Ellipse width="212" height="105" originX="0.5" originY="0.5" name="Aura lobe 7 outer volume form" id="0:623"/>
+  <Fill name="Aura lobe 7 outer volume volume" id="0:624">
+    <RadialGradient startX="0" startY="0" endX="58.8" endY="0" name="Aura lobe 7 outer volume light" id="0:625">
+      <GradientStop colorValue="C83B9FF4" position="0" id="0:626"/>
+      <GradientStop colorValue="A92B82E4" position="0.42" id="0:627"/>
+      <GradientStop colorValue="5D235FC7" position="0.76" id="0:628"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:629"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+<Node x="77" y="64" rotation="-0.05" scaleX="1" scaleY="1" opacity="0.94" name="Aura lobe 08" id="0:29">
+<Shape x="-31.92" y="-21.6" rotation="0" opacity="0.68" name="Aura lobe 8 cool highlight" id="0:630">
+  <Ellipse width="95.76" height="51.84" originX="0.5" originY="0.5" name="Aura lobe 8 cool highlight form" id="0:631"/>
+  <Fill name="Aura lobe 8 cool highlight volume" id="0:632">
+    <RadialGradient startX="0" startY="0" endX="29.03" endY="0" name="Aura lobe 8 cool highlight light" id="0:633">
+      <GradientStop colorValue="BFF6FFFF" position="0" id="0:634"/>
+      <GradientStop colorValue="79A8EFFF" position="0.4" id="0:635"/>
+      <GradientStop colorValue="0073CFFF" position="1" id="0:636"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="27.36" y="12.96" rotation="0" opacity="0.74" name="Aura lobe 8 inner fold" id="0:637">
+  <Ellipse width="173.28" height="82.08" originX="0.5" originY="0.5" name="Aura lobe 8 inner fold form" id="0:638"/>
+  <Fill name="Aura lobe 8 inner fold volume" id="0:639">
+    <RadialGradient startX="0" startY="0" endX="45.965" endY="0" name="Aura lobe 8 inner fold light" id="0:640">
+      <GradientStop colorValue="C3BDEEFF" position="0" id="0:641"/>
+      <GradientStop colorValue="9B78C8FF" position="0.34" id="0:642"/>
+      <GradientStop colorValue="5D318FE8" position="0.72" id="0:643"/>
+      <GradientStop colorValue="0070B9FF" position="1" id="0:644"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+<Shape x="0" y="0" rotation="0" opacity="0.86" name="Aura lobe 8 outer volume" id="0:645">
+  <Ellipse width="228" height="108" originX="0.5" originY="0.5" name="Aura lobe 8 outer volume form" id="0:646"/>
+  <Fill name="Aura lobe 8 outer volume volume" id="0:647">
+    <RadialGradient startX="0" startY="0" endX="60.48" endY="0" name="Aura lobe 8 outer volume light" id="0:648">
+      <GradientStop colorValue="C92794F1" position="0" id="0:649"/>
+      <GradientStop colorValue="AE267FE0" position="0.38" id="0:650"/>
+      <GradientStop colorValue="641650B8" position="0.72" id="0:651"/>
+      <GradientStop colorValue="00124B99" position="1" id="0:652"/>
+    </RadialGradient>
+  </Fill>
+</Shape>
+</Node>
+</Node>
+
+    <StateMachine name="ProfileArrival" id="0:4">
+      <StateMachineLayer name="Arrival Motion" id="0:5">
+        <AnyState x="0" y="-120" id="0:653"/>
+        <ExitState x="120" y="-120" id="0:654"/>
+        <EntryState id="0:655"><StateTransition stateToId="0:6" id="0:656"/></EntryState>
+        <AnimationState x="180" y="0" animationId="0:7" id="0:6"/>
+      </StateMachineLayer>
+    </StateMachine>
+    <LinearAnimation fps="60" duration="300" loopValue="oneShot" name="Starfall into blue hour" id="0:7">
+<KeyedObject objectId="0:8" id="0:657">
+<KeyedProperty propertyKey="16" id="0:658">
+<KeyFrameDouble value="0.82" interpolationType="linear" id="0:659"/>
+<KeyFrameDouble value="1.06" frame="44" interpolationType="linear" id="0:660"/>
+<KeyFrameDouble value="0.94" frame="116" interpolationType="linear" id="0:661"/>
+<KeyFrameDouble value="1.08" frame="176" interpolationType="linear" id="0:662"/>
+<KeyFrameDouble value="0.84" frame="300" interpolationType="linear" id="0:663"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:664">
+<KeyFrameDouble value="0.9" interpolationType="linear" id="0:665"/>
+<KeyFrameDouble value="1.03" frame="44" interpolationType="linear" id="0:666"/>
+<KeyFrameDouble value="0.92" frame="116" interpolationType="linear" id="0:667"/>
+<KeyFrameDouble value="1.1" frame="176" interpolationType="linear" id="0:668"/>
+<KeyFrameDouble value="0.84" frame="300" interpolationType="linear" id="0:669"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:9" id="0:670">
+<KeyedProperty propertyKey="13" id="0:671">
+<KeyFrameDouble value="44" interpolationType="cubic" id="0:672">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:673"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="49" frame="9" interpolationType="cubic" id="0:674">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:675"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="68" frame="35" interpolationType="cubic" id="0:676">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:677"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="111" frame="74" interpolationType="cubic" id="0:678">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:679"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="160" frame="116" interpolationType="cubic" id="0:680">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:681"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="202" frame="154" interpolationType="cubic" id="0:682">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:683"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="227" frame="179" interpolationType="cubic" id="0:684">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:685"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="244" frame="204" interpolationType="linear" id="0:686"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:687">
+<KeyFrameDouble value="40" interpolationType="cubic" id="0:688">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:689"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="53" frame="9" interpolationType="cubic" id="0:690">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:691"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="112" frame="35" interpolationType="cubic" id="0:692">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:693"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="222" frame="74" interpolationType="cubic" id="0:694">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:695"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="336" frame="116" interpolationType="cubic" id="0:696">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:697"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="438" frame="154" interpolationType="cubic" id="0:698">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:699"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="497" frame="179" interpolationType="cubic" id="0:700">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:701"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="543" frame="204" interpolationType="linear" id="0:702"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="15" id="0:703">
+<KeyFrameDouble value="-0.2" interpolationType="cubic" id="0:704">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:705"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-0.08" frame="9" interpolationType="cubic" id="0:706">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:707"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.12" frame="35" interpolationType="cubic" id="0:708">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:709"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.38" frame="74" interpolationType="cubic" id="0:710">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:711"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.17" frame="116" interpolationType="cubic" id="0:712">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:713"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.48" frame="154" interpolationType="cubic" id="0:714">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:715"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.72" frame="179" interpolationType="cubic" id="0:716">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:717"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.98" frame="204" interpolationType="linear" id="0:718"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:719">
+<KeyFrameDouble value="0" interpolationType="cubic" id="0:720">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:721"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="1" frame="9" interpolationType="cubic" id="0:722">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:723"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="1" frame="35" interpolationType="cubic" id="0:724">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:725"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.98" frame="74" interpolationType="cubic" id="0:726">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:727"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.97" frame="116" interpolationType="cubic" id="0:728">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:729"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.9" frame="154" interpolationType="cubic" id="0:730">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:731"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.66" frame="179" interpolationType="cubic" id="0:732">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:733"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0" frame="204" interpolationType="linear" id="0:734"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:10" id="0:735">
+<KeyedProperty propertyKey="16" id="0:736">
+<KeyFrameDouble value="0.82" interpolationType="linear" id="0:737"/>
+<KeyFrameDouble value="1.06" frame="44" interpolationType="linear" id="0:738"/>
+<KeyFrameDouble value="0.94" frame="116" interpolationType="linear" id="0:739"/>
+<KeyFrameDouble value="1.08" frame="176" interpolationType="linear" id="0:740"/>
+<KeyFrameDouble value="0.84" frame="300" interpolationType="linear" id="0:741"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:742">
+<KeyFrameDouble value="0.9" interpolationType="linear" id="0:743"/>
+<KeyFrameDouble value="1.03" frame="44" interpolationType="linear" id="0:744"/>
+<KeyFrameDouble value="0.92" frame="116" interpolationType="linear" id="0:745"/>
+<KeyFrameDouble value="1.1" frame="176" interpolationType="linear" id="0:746"/>
+<KeyFrameDouble value="0.84" frame="300" interpolationType="linear" id="0:747"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:11" id="0:748">
+<KeyedProperty propertyKey="13" id="0:749">
+<KeyFrameDouble value="14" interpolationType="cubic" id="0:750">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:751"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="14" frame="38" interpolationType="cubic" id="0:752">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:753"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="24" frame="52" interpolationType="cubic" id="0:754">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:755"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="51" frame="92" interpolationType="cubic" id="0:756">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:757"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="83" frame="130" interpolationType="cubic" id="0:758">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:759"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="105" frame="158" interpolationType="cubic" id="0:760">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:761"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="105" frame="204" interpolationType="linear" id="0:762"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:763">
+<KeyFrameDouble value="-8" interpolationType="cubic" id="0:764">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:765"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-8" frame="38" interpolationType="cubic" id="0:766">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:767"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="28" frame="52" interpolationType="cubic" id="0:768">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:769"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="113" frame="92" interpolationType="cubic" id="0:770">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:771"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="195" frame="130" interpolationType="cubic" id="0:772">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:773"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="250" frame="158" interpolationType="cubic" id="0:774">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:775"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="250" frame="204" interpolationType="linear" id="0:776"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="15" id="0:777">
+<KeyFrameDouble value="0.15" interpolationType="cubic" id="0:778">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:779"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.15" frame="38" interpolationType="cubic" id="0:780">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:781"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-0.05" frame="52" interpolationType="cubic" id="0:782">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:783"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.26" frame="92" interpolationType="cubic" id="0:784">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:785"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.46" frame="130" interpolationType="cubic" id="0:786">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:787"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.58" frame="158" interpolationType="cubic" id="0:788">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:789"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.58" frame="204" interpolationType="linear" id="0:790"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:791">
+<KeyFrameDouble value="0" interpolationType="cubic" id="0:792">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:793"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0" frame="38" interpolationType="cubic" id="0:794">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:795"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.7" frame="52" interpolationType="cubic" id="0:796">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:797"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.62" frame="92" interpolationType="cubic" id="0:798">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:799"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.48" frame="130" interpolationType="cubic" id="0:800">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:801"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0" frame="158" interpolationType="cubic" id="0:802">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:803"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0" frame="204" interpolationType="linear" id="0:804"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:12" id="0:805">
+<KeyedProperty propertyKey="16" id="0:806">
+<KeyFrameDouble value="0.82" interpolationType="linear" id="0:807"/>
+<KeyFrameDouble value="1.06" frame="44" interpolationType="linear" id="0:808"/>
+<KeyFrameDouble value="0.94" frame="116" interpolationType="linear" id="0:809"/>
+<KeyFrameDouble value="1.08" frame="176" interpolationType="linear" id="0:810"/>
+<KeyFrameDouble value="0.84" frame="300" interpolationType="linear" id="0:811"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:812">
+<KeyFrameDouble value="0.9" interpolationType="linear" id="0:813"/>
+<KeyFrameDouble value="1.03" frame="44" interpolationType="linear" id="0:814"/>
+<KeyFrameDouble value="0.92" frame="116" interpolationType="linear" id="0:815"/>
+<KeyFrameDouble value="1.1" frame="176" interpolationType="linear" id="0:816"/>
+<KeyFrameDouble value="0.84" frame="300" interpolationType="linear" id="0:817"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:13" id="0:818">
+<KeyedProperty propertyKey="13" id="0:819">
+<KeyFrameDouble value="122" interpolationType="cubic" id="0:820">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:821"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="122" frame="72" interpolationType="cubic" id="0:822">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:823"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="136" frame="89" interpolationType="cubic" id="0:824">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:825"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="166" frame="124" interpolationType="cubic" id="0:826">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:827"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="199" frame="160" interpolationType="cubic" id="0:828">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:829"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="224" frame="190" interpolationType="cubic" id="0:830">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:831"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="224" frame="230" interpolationType="linear" id="0:832"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:833">
+<KeyFrameDouble value="-24" interpolationType="cubic" id="0:834">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:835"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-24" frame="72" interpolationType="cubic" id="0:836">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:837"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="24" frame="89" interpolationType="cubic" id="0:838">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:839"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="118" frame="124" interpolationType="cubic" id="0:840">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:841"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="222" frame="160" interpolationType="cubic" id="0:842">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:843"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="300" frame="190" interpolationType="cubic" id="0:844">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:845"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="300" frame="230" interpolationType="linear" id="0:846"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="15" id="0:847">
+<KeyFrameDouble value="-0.12" interpolationType="cubic" id="0:848">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:849"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-0.12" frame="72" interpolationType="cubic" id="0:850">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:851"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.02" frame="89" interpolationType="cubic" id="0:852">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:853"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.3" frame="124" interpolationType="cubic" id="0:854">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:855"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.6" frame="160" interpolationType="cubic" id="0:856">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:857"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.74" frame="190" interpolationType="cubic" id="0:858">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:859"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.74" frame="230" interpolationType="linear" id="0:860"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:861">
+<KeyFrameDouble value="0" interpolationType="cubic" id="0:862">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:863"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0" frame="72" interpolationType="cubic" id="0:864">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:865"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.68" frame="89" interpolationType="cubic" id="0:866">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:867"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.58" frame="124" interpolationType="cubic" id="0:868">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:869"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.42" frame="160" interpolationType="cubic" id="0:870">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:871"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0" frame="190" interpolationType="cubic" id="0:872">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:873"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0" frame="230" interpolationType="linear" id="0:874"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:14" id="0:875">
+<KeyedProperty propertyKey="13" id="0:876">
+<KeyFrameDouble value="56" interpolationType="linear" id="0:877"/>
+<KeyFrameDouble value="56" frame="3" interpolationType="linear" id="0:878"/>
+<KeyFrameDouble value="48" frame="141" interpolationType="linear" id="0:879"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:880">
+<KeyFrameDouble value="92" interpolationType="linear" id="0:881"/>
+<KeyFrameDouble value="92" frame="3" interpolationType="linear" id="0:882"/>
+<KeyFrameDouble value="74" frame="141" interpolationType="linear" id="0:883"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="16" id="0:884">
+<KeyFrameDouble value="0.18" interpolationType="linear" id="0:885"/>
+<KeyFrameDouble value="0.42" frame="21" interpolationType="linear" id="0:886"/>
+<KeyFrameDouble value="1.08" frame="58" interpolationType="linear" id="0:887"/>
+<KeyFrameDouble value="1.48" frame="141" interpolationType="linear" id="0:888"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:889">
+<KeyFrameDouble value="0.22" interpolationType="linear" id="0:890"/>
+<KeyFrameDouble value="0.4" frame="21" interpolationType="linear" id="0:891"/>
+<KeyFrameDouble value="1.02" frame="58" interpolationType="linear" id="0:892"/>
+<KeyFrameDouble value="1.34" frame="141" interpolationType="linear" id="0:893"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:894">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:895"/>
+<KeyFrameDouble value="0" frame="3" interpolationType="linear" id="0:896"/>
+<KeyFrameDouble value="0.64" frame="23" interpolationType="linear" id="0:897"/>
+<KeyFrameDouble value="0.4" frame="81" interpolationType="linear" id="0:898"/>
+<KeyFrameDouble value="0" frame="141" interpolationType="linear" id="0:899"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:15" id="0:900">
+<KeyedProperty propertyKey="13" id="0:901">
+<KeyFrameDouble value="67" interpolationType="linear" id="0:902"/>
+<KeyFrameDouble value="67" frame="16" interpolationType="linear" id="0:903"/>
+<KeyFrameDouble value="55" frame="154" interpolationType="linear" id="0:904"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:905">
+<KeyFrameDouble value="144" interpolationType="linear" id="0:906"/>
+<KeyFrameDouble value="144" frame="16" interpolationType="linear" id="0:907"/>
+<KeyFrameDouble value="122" frame="154" interpolationType="linear" id="0:908"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="16" id="0:909">
+<KeyFrameDouble value="0.18" interpolationType="linear" id="0:910"/>
+<KeyFrameDouble value="0.42" frame="34" interpolationType="linear" id="0:911"/>
+<KeyFrameDouble value="1.08" frame="71" interpolationType="linear" id="0:912"/>
+<KeyFrameDouble value="1.48" frame="154" interpolationType="linear" id="0:913"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:914">
+<KeyFrameDouble value="0.22" interpolationType="linear" id="0:915"/>
+<KeyFrameDouble value="0.4" frame="34" interpolationType="linear" id="0:916"/>
+<KeyFrameDouble value="1.02" frame="71" interpolationType="linear" id="0:917"/>
+<KeyFrameDouble value="1.34" frame="154" interpolationType="linear" id="0:918"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:919">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:920"/>
+<KeyFrameDouble value="0" frame="16" interpolationType="linear" id="0:921"/>
+<KeyFrameDouble value="0.64" frame="36" interpolationType="linear" id="0:922"/>
+<KeyFrameDouble value="0.4" frame="94" interpolationType="linear" id="0:923"/>
+<KeyFrameDouble value="0" frame="154" interpolationType="linear" id="0:924"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:16" id="0:925">
+<KeyedProperty propertyKey="13" id="0:926">
+<KeyFrameDouble value="87" interpolationType="linear" id="0:927"/>
+<KeyFrameDouble value="87" frame="32" interpolationType="linear" id="0:928"/>
+<KeyFrameDouble value="71" frame="170" interpolationType="linear" id="0:929"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:930">
+<KeyFrameDouble value="198" interpolationType="linear" id="0:931"/>
+<KeyFrameDouble value="198" frame="32" interpolationType="linear" id="0:932"/>
+<KeyFrameDouble value="170" frame="170" interpolationType="linear" id="0:933"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="16" id="0:934">
+<KeyFrameDouble value="0.18" interpolationType="linear" id="0:935"/>
+<KeyFrameDouble value="0.42" frame="50" interpolationType="linear" id="0:936"/>
+<KeyFrameDouble value="1.08" frame="87" interpolationType="linear" id="0:937"/>
+<KeyFrameDouble value="1.48" frame="170" interpolationType="linear" id="0:938"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:939">
+<KeyFrameDouble value="0.22" interpolationType="linear" id="0:940"/>
+<KeyFrameDouble value="0.4" frame="50" interpolationType="linear" id="0:941"/>
+<KeyFrameDouble value="1.02" frame="87" interpolationType="linear" id="0:942"/>
+<KeyFrameDouble value="1.34" frame="170" interpolationType="linear" id="0:943"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:944">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:945"/>
+<KeyFrameDouble value="0" frame="32" interpolationType="linear" id="0:946"/>
+<KeyFrameDouble value="0.64" frame="52" interpolationType="linear" id="0:947"/>
+<KeyFrameDouble value="0.4" frame="110" interpolationType="linear" id="0:948"/>
+<KeyFrameDouble value="0" frame="170" interpolationType="linear" id="0:949"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:17" id="0:950">
+<KeyedProperty propertyKey="13" id="0:951">
+<KeyFrameDouble value="111" interpolationType="linear" id="0:952"/>
+<KeyFrameDouble value="111" frame="48" interpolationType="linear" id="0:953"/>
+<KeyFrameDouble value="92" frame="186" interpolationType="linear" id="0:954"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:955">
+<KeyFrameDouble value="254" interpolationType="linear" id="0:956"/>
+<KeyFrameDouble value="254" frame="48" interpolationType="linear" id="0:957"/>
+<KeyFrameDouble value="225" frame="186" interpolationType="linear" id="0:958"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="16" id="0:959">
+<KeyFrameDouble value="0.18" interpolationType="linear" id="0:960"/>
+<KeyFrameDouble value="0.42" frame="66" interpolationType="linear" id="0:961"/>
+<KeyFrameDouble value="1.08" frame="103" interpolationType="linear" id="0:962"/>
+<KeyFrameDouble value="1.48" frame="186" interpolationType="linear" id="0:963"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:964">
+<KeyFrameDouble value="0.22" interpolationType="linear" id="0:965"/>
+<KeyFrameDouble value="0.4" frame="66" interpolationType="linear" id="0:966"/>
+<KeyFrameDouble value="1.02" frame="103" interpolationType="linear" id="0:967"/>
+<KeyFrameDouble value="1.34" frame="186" interpolationType="linear" id="0:968"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:969">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:970"/>
+<KeyFrameDouble value="0" frame="48" interpolationType="linear" id="0:971"/>
+<KeyFrameDouble value="0.64" frame="68" interpolationType="linear" id="0:972"/>
+<KeyFrameDouble value="0.4" frame="126" interpolationType="linear" id="0:973"/>
+<KeyFrameDouble value="0" frame="186" interpolationType="linear" id="0:974"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:18" id="0:975">
+<KeyedProperty propertyKey="13" id="0:976">
+<KeyFrameDouble value="138" interpolationType="linear" id="0:977"/>
+<KeyFrameDouble value="138" frame="64" interpolationType="linear" id="0:978"/>
+<KeyFrameDouble value="120" frame="202" interpolationType="linear" id="0:979"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:980">
+<KeyFrameDouble value="310" interpolationType="linear" id="0:981"/>
+<KeyFrameDouble value="310" frame="64" interpolationType="linear" id="0:982"/>
+<KeyFrameDouble value="275" frame="202" interpolationType="linear" id="0:983"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="16" id="0:984">
+<KeyFrameDouble value="0.18" interpolationType="linear" id="0:985"/>
+<KeyFrameDouble value="0.42" frame="82" interpolationType="linear" id="0:986"/>
+<KeyFrameDouble value="1.08" frame="119" interpolationType="linear" id="0:987"/>
+<KeyFrameDouble value="1.48" frame="202" interpolationType="linear" id="0:988"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:989">
+<KeyFrameDouble value="0.22" interpolationType="linear" id="0:990"/>
+<KeyFrameDouble value="0.4" frame="82" interpolationType="linear" id="0:991"/>
+<KeyFrameDouble value="1.02" frame="119" interpolationType="linear" id="0:992"/>
+<KeyFrameDouble value="1.34" frame="202" interpolationType="linear" id="0:993"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:994">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:995"/>
+<KeyFrameDouble value="0" frame="64" interpolationType="linear" id="0:996"/>
+<KeyFrameDouble value="0.64" frame="84" interpolationType="linear" id="0:997"/>
+<KeyFrameDouble value="0.4" frame="142" interpolationType="linear" id="0:998"/>
+<KeyFrameDouble value="0" frame="202" interpolationType="linear" id="0:999"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:19" id="0:1000">
+<KeyedProperty propertyKey="13" id="0:1001">
+<KeyFrameDouble value="165" interpolationType="linear" id="0:1002"/>
+<KeyFrameDouble value="165" frame="80" interpolationType="linear" id="0:1003"/>
+<KeyFrameDouble value="142" frame="218" interpolationType="linear" id="0:1004"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:1005">
+<KeyFrameDouble value="364" interpolationType="linear" id="0:1006"/>
+<KeyFrameDouble value="364" frame="80" interpolationType="linear" id="0:1007"/>
+<KeyFrameDouble value="326" frame="218" interpolationType="linear" id="0:1008"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="16" id="0:1009">
+<KeyFrameDouble value="0.18" interpolationType="linear" id="0:1010"/>
+<KeyFrameDouble value="0.42" frame="98" interpolationType="linear" id="0:1011"/>
+<KeyFrameDouble value="1.08" frame="135" interpolationType="linear" id="0:1012"/>
+<KeyFrameDouble value="1.48" frame="218" interpolationType="linear" id="0:1013"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:1014">
+<KeyFrameDouble value="0.22" interpolationType="linear" id="0:1015"/>
+<KeyFrameDouble value="0.4" frame="98" interpolationType="linear" id="0:1016"/>
+<KeyFrameDouble value="1.02" frame="135" interpolationType="linear" id="0:1017"/>
+<KeyFrameDouble value="1.34" frame="218" interpolationType="linear" id="0:1018"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:1019">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:1020"/>
+<KeyFrameDouble value="0" frame="80" interpolationType="linear" id="0:1021"/>
+<KeyFrameDouble value="0.64" frame="100" interpolationType="linear" id="0:1022"/>
+<KeyFrameDouble value="0.4" frame="158" interpolationType="linear" id="0:1023"/>
+<KeyFrameDouble value="0" frame="218" interpolationType="linear" id="0:1024"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:20" id="0:1025">
+<KeyedProperty propertyKey="13" id="0:1026">
+<KeyFrameDouble value="194" interpolationType="linear" id="0:1027"/>
+<KeyFrameDouble value="194" frame="96" interpolationType="linear" id="0:1028"/>
+<KeyFrameDouble value="170" frame="234" interpolationType="linear" id="0:1029"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:1030">
+<KeyFrameDouble value="414" interpolationType="linear" id="0:1031"/>
+<KeyFrameDouble value="414" frame="96" interpolationType="linear" id="0:1032"/>
+<KeyFrameDouble value="375" frame="234" interpolationType="linear" id="0:1033"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="16" id="0:1034">
+<KeyFrameDouble value="0.18" interpolationType="linear" id="0:1035"/>
+<KeyFrameDouble value="0.42" frame="114" interpolationType="linear" id="0:1036"/>
+<KeyFrameDouble value="1.08" frame="151" interpolationType="linear" id="0:1037"/>
+<KeyFrameDouble value="1.48" frame="234" interpolationType="linear" id="0:1038"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:1039">
+<KeyFrameDouble value="0.22" interpolationType="linear" id="0:1040"/>
+<KeyFrameDouble value="0.4" frame="114" interpolationType="linear" id="0:1041"/>
+<KeyFrameDouble value="1.02" frame="151" interpolationType="linear" id="0:1042"/>
+<KeyFrameDouble value="1.34" frame="234" interpolationType="linear" id="0:1043"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:1044">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:1045"/>
+<KeyFrameDouble value="0" frame="96" interpolationType="linear" id="0:1046"/>
+<KeyFrameDouble value="0.64" frame="116" interpolationType="linear" id="0:1047"/>
+<KeyFrameDouble value="0.4" frame="174" interpolationType="linear" id="0:1048"/>
+<KeyFrameDouble value="0" frame="234" interpolationType="linear" id="0:1049"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:21" id="0:1050">
+<KeyedProperty propertyKey="13" id="0:1051">
+<KeyFrameDouble value="221" interpolationType="linear" id="0:1052"/>
+<KeyFrameDouble value="221" frame="111" interpolationType="linear" id="0:1053"/>
+<KeyFrameDouble value="193" frame="249" interpolationType="linear" id="0:1054"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:1055">
+<KeyFrameDouble value="463" interpolationType="linear" id="0:1056"/>
+<KeyFrameDouble value="463" frame="111" interpolationType="linear" id="0:1057"/>
+<KeyFrameDouble value="419" frame="249" interpolationType="linear" id="0:1058"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="16" id="0:1059">
+<KeyFrameDouble value="0.18" interpolationType="linear" id="0:1060"/>
+<KeyFrameDouble value="0.42" frame="129" interpolationType="linear" id="0:1061"/>
+<KeyFrameDouble value="1.08" frame="166" interpolationType="linear" id="0:1062"/>
+<KeyFrameDouble value="1.48" frame="249" interpolationType="linear" id="0:1063"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:1064">
+<KeyFrameDouble value="0.22" interpolationType="linear" id="0:1065"/>
+<KeyFrameDouble value="0.4" frame="129" interpolationType="linear" id="0:1066"/>
+<KeyFrameDouble value="1.02" frame="166" interpolationType="linear" id="0:1067"/>
+<KeyFrameDouble value="1.34" frame="249" interpolationType="linear" id="0:1068"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:1069">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:1070"/>
+<KeyFrameDouble value="0" frame="111" interpolationType="linear" id="0:1071"/>
+<KeyFrameDouble value="0.64" frame="131" interpolationType="linear" id="0:1072"/>
+<KeyFrameDouble value="0.4" frame="189" interpolationType="linear" id="0:1073"/>
+<KeyFrameDouble value="0" frame="249" interpolationType="linear" id="0:1074"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:30" id="0:1075">
+<KeyedProperty propertyKey="13" id="0:1076">
+<KeyFrameDouble value="-25" interpolationType="cubic" id="0:1077">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1078"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-25" frame="138" interpolationType="cubic" id="0:1079">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1080"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-8" frame="174" interpolationType="cubic" id="0:1081">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1082"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="5" frame="215" interpolationType="cubic" id="0:1083">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1084"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="28" frame="254" interpolationType="cubic" id="0:1085">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1086"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="62" frame="300" interpolationType="linear" id="0:1087"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="14" id="0:1088">
+<KeyFrameDouble value="-28" interpolationType="cubic" id="0:1089">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1090"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-28" frame="138" interpolationType="cubic" id="0:1091">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1092"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="1" frame="174" interpolationType="cubic" id="0:1093">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1094"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-2" frame="215" interpolationType="cubic" id="0:1095">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1096"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-22" frame="254" interpolationType="cubic" id="0:1097">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1098"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="-72" frame="300" interpolationType="linear" id="0:1099"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="16" id="0:1100">
+<KeyFrameDouble value="0.58" interpolationType="cubic" id="0:1101">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1102"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.58" frame="138" interpolationType="cubic" id="0:1103">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1104"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.82" frame="174" interpolationType="cubic" id="0:1105">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1106"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="1.02" frame="215" interpolationType="cubic" id="0:1107">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1108"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="1.13" frame="252" interpolationType="cubic" id="0:1109">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1110"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="1.18" frame="300" interpolationType="linear" id="0:1111"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:1112">
+<KeyFrameDouble value="0.64" interpolationType="cubic" id="0:1113">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1114"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.64" frame="138" interpolationType="cubic" id="0:1115">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1116"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.86" frame="174" interpolationType="cubic" id="0:1117">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1118"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="1.02" frame="215" interpolationType="cubic" id="0:1119">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1120"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="1.04" frame="252" interpolationType="cubic" id="0:1121">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1122"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.76" frame="300" interpolationType="linear" id="0:1123"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:1124">
+<KeyFrameDouble value="0" interpolationType="cubic" id="0:1125">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1126"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0" frame="138" interpolationType="cubic" id="0:1127">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1128"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.26" frame="168" interpolationType="cubic" id="0:1129">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1130"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.82" frame="205" interpolationType="cubic" id="0:1131">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1132"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.7" frame="238" interpolationType="cubic" id="0:1133">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1134"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0.34" frame="270" interpolationType="cubic" id="0:1135">
+  <CubicEaseInterpolator x1="0.24" y1="0.02" x2="0.34" y2="1" id="0:1136"/>
+</KeyFrameDouble>
+<KeyFrameDouble value="0" frame="300" interpolationType="linear" id="0:1137"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:31" id="0:1138">
+<KeyedProperty propertyKey="16" id="0:1139">
+<KeyFrameDouble value="0.2" interpolationType="linear" id="0:1140"/>
+<KeyFrameDouble value="0.7" frame="26" interpolationType="linear" id="0:1141"/>
+<KeyFrameDouble value="1.05" frame="51" interpolationType="linear" id="0:1142"/>
+<KeyFrameDouble value="0.5" frame="106" interpolationType="linear" id="0:1143"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:1144">
+<KeyFrameDouble value="0.2" interpolationType="linear" id="0:1145"/>
+<KeyFrameDouble value="0.7" frame="26" interpolationType="linear" id="0:1146"/>
+<KeyFrameDouble value="1.05" frame="51" interpolationType="linear" id="0:1147"/>
+<KeyFrameDouble value="0.5" frame="106" interpolationType="linear" id="0:1148"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:1149">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:1150"/>
+<KeyFrameDouble value="0" frame="18" interpolationType="linear" id="0:1151"/>
+<KeyFrameDouble value="0.86" frame="34" interpolationType="linear" id="0:1152"/>
+<KeyFrameDouble value="0.5" frame="65" interpolationType="linear" id="0:1153"/>
+<KeyFrameDouble value="0" frame="106" interpolationType="linear" id="0:1154"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:32" id="0:1155">
+<KeyedProperty propertyKey="16" id="0:1156">
+<KeyFrameDouble value="0.2" interpolationType="linear" id="0:1157"/>
+<KeyFrameDouble value="0.7" frame="54" interpolationType="linear" id="0:1158"/>
+<KeyFrameDouble value="1.05" frame="79" interpolationType="linear" id="0:1159"/>
+<KeyFrameDouble value="0.5" frame="134" interpolationType="linear" id="0:1160"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:1161">
+<KeyFrameDouble value="0.2" interpolationType="linear" id="0:1162"/>
+<KeyFrameDouble value="0.7" frame="54" interpolationType="linear" id="0:1163"/>
+<KeyFrameDouble value="1.05" frame="79" interpolationType="linear" id="0:1164"/>
+<KeyFrameDouble value="0.5" frame="134" interpolationType="linear" id="0:1165"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:1166">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:1167"/>
+<KeyFrameDouble value="0" frame="46" interpolationType="linear" id="0:1168"/>
+<KeyFrameDouble value="0.86" frame="62" interpolationType="linear" id="0:1169"/>
+<KeyFrameDouble value="0.5" frame="93" interpolationType="linear" id="0:1170"/>
+<KeyFrameDouble value="0" frame="134" interpolationType="linear" id="0:1171"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:33" id="0:1172">
+<KeyedProperty propertyKey="16" id="0:1173">
+<KeyFrameDouble value="0.2" interpolationType="linear" id="0:1174"/>
+<KeyFrameDouble value="0.7" frame="83" interpolationType="linear" id="0:1175"/>
+<KeyFrameDouble value="1.05" frame="108" interpolationType="linear" id="0:1176"/>
+<KeyFrameDouble value="0.5" frame="163" interpolationType="linear" id="0:1177"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:1178">
+<KeyFrameDouble value="0.2" interpolationType="linear" id="0:1179"/>
+<KeyFrameDouble value="0.7" frame="83" interpolationType="linear" id="0:1180"/>
+<KeyFrameDouble value="1.05" frame="108" interpolationType="linear" id="0:1181"/>
+<KeyFrameDouble value="0.5" frame="163" interpolationType="linear" id="0:1182"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:1183">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:1184"/>
+<KeyFrameDouble value="0" frame="75" interpolationType="linear" id="0:1185"/>
+<KeyFrameDouble value="0.86" frame="91" interpolationType="linear" id="0:1186"/>
+<KeyFrameDouble value="0.5" frame="122" interpolationType="linear" id="0:1187"/>
+<KeyFrameDouble value="0" frame="163" interpolationType="linear" id="0:1188"/>
+</KeyedProperty>
+</KeyedObject>
+<KeyedObject objectId="0:34" id="0:1189">
+<KeyedProperty propertyKey="16" id="0:1190">
+<KeyFrameDouble value="0.2" interpolationType="linear" id="0:1191"/>
+<KeyFrameDouble value="0.7" frame="175" interpolationType="linear" id="0:1192"/>
+<KeyFrameDouble value="1.05" frame="200" interpolationType="linear" id="0:1193"/>
+<KeyFrameDouble value="0.5" frame="255" interpolationType="linear" id="0:1194"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="17" id="0:1195">
+<KeyFrameDouble value="0.2" interpolationType="linear" id="0:1196"/>
+<KeyFrameDouble value="0.7" frame="175" interpolationType="linear" id="0:1197"/>
+<KeyFrameDouble value="1.05" frame="200" interpolationType="linear" id="0:1198"/>
+<KeyFrameDouble value="0.5" frame="255" interpolationType="linear" id="0:1199"/>
+</KeyedProperty>
+<KeyedProperty propertyKey="18" id="0:1200">
+<KeyFrameDouble value="0" interpolationType="linear" id="0:1201"/>
+<KeyFrameDouble value="0" frame="167" interpolationType="linear" id="0:1202"/>
+<KeyFrameDouble value="0.86" frame="183" interpolationType="linear" id="0:1203"/>
+<KeyFrameDouble value="0.5" frame="214" interpolationType="linear" id="0:1204"/>
+<KeyFrameDouble value="0" frame="255" interpolationType="linear" id="0:1205"/>
+</KeyedProperty>
+</KeyedObject>
+    </LinearAnimation>
+  </Artboard>
+</Rive>

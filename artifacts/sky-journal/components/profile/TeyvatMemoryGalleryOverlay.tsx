@@ -4,7 +4,8 @@ import { useSecureMediaUri } from '@/hooks/useSecureMediaUri';
 import { Button as KindnessButton } from '@workspace/storigam-kindness/components/native/button';
 import { nativeTheme } from '@workspace/storigam-kindness/lib/native-theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Audio, ResizeMode, Video } from 'expo-av';
+import { ResizeMode, VideoSurface as Video } from '@/components/VideoSurface';
+import { Audio } from '@/utils/audioCompat';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createTeyvatViewerSession } from './teyvatViewerSession';
 import {
@@ -749,7 +750,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 24,
   },
-  boxGlow: { ...StyleSheet.absoluteFillObject },
+  boxGlow: { ...StyleSheet.absoluteFill },
   boxAura: {
     position: 'absolute',
     width: 184,
@@ -857,7 +858,7 @@ const styles = StyleSheet.create({
     maxWidth: 230,
   },
   lightbox: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 5,
     backgroundColor: 'rgba(9,6,20,0.84)',
     alignItems: 'center',
@@ -936,7 +937,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.32)',
   },
   videoLoading: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: `${nativeTheme.dark.background}CC`,

@@ -62,6 +62,27 @@ export interface ContentComment {
   createdAt: string;
 }
 
+export type ReportContentCommentInputReason =
+  (typeof ReportContentCommentInputReason)[keyof typeof ReportContentCommentInputReason];
+
+export const ReportContentCommentInputReason = {
+  Inappropriate_content: "Inappropriate content",
+  Spam_or_misleading: "Spam or misleading",
+  Harassment_or_hate_speech: "Harassment or hate speech",
+  Other: "Other",
+} as const;
+
+export interface ReportContentCommentInput {
+  reason: ReportContentCommentInputReason;
+  /** @maxLength 500 */
+  details?: string;
+}
+
+export interface ReportContentCommentResult {
+  ok: true;
+  duplicate: boolean;
+}
+
 export type LumiMessageRole =
   (typeof LumiMessageRole)[keyof typeof LumiMessageRole];
 
@@ -270,6 +291,28 @@ export interface ChatPhotoInput {
   imageUri: string;
 }
 
+export interface ChatVideoInput {
+  /** Stable client-generated UUID used to make safe retries idempotent. */
+  clientMessageId?: string;
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  content?: string;
+  /**
+   * Canonical uploaded video path owned by the sender.
+   * @maxLength 2048
+   * @pattern ^/api/videos/[\w.-]+$
+   */
+  videoUri: string;
+  /**
+   * Optional sender-owned poster image for the video.
+   * @maxLength 2048
+   * @pattern ^/api/images/[\w.-]+$
+   */
+  thumbnailUri?: string;
+}
+
 export type ChatMessageInputExpression =
   (typeof ChatMessageInputExpression)[keyof typeof ChatMessageInputExpression];
 
@@ -304,6 +347,16 @@ export interface ChatMessageInput {
    * @pattern ^/api/images/[\w.-]+$
    */
   imageUri?: string;
+  /**
+   * Canonical uploaded video path owned by the sender; never a temporary read URL.
+   * @pattern ^/api/videos/[\w.-]+$
+   */
+  videoUri?: string;
+  /**
+   * Optional canonical sender-owned video poster image.
+   * @pattern ^/api/images/[\w.-]+$
+   */
+  thumbnailUri?: string;
 }
 
 export interface ChatMessage {
@@ -316,6 +369,10 @@ export interface ChatMessage {
   expression: string | null;
   /** @nullable */
   imageUri?: string | null;
+  /** @nullable */
+  videoUri?: string | null;
+  /** @nullable */
+  thumbnailUri?: string | null;
   isRead: boolean;
   createdAt: string;
   isOwn: boolean;
@@ -417,6 +474,27 @@ export interface HealthStatus {
   status: string;
 }
 
+/**
+ * Selected website language for the signup emails.
+ */
+export type StorigamInterestInputLanguage =
+  (typeof StorigamInterestInputLanguage)[keyof typeof StorigamInterestInputLanguage];
+
+export const StorigamInterestInputLanguage = {
+  en: "en",
+  ja: "ja",
+  es: "es",
+  tr: "tr",
+  fr: "fr",
+  de: "de",
+  pt: "pt",
+  ko: "ko",
+  zh: "zh",
+  ru: "ru",
+  ar: "ar",
+  it: "it",
+} as const;
+
 export type StorigamInterestInputInterestsItem =
   (typeof StorigamInterestInputInterestsItem)[keyof typeof StorigamInterestInputInterestsItem];
 
@@ -428,6 +506,14 @@ export const StorigamInterestInputInterestsItem = {
 export interface StorigamInterestInput {
   /** @maxLength 254 */
   email: string;
+  /**
+   * Name used to personalize the beta welcome email.
+   * @minLength 1
+   * @maxLength 100
+   */
+  name: string;
+  /** Selected website language for the signup emails. */
+  language?: StorigamInterestInputLanguage;
   /**
    * @minItems 1
    * @maxItems 2
@@ -441,8 +527,37 @@ export interface StorigamInterestInput {
   website?: string;
 }
 
+/**
+ * Whether Resend accepted the welcome email or it needs attention.
+ */
+export type StorigamInterestResponseWelcomeEmailStatus =
+  (typeof StorigamInterestResponseWelcomeEmailStatus)[keyof typeof StorigamInterestResponseWelcomeEmailStatus];
+
+export const StorigamInterestResponseWelcomeEmailStatus = {
+  accepted: "accepted",
+  failed: "failed",
+  pending: "pending",
+} as const;
+
+/**
+ * Delivery status for the beta badge invitation.
+ */
+export type StorigamInterestResponseBadgeInvitationEmailStatus =
+  (typeof StorigamInterestResponseBadgeInvitationEmailStatus)[keyof typeof StorigamInterestResponseBadgeInvitationEmailStatus];
+
+export const StorigamInterestResponseBadgeInvitationEmailStatus = {
+  accepted: "accepted",
+  failed: "failed",
+  pending: "pending",
+  not_applicable: "not_applicable",
+} as const;
+
 export interface StorigamInterestResponse {
   ok: boolean;
+  /** Whether Resend accepted the welcome email or it needs attention. */
+  welcomeEmailStatus: StorigamInterestResponseWelcomeEmailStatus;
+  /** Delivery status for the beta badge invitation. */
+  badgeInvitationEmailStatus: StorigamInterestResponseBadgeInvitationEmailStatus;
 }
 
 export type StorigamFeedbackInputCategory =
@@ -826,11 +941,31 @@ export interface Notification {
   id: string;
   actorId: string;
   actorName: string;
+  /** Includes content_comment for new comments and content_reply for replies. */
   type: string;
+  /** For comment notifications, contentType:contentId:commentId:parentCommentId (empty parentCommentId for a top-level comment). */
   refId?: string | null;
   title?: string | null;
   isRead: boolean;
   createdAt: string;
+}
+
+export type PushDeviceRegistrationPlatform =
+  (typeof PushDeviceRegistrationPlatform)[keyof typeof PushDeviceRegistrationPlatform];
+
+export const PushDeviceRegistrationPlatform = {
+  ios: "ios",
+  android: "android",
+  unknown: "unknown",
+} as const;
+
+export interface PushDeviceRegistration {
+  /**
+   * @minLength 1
+   * @maxLength 500
+   */
+  token: string;
+  platform?: PushDeviceRegistrationPlatform;
 }
 
 export type DiscoverPostPanelsItem = { [key: string]: unknown };
@@ -1670,6 +1805,54 @@ export interface GuideSession {
   tutorialProgress: number;
   tutorialCompletedAt: string | null;
 }
+
+export type ReplyToStoryReactionBodyStickerType =
+  (typeof ReplyToStoryReactionBodyStickerType)[keyof typeof ReplyToStoryReactionBodyStickerType];
+
+export const ReplyToStoryReactionBodyStickerType = {
+  Hopeful: "Hopeful",
+  Peaceful: "Peaceful",
+  Lonely: "Lonely",
+  Romantic: "Romantic",
+  Chaotic: "Chaotic",
+  Adventurous: "Adventurous",
+  Dreamy: "Dreamy",
+  Soft: "Soft",
+} as const;
+
+export type ReplyToStoryReactionBody = {
+  notificationId: string;
+  stickerType: ReplyToStoryReactionBodyStickerType;
+};
+
+export type ReplyToStoryReaction200StickerType =
+  (typeof ReplyToStoryReaction200StickerType)[keyof typeof ReplyToStoryReaction200StickerType];
+
+export const ReplyToStoryReaction200StickerType = {
+  Hopeful: "Hopeful",
+  Peaceful: "Peaceful",
+  Lonely: "Lonely",
+  Romantic: "Romantic",
+  Chaotic: "Chaotic",
+  Adventurous: "Adventurous",
+  Dreamy: "Dreamy",
+  Soft: "Soft",
+} as const;
+
+export type ReplyToStoryReaction200 = {
+  ok: true;
+  alreadySent: boolean;
+  recipientId: string;
+  stickerType: ReplyToStoryReaction200StickerType;
+};
+
+export type RegisterPushDevice200 = {
+  ok: boolean;
+};
+
+export type UnregisterPushDevice200 = {
+  ok: boolean;
+};
 
 export type ListGuideSessionsParams = {
   guideId?: string;

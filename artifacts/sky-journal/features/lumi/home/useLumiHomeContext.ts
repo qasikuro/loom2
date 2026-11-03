@@ -82,7 +82,7 @@ export function useLumiHomeContext(input: {
     let cancelled = false;
     let delivered = false;
     void (async () => {
-      let record = null;
+      let record: ReturnType<typeof parseVisitRecord>;
       try { record = parseVisitRecord(await AsyncStorage.getItem(visitStorageKey(userId))); } catch { record = null; }
       if (cancelled) return;
       const now = Date.now();

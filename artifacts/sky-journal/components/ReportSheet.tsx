@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon';
 import { apiFetch } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useReportContentComment, type ReportContentCommentInputReason } from '@workspace/api-client-react';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -28,19 +29,30 @@ const REASONS = [
   { key: 'copyright',     icon: 'shield-off'     as const },
   { key: 'other',         icon: 'more-horizontal' as const },
 ] as const;
+const COMMENT_REASON_VALUES = {
+  inappropriate: 'Inappropriate content',
+  spam: 'Spam or misleading',
+  harassment: 'Harassment or hate speech',
+  other: 'Other',
+} satisfies Record<Exclude<Reason, 'copyright'>, ReportContentCommentInputReason>;
+const REPORT_REASON_VALUES: Record<Reason, string> = {
+  ...COMMENT_REASON_VALUES,
+  copyright: 'Copyright infringement',
+};
 
 type Reason = typeof REASONS[number]['key'];
 
 export interface ReportSheetProps {
   visible:     boolean;
   onClose:     () => void;
-  targetType:  'story' | 'outfit' | 'user' | 'manga_generation';
+  targetType:  'story' | 'outfit' | 'user' | 'manga_generation' | 'comment';
   targetId:    string;
   targetLabel?: string;
 }
 
 export function ReportSheet({ visible, onClose, targetType, targetId, targetLabel }: ReportSheetProps) {
   const { t } = useTranslation();
+  const reportContentComment = useReportContentComment();
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -52,6 +64,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
   const [loading,   setLoading]   = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState(false);
+  const [alreadyReported, setAlreadyReported] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -59,6 +72,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
       setDetails('');
       setSubmitted(false);
       setSubmitError(false);
+      setAlreadyReported(false);
       setLoading(false);
       Animated.parallel([
         Animated.timing(fadeIn, { toValue: 1, duration: 220, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
@@ -79,10 +93,19 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
     setLoading(true);
     setSubmitError(false);
     try {
-      await apiFetch('/reports', {
-        method: 'POST',
-        body: JSON.stringify({ targetType, targetId, reason: selected, details }),
-      });
+      if (targetType === 'comment') {
+        if (selected === 'copyright') return;
+        const result = await reportContentComment.mutateAsync({
+          commentId: targetId,
+          data: { reason: COMMENT_REASON_VALUES[selected], details },
+        });
+        setAlreadyReported(result.duplicate);
+      } else {
+        await apiFetch('/reports', {
+          method: 'POST',
+          body: JSON.stringify({ targetType, targetId, reason: REPORT_REASON_VALUES[selected], details }),
+        });
+      }
       setSubmitted(true);
     } catch {
       setSubmitError(true);
@@ -95,7 +118,11 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
     targetType === 'story'  ? t('social.thisStory') :
     targetType === 'outfit' ? t('social.thisOutfit') :
     targetType === 'manga_generation' ? t('social.thisManga') :
+    targetType === 'comment' ? targetLabel ?? 'this comment' :
     targetLabel ?? t('social.thisUser');
+  const availableReasons = targetType === 'comment'
+    ? REASONS.filter(reason => reason.key !== 'copyright')
+    : REASONS;
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -156,10 +183,14 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
                 <Icon name="check-circle" size={32} color="#6BA57A" />
               </View>
               <Text style={[styles.successTitle, { color: colors.foreground }]}>
-                {t('social.reportReceived')}
+                {targetType === 'comment' && alreadyReported ? 'Report already received' : t('social.reportReceived')}
               </Text>
               <Text style={[styles.successBody, { color: colors.mutedForeground }]}>
-                {t('social.reportSuccess')}
+                {targetType === 'comment'
+                  ? alreadyReported
+                    ? 'We already have your report. The commenter will not see who sent it.'
+                    : 'Our moderators will review it. The commenter will not see who sent it.'
+                  : t('social.reportSuccess')}
               </Text>
               <TouchableOpacity
                 style={[styles.submitBtn, { backgroundColor: colors.primary, marginTop: 8 }]}
@@ -176,7 +207,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
               </Text>
 
               <View style={styles.reasons}>
-                {REASONS.map(r => {
+                {availableReasons.map(r => {
                   const active = selected === r.key;
                   return (
                     <TouchableOpacity
@@ -254,7 +285,9 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
               </TouchableOpacity>
 
               <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>
-                {t('social.reportDisclaimer')}
+                {targetType === 'comment'
+                  ? 'Only moderators can see who sent this report.'
+                  : t('social.reportDisclaimer')}
               </Text>
             </>
           )}
@@ -268,7 +301,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
 const styles = StyleSheet.create({
   root:    { flex: 1, justifyContent: 'flex-end' },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(8,7,20,0.72)',
   },
 

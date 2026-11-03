@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { randomUUID } from "node:crypto";
+import { areFriends, friendsSql } from "../lib/contentVisibility";
 import { and, asc, count, eq, gt, inArray, isNull, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -206,6 +207,9 @@ async function serializeSessions(rows: SessionRow[], viewerId: string) {
   const followedGuideIds = new Set(viewerFollows
     .map(row => row.followingId)
     .filter(guideId => !blockedGuideIds.has(guideId)));
+  const friendGuideRows = await db.select({ followingId: followsTable.followingId }).from(followsTable)
+    .where(and(eq(followsTable.followerId, viewerId), friendsSql(followsTable.followingId, viewerId)));
+  const friendGuideIds = new Set(friendGuideRows.map(row => row.followingId));
   return visibleRows.map(row => {
     const tutorial = row.tutorialId ? tutorialsById.get(row.tutorialId) ?? null : null;
     const isJoined = mineById.has(row.id) || row.guideId === viewerId;
@@ -213,6 +217,7 @@ async function serializeSessions(rows: SessionRow[], viewerId: string) {
       row.guideId === viewerId ||
       tutorial.visibility === "public" ||
       (tutorial.visibility === "followers" && followedGuideIds.has(row.guideId)) ||
+      (tutorial.visibility === "friends" && friendGuideIds.has(row.guideId)) ||
       (tutorial.visibility === "unlisted" && isJoined)
     );
     return {
@@ -333,6 +338,13 @@ router.post("/guide-sessions/:sessionId/join", requireAuth, async (req, res) => 
     }).from(guideTutorialsTable).where(eq(guideTutorialsTable.id, session.tutorialId)).limit(1);
     if (!tutorial || tutorial.status !== "published") {
       return res.status(409).json({ error: "This session’s tutorial is no longer available." });
+    }
+    if (userId !== tutorial.guideId && tutorial.visibility === "private") {
+      return res.status(403).json({ error: "This tutorial is only visible to its author." });
+    }
+    if (userId !== tutorial.guideId && tutorial.visibility === "friends"
+      && !await areFriends(tutorial.guideId, userId)) {
+      return res.status(403).json({ error: "This tutorial is only available to the guide's friends." });
     }
     if (tutorial.visibility === "followers" && userId !== tutorial.guideId) {
       const [follow] = await db.select({ followingId: followsTable.followingId }).from(followsTable).where(and(

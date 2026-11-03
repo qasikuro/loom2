@@ -25,17 +25,20 @@ import { useAmbientAnimationActive } from '@/hooks/useAmbientAnimationActive';
 const BAR_HEIGHT = 66;
 const BTN_SIZE   = 56;
 
+export const unstable_settings = { initialRouteName: 'reels' };
+
 function TabIcon({
   name,
-  color,
   focused,
   primaryColor,
+  inactiveColor,
 }: {
   name:         SkyIconName;
-  color:        string;
   focused:      boolean;
   primaryColor: string;
+  inactiveColor: string;
 }) {
+  const iconColor = focused ? primaryColor : inactiveColor;
   const scale = useRef(new Animated.Value(focused ? 1.12 : 0.90)).current;
   const glow  = useRef(new Animated.Value(focused ? 1 : 0)).current;
 
@@ -83,8 +86,8 @@ function TabIcon({
           <SkyIcon
             name={name}
             size={22}
-            color={color}
-            accentColor={focused ? primaryColor : color}
+            color={iconColor}
+            accentColor={iconColor}
             strokeWidth={focused ? 1.9 : 1.5}
           />
         }
@@ -206,7 +209,6 @@ function ClassicTabLayout() {
   return (
     <View style={{ flex: 1 }}>
     <Tabs
-      initialRouteName="reels"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor:   colors.primary,
@@ -261,8 +263,8 @@ function ClassicTabLayout() {
         }}
         options={{
           title: t('nav.home'),
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="sky-home" color={color} focused={focused} primaryColor={colors.primary} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="sky-home" focused={focused} primaryColor={colors.primary} inactiveColor={colors.mutedForeground} />
           ),
         }}
       />
@@ -275,8 +277,8 @@ function ClassicTabLayout() {
         }}
         options={{
           title: t('shell.tabs.reels'),
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="sky-reels" color={color} focused={focused} primaryColor={colors.primary} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="sky-reels" focused={focused} primaryColor={colors.primary} inactiveColor={colors.mutedForeground} />
           ),
         }}
       />
@@ -304,8 +306,8 @@ function ClassicTabLayout() {
         }}
         options={{
           title: t('nav.discover'),
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="sky-lantern" color={color} focused={focused} primaryColor={colors.primary} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="sky-lantern" focused={focused} primaryColor={colors.primary} inactiveColor={colors.mutedForeground} />
           ),
           tabBarBadge:      dmUnread > 0 ? dmUnread : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.primary, fontSize: 9, minWidth: 16, height: 16, lineHeight: 16 },
@@ -328,8 +330,8 @@ function ClassicTabLayout() {
         }}
         options={{
           title: t('nav.profile'),
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="sky-profile" color={color} focused={focused} primaryColor={colors.primary} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="sky-profile" focused={focused} primaryColor={colors.primary} inactiveColor={colors.mutedForeground} />
           ),
         }}
       />

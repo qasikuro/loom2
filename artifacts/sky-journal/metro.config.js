@@ -7,6 +7,21 @@ const workspaceRoot = path.resolve(projectRoot, "../..");
 const config = getDefaultConfig(projectRoot);
 config.resolver.assetExts.push("riv");
 
+// Keep native workspace-linked packages on the app's single React instance.
+// The shared API client is also consumed by web apps, so leave web/SSR React
+// resolution alone and preserve React DOM's matching peer context there.
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (platform !== "web" && (moduleName === "react" || moduleName.startsWith("react/"))) {
+    const appReactModule = path.join(
+      projectRoot,
+      "node_modules",
+      ...moduleName.split("/")
+    );
+    return context.resolveRequest(context, appReactModule, platform);
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 // Watch the monorepo so Metro sees packages in the pnpm store
 config.watchFolders = [workspaceRoot];
 
@@ -15,9 +30,6 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules"),
 ];
-
-// Follow pnpm symlinks so assets inside linked packages are reachable
-config.resolver.unstable_enableSymlinks = true;
 
 // Block volatile agent/skills temp directories — Metro crashes when they
 // disappear while being watched (ENOENT on deleted .tmp-* dirs).

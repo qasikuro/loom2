@@ -279,7 +279,7 @@ const st = StyleSheet.create({
   rowMeta: { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 1 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, maxWidth: 170, minHeight: 34 },
   pillText: { fontSize: 11, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, padding: 16, gap: 8 },
   sheetTitle: { fontSize: 16, fontFamily: 'Satoshi-Bold' },
   choice: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 14, padding: 12 },

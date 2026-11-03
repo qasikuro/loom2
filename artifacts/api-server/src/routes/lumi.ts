@@ -7,7 +7,7 @@ import { getUserId, requireAuth } from "../middleware/auth";
 import { requireAiAccess } from "../middleware/ai-access";
 import {
   LUMI_COMPANION_SYSTEM, isImmediateCrisis, lumiFallback, lumiInputSchema,
-  lumiMessageSchema, lumiOutputSchema, lumiPreferencesSchema, type LumiMessage,
+  lumiMessageSchema, lumiOutputSchema, lumiPreferencesSchema, prepareLumiResult, type LumiMessage,
 } from "../lib/lumiCompanion";
 
 const router = Router();
@@ -112,7 +112,7 @@ router.post("/drift/companion", requireAuth, requireAiAccess, async (req, res) =
     const body = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
     const output = lumiOutputSchema.safeParse(JSON.parse(body));
     if (!output.success) throw new Error("Invalid Lumi response structure");
-    const result = { ...output.data, recommendations: isImmediateCrisis(message) ? [] : output.data.recommendations, fallback: false };
+    const result = prepareLumiResult(output.data, message);
     if (state?.remember) {
       await db.transaction(async tx => {
         await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('lumi-state'), hashtext(${userId}))`);
@@ -136,6 +136,7 @@ router.post("/drift/companion", requireAuth, requireAiAccess, async (req, res) =
       return res.json({
         reply: "If you might hurt yourself or someone else, contact your local emergency service now. Reach out to someone you trust who can stay with you. I'm a gaming companion, not emergency support.",
         recommendations: [], fallback: true,
+        mood: "unknown", phase: "support", emotion: "affectionate",
       });
     }
     return res.json(lumiFallback(locale));

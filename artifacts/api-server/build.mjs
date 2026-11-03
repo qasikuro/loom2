@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 import { copyFile, mkdtemp, rm } from "node:fs/promises";
+import { realpathSync } from "node:fs";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -13,6 +14,20 @@ globalThis.require = createRequire(import.meta.url);
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
 async function buildAll() {
+  const mediaToolPaths = {};
+  for (const tool of ["ffmpeg", "ffprobe"]) {
+    const lookup = spawnSync("sh", ["-c", `command -v ${tool}`], { encoding: "utf8" });
+    if (lookup.status !== 0 || !lookup.stdout.trim()) {
+      throw new Error(`Cannot build API: ${tool} is missing. Install the ffmpeg system package before publishing.`);
+    }
+    const executable = realpathSync(lookup.stdout.trim());
+    const check = spawnSync(executable, ["-version"], { encoding: "utf8", timeout: 15_000 });
+    if (check.error || check.status !== 0) {
+      throw new Error(`Cannot build API: ${tool} could not execute.`);
+    }
+    mediaToolPaths[tool] = executable;
+    console.log(`[media-tools] ${check.stdout.split("\n")[0]}`);
+  }
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
@@ -24,6 +39,10 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
+    define: {
+      __MEDIA_FFMPEG_PATH__: JSON.stringify(mediaToolPaths.ffmpeg),
+      __MEDIA_FFPROBE_PATH__: JSON.stringify(mediaToolPaths.ffprobe),
+    },
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
     // Examples of unbundleable packages:

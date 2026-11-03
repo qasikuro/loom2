@@ -446,6 +446,21 @@ export function getDmOutbox(
   return key ? [...(outboxes.get(key) ?? [])] : [];
 }
 
+/** Restore a cancelled send as paused when its removal cannot be saved. */
+export function restorePausedDmOutboxItem(
+  items: DmOutboxItem[],
+  item: DmOutboxItem,
+  originalPosition: number,
+): DmOutboxItem[] {
+  const restored = items.filter(entry => entry.clientMessageId !== item.clientMessageId);
+  restored.splice(
+    Math.min(Math.max(originalPosition, 0), restored.length),
+    0,
+    { ...item, retryAt: Number.MAX_SAFE_INTEGER },
+  );
+  return restored;
+}
+
 export async function hydrateDmOutbox(
   accountId: string | null | undefined,
   partnerId: string | null | undefined,
@@ -454,19 +469,15 @@ export async function hydrateDmOutbox(
   if (!key || !accountId || !partnerId) return [];
   if (outboxes.has(key)) return getDmOutbox(accountId, partnerId);
   const generation = generationFor(key);
-  try {
-    const root = await storageRoot(accountId, partnerId);
-    const stored = await readBlob<unknown>(root, 'outbox');
-    if (generation !== generationFor(key)) return [];
-    if (outboxes.has(key)) return getDmOutbox(accountId, partnerId);
-    const items = Array.isArray(stored) ? stored.filter(isOutboxItem).slice(-MAX_OUTBOX_MESSAGES) : [];
-    outboxes.set(key, items);
-    return [...items];
-  } catch (error) {
-    // An unavailable keychain is not an empty outbox. A new send must not
-    // overwrite previously queued messages when their storage cannot be read.
-    throw error;
-  }
+  // An unavailable keychain is not an empty outbox. A new send must not
+  // overwrite previously queued messages when their storage cannot be read.
+  const root = await storageRoot(accountId, partnerId);
+  const stored = await readBlob<unknown>(root, 'outbox');
+  if (generation !== generationFor(key)) return [];
+  if (outboxes.has(key)) return getDmOutbox(accountId, partnerId);
+  const items = Array.isArray(stored) ? stored.filter(isOutboxItem).slice(-MAX_OUTBOX_MESSAGES) : [];
+  outboxes.set(key, items);
+  return [...items];
 }
 
 export async function saveDmOutbox(

@@ -5,12 +5,17 @@ import { Readable } from "node:stream";
 
 const fixtures = vi.hoisted(() => ({
   query: vi.fn(),
+  logInfo: vi.fn(),
   file: {
     getMetadata: vi.fn(),
     createReadStream: vi.fn(),
   },
   objectAcl: vi.fn(),
   publicStory: null as Record<string, unknown> | null,
+  publicGuideSession: null as Record<string, unknown> | null,
+  publicGuideTutorial: null as Record<string, unknown> | null,
+  followerTutorialMedia: null as { owner: string; reader: string; path: string } | null,
+  tutorialSchemaReady: true,
   registeredOwners: [] as Record<string, unknown>[],
   legacyRows: {} as Record<string, Record<string, unknown>[]>,
   metadataByPath: {} as Record<string, Record<string, unknown> | null>,
@@ -70,28 +75,57 @@ import { canAccessObject, getObjectAclPolicy, ObjectPermission } from "../lib/ob
 function app() {
   const instance = express();
   instance.use(express.json());
+  instance.use((req, _res, next) => {
+    Object.assign(req, { log: { info: fixtures.logInfo, error: vi.fn() } });
+    next();
+  });
   instance.use("/api", mediaAssetsRouter);
   return instance;
 }
 
 function rowForPublicStory() {
-  return fixtures.publicStory ? [fixtures.publicStory] : [];
+  const row = fixtures.publicStory;
+  return row && row.is_public !== false && row.is_hidden !== true &&
+    fixtures.ownerProfile && !fixtures.ownerProfile.is_banned ? [row] : [];
 }
 
 describe("managed media privacy boundary", () => {
   beforeEach(() => {
     process.env.SESSION_SECRET = "test-session-secret";
     fixtures.publicStory = null;
+    fixtures.logInfo.mockClear();
+    fixtures.publicGuideSession = null;
+    fixtures.publicGuideTutorial = null;
+    fixtures.followerTutorialMedia = null;
+    fixtures.tutorialSchemaReady = true;
     fixtures.registeredOwners = [];
     fixtures.legacyRows = {};
     fixtures.metadataByPath = {};
     fixtures.ownerProfile = { is_banned: false };
     fixtures.objectAcl.mockReset().mockResolvedValue(false);
     fixtures.query.mockClear().mockImplementation(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("to_regclass('public.guide_tutorials')")) {
+        const ready = fixtures.tutorialSchemaReady;
+        return {
+          rows: [{
+            tutorials_table: ready,
+            session_tutorial_link: ready,
+            attendee_progress: ready,
+            attendee_completion: ready,
+          }],
+          rowCount: 1,
+        };
+      }
       if (sql.includes("SELECT user_id AS owner")) {
         const rows = fixtures.registeredOwners.filter(row =>
           !row.path || row.path === params?.[0]
         );
+        return { rows, rowCount: rows.length };
+      }
+      if (sql.includes("SELECT 1 AS readable")) {
+        const row = rowForPublicStory()[0];
+        const rows = row?.user_id === params?.[0] && row.video_uri === params?.[1]
+          ? [{ readable: 1 }] : [];
         return { rows, rowCount: rows.length };
       }
       if (sql.includes("FROM journal_entries")) {
@@ -118,8 +152,34 @@ describe("managed media privacy boundary", () => {
         const rows = fixtures.legacyRows.books ?? [];
         return { rows, rowCount: rows.length };
       }
+      if (sql.includes("JOIN follows f")) {
+        const row = fixtures.followerTutorialMedia;
+        const rows = row && row.path === params?.[0] &&
+          row.reader === params?.[1] && row.owner === params?.[2]
+          ? [row]
+          : [];
+        return { rows, rowCount: rows.length };
+      }
+      if (sql.includes("FROM guide_tutorials gt")) {
+        const row = fixtures.publicGuideTutorial;
+        const visibilityIsPublic = !sql.includes("gt.visibility IN ('public', 'unlisted')") ||
+          row?.visibility === "public" || row?.visibility === "unlisted" ||
+          (sql.includes("OR EXISTS") && row?.linkedSession === true);
+        const rows = row && row.guide_id === params?.[0] && fixtures.ownerProfile && visibilityIsPublic ? [row] : [];
+        return { rows, rowCount: rows.length };
+      }
       if (sql.includes("SELECT user_id, panels") || sql.includes("SELECT s.user_id, s.panels")) {
         const rows = fixtures.ownerProfile ? rowForPublicStory() : [];
+        return { rows, rowCount: rows.length };
+      }
+      if (sql.includes("FROM guide_sessions gs")) {
+        const row = fixtures.publicGuideSession;
+        const rows = row &&
+          row.guide_id === params?.[0] &&
+          row.cover_image_uri === params?.[1] &&
+          fixtures.ownerProfile
+          ? [row]
+          : [];
         return { rows, rowCount: rows.length };
       }
       if (sql.includes("SELECT is_banned")) {
@@ -254,6 +314,78 @@ describe("managed media privacy boundary", () => {
     expect(fixtures.file.createReadStream).not.toHaveBeenCalled();
   });
 
+  it("uses two database lookups and no unrelated content payloads for a canonical public video range", async () => {
+    const path = "/api/videos/fast-public.mp4";
+    fixtures.registeredOwners = [{ owner: "alice", path }];
+    fixtures.publicStory = { user_id: "alice", video_uri: path, panels: [], pages: [] };
+
+    const response = await request(app()).get(path).set("Range", "bytes=0-1");
+
+    expect(response.status).toBe(206);
+    expect(response.headers["server-timing"]).toContain("media_access;dur=");
+    expect(fixtures.query).toHaveBeenCalledTimes(2);
+    const publicCheck = fixtures.query.mock.calls[1]![0] as string;
+    expect(publicCheck).toContain("s.video_uri=$2");
+    expect(publicCheck).toContain("s.is_public=true AND s.is_hidden=false");
+    expect(publicCheck).toContain("c.is_public=true AND c.is_banned=false AND c.is_hidden=false");
+    expect(fixtures.query.mock.calls.some(([sql]) => /FROM (outfits|books|guide_tutorials)/.test(sql))).toBe(false);
+    expect(response.text ?? response.body.toString()).toBe("ab");
+  });
+
+  it("rechecks video publicity on the next range instead of caching permission", async () => {
+    const path = "/api/videos/revoked-public.mp4";
+    fixtures.registeredOwners = [{ owner: "alice", path }];
+    fixtures.publicStory = { user_id: "alice", video_uri: path, panels: [], pages: [] };
+    expect((await request(app()).get(path).set("Range", "bytes=0-1")).status).toBe(206);
+
+    fixtures.publicStory = null;
+    expect((await request(app()).get(path).set("Range", "bytes=1-2")).status).toBe(404);
+    expect(fixtures.file.createReadStream).toHaveBeenCalledTimes(1);
+  });
+
+  it("correlates opted-in video ranges using a validated anonymous trace ID", async () => {
+    const path = "/api/videos/diagnostic.mp4";
+    const traceId = "2d07aa42-c24d-4d1a-90d9-74975d18c038";
+    fixtures.registeredOwners = [{ owner: "alice", path }];
+    fixtures.publicStory = { user_id: "alice", video_uri: path, panels: [], pages: [] };
+    const response = await request(app()).get(path)
+      .set("Range", "bytes=0-1").set("X-Storigam-Reel-Trace", traceId);
+    expect(response.status).toBe(206);
+    expect(fixtures.logInfo).toHaveBeenCalledWith(expect.objectContaining({
+      diagnosticTraceId: traceId, range: "bytes=0-1", contentRange: "bytes 0-1/3",
+      statusCode: 206, method: "GET", completed: true,
+      storageFirstChunkMs: expect.any(Number),
+    }), "Video read timing");
+  });
+
+  it("does not copy arbitrary diagnostic header values into timing logs", async () => {
+    const path = "/api/videos/header-check.mp4";
+    fixtures.registeredOwners = [{ owner: "alice", path }];
+    fixtures.publicStory = { user_id: "alice", video_uri: path, panels: [], pages: [] };
+    await request(app()).get(path).set("X-Storigam-Reel-Trace", "private@example.com?token=secret");
+    expect(JSON.stringify(fixtures.logInfo.mock.calls)).not.toContain("private@example.com");
+    expect(JSON.stringify(fixtures.logInfo.mock.calls)).not.toContain("token=secret");
+  });
+
+  it("never treats a diagnostic trace as authorization for a private video", async () => {
+    const response = await request(app()).get("/api/videos/private-diagnostic.mp4")
+      .set("X-Storigam-Reel-Trace", "2d07aa42-c24d-4d1a-90d9-74975d18c038");
+    expect(response.status).toBe(404);
+    expect(fixtures.file.createReadStream).not.toHaveBeenCalled();
+  });
+
+  it("preserves the normalized-reference fallback for historical public video URLs", async () => {
+    const path = "/api/videos/legacy-public.mp4";
+    fixtures.registeredOwners = [{ owner: "alice", path }];
+    fixtures.publicStory = {
+      user_id: "alice",
+      video_uri: `https://old-workspace.replit.dev${path}?ticket=expired`,
+      panels: [], pages: [],
+    };
+    expect((await request(app()).get(path).set("Range", "bytes=0-1")).status).toBe(206);
+    expect(fixtures.query.mock.calls.some(([sql]) => sql.includes("SELECT s.user_id, s.panels"))).toBe(true);
+  });
+
   it("returns authorized read URLs while omitting missing and foreign paths", async () => {
     fixtures.registeredOwners = [
       { owner: "alice", path: "/api/images/owned.jpg" },
@@ -309,6 +441,7 @@ describe("managed media privacy boundary", () => {
     expect(response.headers["content-range"]).toBe("bytes 1-2/3");
     expect(Buffer.from(response.body).toString()).toBe("bc");
     expect(response.headers["cache-control"]).toBe("private, no-store");
+    expect(fixtures.file.getMetadata).toHaveBeenCalledTimes(1);
   });
 
   it("revokes anonymous publicity as soon as the live public story reference disappears", async () => {
@@ -325,6 +458,64 @@ describe("managed media privacy boundary", () => {
     fixtures.publicStory = null;
     const revokedResponse = await request(app()).get("/api/videos/public.mp4");
     expect(revokedResponse.status).toBe(404);
+  });
+
+  it("serves a guide-session cover only while the public session is live", async () => {
+    const path = "/api/images/guide-session-cover.jpg";
+    fixtures.registeredOwners = [{ owner: "alice", path }];
+    fixtures.publicGuideSession = { guide_id: "alice", cover_image_uri: path };
+
+    const visible = await request(app()).get(path);
+    expect(visible.status).toBe(200);
+
+    fixtures.publicGuideSession = null;
+    const revoked = await request(app()).get(path);
+    expect(revoked.status).toBe(404);
+  });
+
+  it("serves published public tutorial media and revokes it when no public tutorial references it", async () => {
+    const path = "/api/images/guide-tutorial-step.jpg";
+    fixtures.registeredOwners = [{ owner: "alice", path }];
+
+    for (const visibility of ["public", "unlisted"]) {
+      fixtures.publicGuideTutorial = {
+        guide_id: "alice",
+        visibility,
+        steps: [{ id: "step-1", type: "image", mediaUri: path }],
+      };
+      const visible = await request(app()).get(path);
+      expect(visible.status).toBe(200);
+    }
+
+    fixtures.publicGuideTutorial = null;
+    const revoked = await request(app()).get(path);
+    expect(revoked.status).toBe(404);
+  });
+
+  it("does not make follower-only tutorial media public just because it is linked to a live session", async () => {
+    const path = "/api/images/follower-session-tutorial-step.jpg";
+    fixtures.registeredOwners = [{ owner: "alice", path }];
+    fixtures.publicGuideTutorial = {
+      guide_id: "alice",
+      visibility: "followers",
+      linkedSession: true,
+      steps: [{ id: "step-1", type: "image", mediaUri: path }],
+    };
+    const response = await request(app()).get(path);
+    expect(response.status).toBe(404);
+  });
+
+  it("serves follower-only tutorial media to followers but revokes it after access ends", async () => {
+    const path = "/api/images/follower-guide-tutorial-step.jpg";
+    fixtures.registeredOwners = [{ owner: "alice", path }];
+    fixtures.followerTutorialMedia = { owner: "alice", reader: "bob", path };
+
+    const followed = await request(app()).get(path).set("x-test-user", "bob");
+    expect(followed.status).toBe(200);
+
+    fixtures.followerTutorialMedia = null;
+    const noLongerFollowing = await request(app()).get(path).set("x-test-user", "bob");
+    expect(noLongerFollowing.status).toBe(404);
   });
 
   it("does not let a foreign public reference launder an owner's media path", async () => {

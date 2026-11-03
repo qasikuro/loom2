@@ -368,6 +368,31 @@ describe('toAppStory', () => {
     expect(result.panels[0].imageUri).toBeUndefined();
   });
 
+  it('preserves rich text block formatting on panels and pages', () => {
+    const richPanel = {
+      id: 'heading-1',
+      text: 'Chapter 1 — The Beginning',
+      textFormat: 'rich' as const,
+      articleBlock: 'heading' as const,
+      articleEmphasis: 'bold' as const,
+    };
+    const result = toAppStory({
+      ...base,
+      panels: [richPanel],
+      pages: [{ id: 'page-1', layoutKey: '1', panels: [richPanel] }],
+    });
+    expect(result.panels[0]).toMatchObject({
+      textFormat: 'rich',
+      articleBlock: 'heading',
+      articleEmphasis: 'bold',
+    });
+    expect(result.pages?.[0].panels[0]).toMatchObject({
+      textFormat: 'rich',
+      articleBlock: 'heading',
+      articleEmphasis: 'bold',
+    });
+  });
+
   it('returns empty panels array when panels is null/absent', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(toAppStory({ ...base, panels: null as any }).panels).toEqual([]);
@@ -542,6 +567,23 @@ describe('toRawDiscoverPost', () => {
 
     expect(result.videoUri).toBe('https://api.example.com/api/videos/composed.mp4');
     expect(result.thumbnailUri).toBe('https://api.example.com/api/images/composed.jpg');
+  });
+
+  it('preserves rich text metadata in Discover story panels', () => {
+    const result = toRawDiscoverPost({
+      id: 'rich-story',
+      panels: [{
+        text: 'This made me smile.',
+        textFormat: 'rich',
+        articleBlock: 'quote',
+        articleEmphasis: 'italic',
+      }],
+    });
+    expect(result.panels?.[0]).toMatchObject({
+      textFormat: 'rich',
+      articleBlock: 'quote',
+      articleEmphasis: 'italic',
+    });
   });
 
   it('maps a minimal payload with safe defaults', () => {

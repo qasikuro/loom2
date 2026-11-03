@@ -38,6 +38,7 @@ import type {
   ChatMessage,
   ChatMessageInput,
   ChatPhotoInput,
+  ChatVideoInput,
   ComposeVideoRequest,
   ComposeVideoResponse,
   ConfirmStorigamUnsubscribeParams,
@@ -93,6 +94,7 @@ import type {
   ListGuideSessionsParams,
   ListGuideTutorialsParams,
   ListInterestSubscribersParams,
+  ListMyPostVisibility200Item,
   LumiClearResult,
   LumiConversationInput,
   LumiConversationResult,
@@ -107,6 +109,12 @@ import type {
   OutfitInput,
   ProfileLikeState,
   PublicUserProfile,
+  PushDeviceRegistration,
+  RegisterPushDevice200,
+  ReplyToStoryReaction200,
+  ReplyToStoryReactionBody,
+  ReportContentCommentInput,
+  ReportContentCommentResult,
   RescheduleGuideSessionInput,
   RestoreAdminUserVisibility200,
   RewardBalance,
@@ -1700,6 +1708,94 @@ export const useWitnessStory = <
 };
 
 /**
+ * @summary Send a sticker reaction to a story reactor from its notification
+ */
+export const getReplyToStoryReactionUrl = (id: string) => {
+  return `/api/stories/${id}/reaction-back`;
+};
+
+export const replyToStoryReaction = async (
+  id: string,
+  replyToStoryReactionBody: ReplyToStoryReactionBody,
+  options?: RequestInit,
+): Promise<ReplyToStoryReaction200> => {
+  return customFetch<ReplyToStoryReaction200>(getReplyToStoryReactionUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(replyToStoryReactionBody),
+  });
+};
+
+export const getReplyToStoryReactionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replyToStoryReaction>>,
+    TError,
+    { id: string; data: BodyType<ReplyToStoryReactionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replyToStoryReaction>>,
+  TError,
+  { id: string; data: BodyType<ReplyToStoryReactionBody> },
+  TContext
+> => {
+  const mutationKey = ["replyToStoryReaction"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replyToStoryReaction>>,
+    { id: string; data: BodyType<ReplyToStoryReactionBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return replyToStoryReaction(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplyToStoryReactionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof replyToStoryReaction>>
+>;
+export type ReplyToStoryReactionMutationBody =
+  BodyType<ReplyToStoryReactionBody>;
+export type ReplyToStoryReactionMutationError = ErrorType<void>;
+
+/**
+ * @summary Send a sticker reaction to a story reactor from its notification
+ */
+export const useReplyToStoryReaction = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replyToStoryReaction>>,
+    TError,
+    { id: string; data: BodyType<ReplyToStoryReactionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof replyToStoryReaction>>,
+  TError,
+  { id: string; data: BodyType<ReplyToStoryReactionBody> },
+  TContext
+> => {
+  return useMutation(getReplyToStoryReactionMutationOptions(options));
+};
+
+/**
  * @summary List all outfit logs newest first
  */
 export const getListOutfitsUrl = () => {
@@ -2166,6 +2262,178 @@ export function useListNotifications<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Register this installation for push notifications
+ */
+export const getRegisterPushDeviceUrl = () => {
+  return `/api/push/register`;
+};
+
+export const registerPushDevice = async (
+  pushDeviceRegistration: PushDeviceRegistration,
+  options?: RequestInit,
+): Promise<RegisterPushDevice200> => {
+  return customFetch<RegisterPushDevice200>(getRegisterPushDeviceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(pushDeviceRegistration),
+  });
+};
+
+export const getRegisterPushDeviceMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerPushDevice>>,
+    TError,
+    { data: BodyType<PushDeviceRegistration> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerPushDevice>>,
+  TError,
+  { data: BodyType<PushDeviceRegistration> },
+  TContext
+> => {
+  const mutationKey = ["registerPushDevice"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerPushDevice>>,
+    { data: BodyType<PushDeviceRegistration> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return registerPushDevice(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterPushDeviceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerPushDevice>>
+>;
+export type RegisterPushDeviceMutationBody = BodyType<PushDeviceRegistration>;
+export type RegisterPushDeviceMutationError = ErrorType<void>;
+
+/**
+ * @summary Register this installation for push notifications
+ */
+export const useRegisterPushDevice = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerPushDevice>>,
+    TError,
+    { data: BodyType<PushDeviceRegistration> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof registerPushDevice>>,
+  TError,
+  { data: BodyType<PushDeviceRegistration> },
+  TContext
+> => {
+  return useMutation(getRegisterPushDeviceMutationOptions(options));
+};
+
+/**
+ * @summary Unregister this installation from push notifications
+ */
+export const getUnregisterPushDeviceUrl = () => {
+  return `/api/push/register`;
+};
+
+export const unregisterPushDevice = async (
+  pushDeviceRegistration: PushDeviceRegistration,
+  options?: RequestInit,
+): Promise<UnregisterPushDevice200> => {
+  return customFetch<UnregisterPushDevice200>(getUnregisterPushDeviceUrl(), {
+    ...options,
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(pushDeviceRegistration),
+  });
+};
+
+export const getUnregisterPushDeviceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unregisterPushDevice>>,
+    TError,
+    { data: BodyType<PushDeviceRegistration> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unregisterPushDevice>>,
+  TError,
+  { data: BodyType<PushDeviceRegistration> },
+  TContext
+> => {
+  const mutationKey = ["unregisterPushDevice"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unregisterPushDevice>>,
+    { data: BodyType<PushDeviceRegistration> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return unregisterPushDevice(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnregisterPushDeviceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unregisterPushDevice>>
+>;
+export type UnregisterPushDeviceMutationBody = BodyType<PushDeviceRegistration>;
+export type UnregisterPushDeviceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Unregister this installation from push notifications
+ */
+export const useUnregisterPushDevice = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unregisterPushDevice>>,
+    TError,
+    { data: BodyType<PushDeviceRegistration> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unregisterPushDevice>>,
+  TError,
+  { data: BodyType<PushDeviceRegistration> },
+  TContext
+> => {
+  return useMutation(getUnregisterPushDeviceMutationOptions(options));
+};
 
 /**
  * @summary Ranked discovery feed of public stories
@@ -7920,6 +8188,93 @@ export const useSendChatPhoto = <
 };
 
 /**
+ * @summary Send a private video attachment with an optional caption and poster
+ */
+export const getSendChatVideoUrl = (userId: string) => {
+  return `/api/messages/${userId}/videos`;
+};
+
+export const sendChatVideo = async (
+  userId: string,
+  chatVideoInput: ChatVideoInput,
+  options?: RequestInit,
+): Promise<ChatMessage> => {
+  return customFetch<ChatMessage>(getSendChatVideoUrl(userId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(chatVideoInput),
+  });
+};
+
+export const getSendChatVideoMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendChatVideo>>,
+    TError,
+    { userId: string; data: BodyType<ChatVideoInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendChatVideo>>,
+  TError,
+  { userId: string; data: BodyType<ChatVideoInput> },
+  TContext
+> => {
+  const mutationKey = ["sendChatVideo"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendChatVideo>>,
+    { userId: string; data: BodyType<ChatVideoInput> }
+  > = (props) => {
+    const { userId, data } = props ?? {};
+
+    return sendChatVideo(userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendChatVideoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendChatVideo>>
+>;
+export type SendChatVideoMutationBody = BodyType<ChatVideoInput>;
+export type SendChatVideoMutationError = ErrorType<void>;
+
+/**
+ * @summary Send a private video attachment with an optional caption and poster
+ */
+export const useSendChatVideo = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendChatVideo>>,
+    TError,
+    { userId: string; data: BodyType<ChatVideoInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendChatVideo>>,
+  TError,
+  { userId: string; data: BodyType<ChatVideoInput> },
+  TContext
+> => {
+  return useMutation(getSendChatVideoMutationOptions(options));
+};
+
+/**
  * @summary Read a private direct-message conversation
  */
 export const getGetChatConversationUrl = (
@@ -8034,7 +8389,7 @@ export function useGetChatConversation<
 }
 
 /**
- * @summary Send text, an expression, or an owned uploaded photo
+ * @summary Send text, an expression, or an owned uploaded photo or video
  */
 export const getSendChatMessageUrl = (userId: string) => {
   return `/api/messages/${userId}`;
@@ -8098,7 +8453,7 @@ export type SendChatMessageMutationBody = BodyType<ChatMessageInput>;
 export type SendChatMessageMutationError = ErrorType<void>;
 
 /**
- * @summary Send text, an expression, or an owned uploaded photo
+ * @summary Send text, an expression, or an owned uploaded photo or video
  */
 export const useSendChatMessage = <
   TError = ErrorType<void>,
@@ -9066,6 +9421,97 @@ export const useToggleContentCommentLike = <
   TContext
 > => {
   return useMutation(getToggleContentCommentLikeMutationOptions(options));
+};
+
+/**
+ * @summary Privately report a comment for moderator review
+ */
+export const getReportContentCommentUrl = (commentId: string) => {
+  return `/api/content-comments/${commentId}/report`;
+};
+
+export const reportContentComment = async (
+  commentId: string,
+  reportContentCommentInput: ReportContentCommentInput,
+  options?: RequestInit,
+): Promise<ReportContentCommentResult> => {
+  return customFetch<ReportContentCommentResult>(
+    getReportContentCommentUrl(commentId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(reportContentCommentInput),
+    },
+  );
+};
+
+export const getReportContentCommentMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reportContentComment>>,
+    TError,
+    { commentId: string; data: BodyType<ReportContentCommentInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reportContentComment>>,
+  TError,
+  { commentId: string; data: BodyType<ReportContentCommentInput> },
+  TContext
+> => {
+  const mutationKey = ["reportContentComment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reportContentComment>>,
+    { commentId: string; data: BodyType<ReportContentCommentInput> }
+  > = (props) => {
+    const { commentId, data } = props ?? {};
+
+    return reportContentComment(commentId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReportContentCommentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reportContentComment>>
+>;
+export type ReportContentCommentMutationBody =
+  BodyType<ReportContentCommentInput>;
+export type ReportContentCommentMutationError = ErrorType<void>;
+
+/**
+ * @summary Privately report a comment for moderator review
+ */
+export const useReportContentComment = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reportContentComment>>,
+    TError,
+    { commentId: string; data: BodyType<ReportContentCommentInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof reportContentComment>>,
+  TError,
+  { commentId: string; data: BodyType<ReportContentCommentInput> },
+  TContext
+> => {
+  return useMutation(getReportContentCommentMutationOptions(options));
 };
 
 /**

@@ -7,6 +7,10 @@ vi.mock("@clerk/express", () => ({
   getAuth: () => ({ userId: null }),
 }));
 
+vi.mock("@clerk/shared/keys", () => ({
+  publishableKeyFromHost: (host: string, key: string) => `${host}|${key}`,
+}));
+
 import app from "../app";
 
 describe("custom domain root routing", () => {
@@ -50,20 +54,31 @@ describe("custom domain root routing", () => {
     }
   });
 
-  it("always returns fresh Admin bootstrap config instead of 304", async () => {
-    const first = await request(app).get("/api/admin/config");
-    expect(first.status).toBe(200);
-    expect(first.headers["cache-control"]).toBe("no-store");
-    expect(first.body.publishableKey).toEqual(expect.any(String));
-    expect(first.body._ts).toEqual(expect.any(Number));
+  it("returns host-matched Admin bootstrap keys and fresh config instead of 304", async () => {
+    vi.stubEnv("CLERK_PUBLISHABLE_KEY", "pk_test_admin-config");
+    try {
+      const first = await request(app)
+        .get("/api/admin/config")
+        .set("Host", "api.internal")
+        .set("x-forwarded-host", "www.storigam.com, api.internal");
+      expect(first.status).toBe(200);
+      expect(first.headers["cache-control"]).toBe("no-store");
+      expect(first.body.publishableKey).toBe("www.storigam.com|pk_test_admin-config");
+      expect(first.body._ts).toEqual(expect.any(Number));
 
-    await new Promise((resolve) => setTimeout(resolve, 2));
-    const second = await request(app)
-      .get("/api/admin/config")
-      .set("If-None-Match", first.headers.etag);
+      await new Promise((resolve) => setTimeout(resolve, 2));
+      const second = await request(app)
+        .get("/api/admin/config")
+        .set("Host", "api.internal")
+        .set("x-forwarded-host", "storigam.com, api.internal")
+        .set("If-None-Match", first.headers.etag);
 
-    expect(second.status).toBe(200);
-    expect(second.body.publishableKey).toBe(first.body.publishableKey);
-    expect(second.body._ts).not.toBe(first.body._ts);
+      expect(second.status).toBe(200);
+      expect(second.body.publishableKey).toBe("storigam.com|pk_test_admin-config");
+      expect(second.body.publishableKey).not.toBe(first.body.publishableKey);
+      expect(second.body._ts).not.toBe(first.body._ts);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

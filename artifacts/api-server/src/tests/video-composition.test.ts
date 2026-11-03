@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, rm, stat } from "node:fs/promises";
@@ -53,6 +53,28 @@ describe("video composition processor", () => {
     expect(() => validateCompositionWindow(90, 65, 30)).toThrow(VideoCompositionError);
     expect(() => validateCompositionWindow(90, 65, 25)).not.toThrow();
   });
+
+  it.skipIf(!toolsAvailable)("processes video using build-resolved binaries with an empty PATH", async () => {
+    const source = await makeFixture("source-no-path.mp4", 3, false);
+    const ffmpeg = (await execFileAsync("sh", ["-c", "command -v ffmpeg"])).stdout.trim();
+    const ffprobe = (await execFileAsync("sh", ["-c", "command -v ffprobe"])).stdout.trim();
+    vi.stubGlobal("__MEDIA_FFMPEG_PATH__", ffmpeg);
+    vi.stubGlobal("__MEDIA_FFPROBE_PATH__", ffprobe);
+    vi.stubEnv("PATH", "");
+    try {
+      const result = await composeVideo({
+        sourcePath: source,
+        videoStartSeconds: 1,
+        videoDurationSeconds: 1,
+        workDir: join(fixtureDir, "compose-no-path"),
+      });
+      expect(result.duration).toBeLessThanOrEqual(1.1);
+      expect(result.fileSize).toBeGreaterThan(0);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    }
+  }, 120_000);
 
   it.skipIf(!toolsAvailable)("trims a 90-second source to 25 seconds", async () => {
     const source = await makeFixture("source-90.mp4", 90, false);

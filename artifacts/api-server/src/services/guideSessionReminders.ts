@@ -10,7 +10,11 @@ export async function sendDueGuideSessionReminders(): Promise<void> {
   running = true;
   try {
     const now = new Date();
-    const due = await db.select().from(guideSessionsTable).where(and(
+    const due = await db.select({
+      id: guideSessionsTable.id,
+      roomId: guideSessionsTable.roomId,
+      title: guideSessionsTable.title,
+    }).from(guideSessionsTable).where(and(
       eq(guideSessionsTable.status, "scheduled"),
       isNull(guideSessionsTable.reminderSentAt),
       lte(guideSessionsTable.startsAt, now),
@@ -26,8 +30,8 @@ export async function sendDueGuideSessionReminders(): Promise<void> {
         .where(eq(guideSessionAttendeesTable.sessionId, session.id));
       await Promise.all(attendees.map(({ userId }) => sendPushNotification(userId, {
         title: `${session.title} is starting`,
-        body: "Your guide session is ready. Join everyone in the shared chat.",
-        data: { type: "guide_session", refId: session.roomId, url: `/campfire/${session.roomId}` },
+        body: "Your guide session is ready. Join the live activities and discussion.",
+        data: { type: "guide_session", refId: session.id, url: `/guide-session/${session.id}` },
       })));
     }
   } finally {

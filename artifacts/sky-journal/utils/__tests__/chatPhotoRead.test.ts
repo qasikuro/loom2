@@ -6,8 +6,10 @@ const h = vi.hoisted(() => ({
   scope: 'reader-a',
   states: [] as unknown[],
   refs: [] as { current: unknown }[],
+  memos: [] as { dependencies: unknown[]; value: unknown }[],
   stateCursor: 0,
   refCursor: 0,
+  memoCursor: 0,
   effect: null as null | (() => void | (() => void)),
 }));
 vi.mock('react', async original => ({
@@ -25,12 +27,23 @@ vi.mock('react', async original => ({
     if (!h.refs[index]) h.refs[index] = { current: initial };
     return h.refs[index];
   },
+  useMemo: (factory: () => unknown, dependencies: unknown[]) => {
+    const index = h.memoCursor++;
+    const previous = h.memos[index];
+    if (previous && dependencies.length === previous.dependencies.length
+      && dependencies.every((dependency, dependencyIndex) => Object.is(dependency, previous.dependencies[dependencyIndex]))) {
+      return previous.value;
+    }
+    const value = factory();
+    h.memos[index] = { dependencies, value };
+    return value;
+  },
   useCallback: (fn: unknown) => fn,
   useEffect: (fn: () => void | (() => void)) => { if (!h.effect) h.effect = fn; },
 }));
 vi.mock('react-native', () => ({
   View: 'View', Text: 'Text', TouchableOpacity: 'Button', ActivityIndicator: 'Spinner', Modal: 'Modal',
-  StyleSheet: { create: (s: unknown) => s, absoluteFill: {}, absoluteFillObject: {} },
+  StyleSheet: { create: (s: unknown) => s, absoluteFill: {} },
   AppState: { addEventListener: () => ({ remove: vi.fn() }) },
 }));
 vi.mock('expo-image', () => ({ Image: 'NativeImage' }));
@@ -56,7 +69,7 @@ function find(node: unknown, type: string): Node | undefined {
   return element.type === type ? element : find(element.props.children, type);
 }
 function render(): Node {
-  h.stateCursor = 0; h.refCursor = 0;
+  h.stateCursor = 0; h.refCursor = 0; h.memoCursor = 0;
   const element = ChatMessagePhoto({ uri: '/api/images/chat.jpg', width: 250 });
   return (element.type as (props: typeof element.props) => Node)(element.props);
 }
@@ -64,7 +77,8 @@ const flush = async () => { await Promise.resolve(); await Promise.resolve(); };
 
 describe('private chat photo reader lifecycle', () => {
   beforeEach(() => {
-    h.scope = 'reader-a'; h.states = []; h.refs = []; h.effect = null;
+    h.scope = 'reader-a'; h.states = []; h.refs = []; h.memos = [];
+    h.stateCursor = 0; h.refCursor = 0; h.memoCursor = 0; h.effect = null;
     vi.mocked(resolveMediaReadUrl).mockReset();
   });
   it('never starts a native request with an unsigned private path', async () => {
@@ -74,8 +88,20 @@ describe('private chat photo reader lifecycle', () => {
     h.effect!();
     await flush();
     const image = find(render(), 'NativeImage')!;
-    expect(image.props.source).toEqual({ uri: 'https://media.test/chat.jpg?test-read-capability' });
+    expect(image.props.source).toEqual({
+      uri: 'https://media.test/chat.jpg?test-read-capability',
+      cacheKey: JSON.stringify(['reader-a', '/api/images/chat.jpg']),
+    });
+    expect(image.props.priority).toBe('normal');
     expect(resolveMediaReadUrl).toHaveBeenCalledWith('/api/images/chat.jpg', false, 'reader-a');
+  });
+  it('keeps the native image source stable through loading-state updates', async () => {
+    vi.mocked(resolveMediaReadUrl).mockResolvedValue('https://media.test/chat.jpg?test-read-capability');
+    render(); h.effect!(); await flush();
+    const image = find(render(), 'NativeImage')!;
+    const source = image.props.source;
+    (image.props.onLoadStart as () => void)();
+    expect(find(render(), 'NativeImage')!.props.source).toBe(source);
   });
   it('does not display a late URL after the reader account changes', async () => {
     let finish!: (url: string) => void;
@@ -105,7 +131,10 @@ describe('private chat photo reader lifecycle', () => {
     (retry.props.onPress as () => void)();
     await flush();
     expect(resolveMediaReadUrl).toHaveBeenLastCalledWith('/api/images/chat.jpg', true, 'reader-a');
-    expect(find(render(), 'NativeImage')!.props.source).toEqual({ uri: 'https://media.test/renewed' });
+    expect(find(render(), 'NativeImage')!.props.source).toEqual({
+      uri: 'https://media.test/renewed',
+      cacheKey: JSON.stringify(['reader-a', '/api/images/chat.jpg']),
+    });
   });
   it('bounds automatic image-failure renewal to one attempt before offering manual retry', async () => {
     vi.mocked(resolveMediaReadUrl).mockResolvedValue('https://media.test/read');

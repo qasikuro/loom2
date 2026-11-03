@@ -92,7 +92,7 @@ export function CosmicProfileArrivalOverlay({ onComplete }: Props) {
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 80,
   },
 });

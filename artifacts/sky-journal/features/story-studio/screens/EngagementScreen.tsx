@@ -80,7 +80,7 @@ export default function EngagementScreen() {
   const [input,       setInput]       = useState('');
   const [replyTo,     setReplyTo]     = useState<Comment | null>(null);
   const [expanded,    setExpanded]    = useState<Record<string, Comment[] | null>>({});
-  const inputRef     = useRef<TextInput>(null);
+  const inputRef     = useRef<React.ComponentRef<typeof TextInput>>(null);
 
   useFocusEffect(useCallback(() => {
     if (tab === 'comments' && chapterId) {

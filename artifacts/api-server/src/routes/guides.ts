@@ -1,8 +1,10 @@
 import { db, characterTable, followsTable } from "@workspace/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { publicMediaUri as safeDiscoverUri } from "../lib/publicMediaUri";
 
 const router: IRouter = Router();
 
@@ -64,12 +66,6 @@ function isAvailableNow(avail: GuideAvailability | null | undefined): boolean {
   return cur >= from && cur <= to;
 }
 
-function safeDiscoverUri(uri: string | null | undefined): string | null {
-  if (!uri) return null;
-  if (uri.startsWith("file://") || uri.startsWith("data:")) return null;
-  return uri;
-}
-
 function serializeGuide(
   row: typeof characterTable.$inferSelect,
   followerCount: number,
@@ -99,6 +95,9 @@ function serializeGuide(
 
 // ── GET /api/guides — browse all guides ───────────────────────────────────────
 router.get("/guides", requireAuth, async (req, res) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  // Native fetch cannot use a bodyless 304 without a retained HTTP-cache body.
+  res.setHeader("ETag", `W/"guides-${randomUUID()}"`);
   const userId  = getUserId(req);
   const topic   = req.query.topic   ? String(req.query.topic)   : null;
   const availNow = req.query.available_now === "true";
@@ -121,6 +120,7 @@ router.get("/guides", requireAuth, async (req, res) => {
           eq(characterTable.isGuide,  true),
           eq(characterTable.isPublic, true),
           eq(characterTable.isBanned, false),
+          eq(characterTable.isHidden, false),
         ),
       )
       .orderBy(desc(characterTable.updatedAt))
@@ -185,6 +185,8 @@ router.get("/guides", requireAuth, async (req, res) => {
 
 // ── GET /api/guides/:userId — single guide profile ────────────────────────────
 router.get("/guides/:userId", requireAuth, async (req, res) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("ETag", `W/"guide-${randomUUID()}"`);
   const viewerId = getUserId(req);
   const targetId = String(req.params.userId);
   const isOwnProfile = viewerId === targetId;
@@ -202,6 +204,7 @@ router.get("/guides/:userId", requireAuth, async (req, res) => {
               eq(characterTable.userId,   targetId),
               eq(characterTable.isGuide,  true),
               eq(characterTable.isPublic, true),
+              eq(characterTable.isHidden, false),
             ),
       )
       .limit(1);

@@ -15,16 +15,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { apiFetch, useApp, COSMETIC_CATEGORY_MAP, type ShopItem } from '@/context/AppContext';
+import { apiFetch, useApp, COSMETIC_CATEGORY_MAP, type Character, type Outfit, type ShopItem } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import { Button as KindnessButton } from '@workspace/storigam-kindness/components/native/button';
 import { useColors as useDesignSystemColors } from '@workspace/storigam-kindness/hooks/use-colors';
 import type { NativeThemeColors, NativeThemeMode } from '@workspace/storigam-kindness/lib/native-theme';
 import { Icon } from '@/components/Icon';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
-import { FrameRing } from '@/components/profile/CharacterAuraHeader';
+import { CharacterAuraHeader, FrameRing } from '@/components/profile/CharacterAuraHeader';
+import { OwnProfileAvatar } from '@/components/profile/ProfileHeaderSection';
+import { Images } from '@/assets/images';
 import AuroraCloudBackdrop from '@/components/profile/AuroraCloudBackdrop';
 import FounderAuroraCardFrame from '@/components/profile/FounderAuroraCardFrame';
+import { CosmicProfileArrivalOverlay } from '@/components/profile/CosmicProfileArrivalOverlay';
 import { useTranslation } from 'react-i18next';
 
 const COLLECTION_CACHE_KEY  = 'collection_v1';
@@ -362,11 +365,12 @@ interface ItemCardProps {
   canAfford:  boolean;
   onBuy:      (item: ShopItem) => void;
   onActivate: (item: ShopItem) => void;
+  onPreview?: (item: ShopItem) => void;
   purchasing: boolean;
   founderLocked?: boolean;
 }
 
-function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchasing, founderLocked = false }: ItemCardProps) {
+function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, onPreview, purchasing, founderLocked = false }: ItemCardProps) {
   const { t } = useTranslation();
   const colors   = useShopColors();
   const { isDark } = useTheme();
@@ -393,25 +397,60 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
           isActive && { backgroundColor: `${catColor}0A` },
           isUnavailable && { opacity: 0.72 },
         ]}>
-          <View style={[styles.cardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-            <ItemPreview category={item.category} icon={item.icon} color={catColor} itemId={item.id} large />
-            {(owned || isUnavailable) && (
-              <View style={[
-                styles.cardStatus,
-                { backgroundColor: colors.card, borderColor: isActive ? catColor : colors.border },
-              ]}>
-                <Text style={[styles.cardStatusText, { color: isActive ? catColor : colors.mutedForeground }]}>
-                  {isActive
-                    ? t('components.shop.active')
-                    : owned
-                      ? t('components.shop.owned', { defaultValue: 'Owned' })
-                      : founderLocked
-                        ? t('components.shop.founderExclusive', { defaultValue: 'Founder' })
-                        : t('components.shop.returns')}
+          {onPreview ? (
+            <TouchableOpacity
+              style={[styles.cardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}
+              onPress={() => onPreview(item)}
+              activeOpacity={0.82}
+              accessibilityRole="button"
+              accessibilityLabel={t('components.shop.previewItemA11y', { name: item.name, defaultValue: `Preview ${item.name} on your profile` })}
+              accessibilityHint={t('components.shop.previewItemHint', { defaultValue: 'Opens a try-on preview without purchasing or equipping this item.' })}
+              testID={`shop-preview-${item.id}`}
+            >
+              <ItemPreview category={item.category} icon={item.icon} color={catColor} itemId={item.id} large />
+              {(owned || isUnavailable) && (
+                <View style={[
+                  styles.cardStatus,
+                  { backgroundColor: colors.card, borderColor: isActive ? catColor : colors.border },
+                ]}>
+                  <Text style={[styles.cardStatusText, { color: isActive ? catColor : colors.mutedForeground }]}>
+                    {isActive
+                      ? t('components.shop.active')
+                      : owned
+                        ? t('components.shop.owned', { defaultValue: 'Owned' })
+                        : founderLocked
+                          ? t('components.shop.founderExclusive', { defaultValue: 'Founder' })
+                          : t('components.shop.returns')}
+                  </Text>
+                </View>
+              )}
+              <View style={[styles.previewTapLabel, { backgroundColor: colors.card }]}>
+                <Text style={[styles.previewTapLabelText, { color: catColor }]}>
+                  {t('components.shop.preview', { defaultValue: 'Preview' })}
                 </Text>
               </View>
-            )}
-          </View>
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.cardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <ItemPreview category={item.category} icon={item.icon} color={catColor} itemId={item.id} large />
+              {(owned || isUnavailable) && (
+                <View style={[
+                  styles.cardStatus,
+                  { backgroundColor: colors.card, borderColor: isActive ? catColor : colors.border },
+                ]}>
+                  <Text style={[styles.cardStatusText, { color: isActive ? catColor : colors.mutedForeground }]}>
+                    {isActive
+                      ? t('components.shop.active')
+                      : owned
+                        ? t('components.shop.owned', { defaultValue: 'Owned' })
+                        : founderLocked
+                          ? t('components.shop.founderExclusive', { defaultValue: 'Founder' })
+                          : t('components.shop.returns')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           <View style={styles.cardInfo}>
             <View style={styles.cardTitleArea}>
@@ -752,6 +791,118 @@ function TabSwitcher({ active, onChange, colors }: { active: ActiveTab; onChange
   );
 }
 
+function ProfileTryOnPreview({
+  item,
+  character,
+  activeOutfit,
+  activeCosmetics,
+  onBack,
+}: {
+  item: ShopItem;
+  character: Character;
+  activeOutfit: Outfit | null;
+  activeCosmetics: Record<string, string>;
+  onBack: () => void;
+}) {
+  const { t } = useTranslation();
+  const colors = useShopColors();
+  const { isDark } = useTheme();
+  const selectedFrame = item.category === 'frame' ? item.id : activeCosmetics.frame;
+  const selectedEffect = item.category === 'effect'
+    ? item.id === 'effect_cosmic_arrival' ? undefined : item.id
+    : activeCosmetics.effect;
+  const avatarSource = character.avatarUri
+    ? { uri: character.avatarUri }
+    : activeOutfit?.imageUri
+      ? { uri: activeOutfit.imageUri }
+      : Images.character_default;
+  const showCatalogVisual =
+    (item.category !== 'frame' && item.category !== 'effect' && item.category !== 'card_frame') ||
+    item.id === 'effect_cosmic_arrival';
+
+  return (
+    <View style={styles.tryOnScreen}>
+      <TouchableOpacity
+        style={[styles.tryOnBack, { borderColor: colors.border, backgroundColor: colors.muted }]}
+        onPress={onBack}
+        activeOpacity={0.78}
+        accessibilityRole="button"
+        accessibilityLabel={t('components.shop.backToCatalog', { defaultValue: 'Back to shop' })}
+        testID="shop-preview-back"
+      >
+        <Text style={[styles.tryOnBackText, { color: colors.foreground }]}>‹</Text>
+        <Text style={[styles.tryOnBackLabel, { color: colors.foreground }]}>
+          {t('components.shop.backToCatalog', { defaultValue: 'Back to shop' })}
+        </Text>
+      </TouchableOpacity>
+
+      <View style={styles.tryOnCopy}>
+        <Text style={[styles.tryOnEyebrow, { color: colors.primary }]}>
+          {t('components.shop.previewOnly', { defaultValue: 'TRY-ON PREVIEW · NOTHING EQUIPPED OR PURCHASED' })}
+        </Text>
+        <Text style={[styles.tryOnTitle, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
+        <Text style={[styles.tryOnDescription, { color: colors.mutedForeground }]}>{item.description}</Text>
+      </View>
+
+      <View style={[styles.tryOnStage, { borderColor: colors.border }]}>
+        <CharacterAuraHeader
+          mood={character.mood || 'Dreamy'}
+          paddingTop={0}
+          activeEffect={selectedEffect}
+          coverImageUri={null}
+        >
+          <View style={styles.tryOnIdentity}>
+            <OwnProfileAvatar
+              avatarSource={avatarSource}
+              contain={Boolean(character.avatarUri)}
+              activeFrame={selectedFrame}
+              mood={character.mood || 'Dreamy'}
+            />
+            <Text style={[styles.tryOnName, { color: colors.foreground }]} numberOfLines={1}>{character.name}</Text>
+            {!!character.username && (
+              <Text style={[styles.tryOnHandle, { color: colors.mutedForeground }]} numberOfLines={1}>@{character.username}</Text>
+            )}
+          </View>
+        </CharacterAuraHeader>
+        {item.category === 'card_frame' && item.id === 'card_frame_founder_regalia' && (
+          <FounderAuroraCardFrame />
+        )}
+        {item.id === 'effect_cosmic_arrival' && (
+          <CosmicProfileArrivalOverlay onComplete={() => undefined} />
+        )}
+      </View>
+
+      {showCatalogVisual && (
+        <View style={styles.tryOnItemVisual}>
+          <ItemPreview
+            category={item.category}
+            icon={item.icon}
+            color={categoryColor(item.category, colors)}
+            itemId={item.id}
+          />
+          <Text style={[styles.tryOnVisualLabel, { color: colors.mutedForeground }]}>
+            {t('components.shop.itemPreviewContext', { defaultValue: 'Item appearance' })}
+          </Text>
+        </View>
+      )}
+
+      <Text style={[styles.tryOnNotice, { color: colors.mutedForeground }]}>
+        {t('components.shop.previewNoChanges', { defaultValue: 'Your equipped look and balance stay unchanged until you choose an action in the shop.' })}
+      </Text>
+      <KindnessButton
+        label={t('components.shop.backToCatalog', { defaultValue: 'Back to shop' })}
+        onPress={onBack}
+        mode={isDark ? 'dark' : 'light'}
+        variant="outline"
+        size="medium"
+        accessibilityLabel={t('components.shop.backToCatalog', { defaultValue: 'Back to shop' })}
+        style={[styles.tryOnReturnButton, { borderColor: colors.border }]}
+        labelStyle={{ color: colors.foreground }}
+      />
+    </View>
+  );
+}
+
 // ── Main modal ────────────────────────────────────────────────────────────────
 
 interface ShopModalProps {
@@ -765,7 +916,8 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
   const { isDark } = useTheme();
   const mode: NativeThemeMode = isDark ? 'dark' : 'light';
   const insets  = useSafeAreaInsets();
-  const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased, character } = useApp();
+  const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased, character, outfits, activeOutfitId } = useApp();
+  const activeOutfit = activeOutfitId ? outfits.find(outfit => outfit.id === activeOutfitId) ?? null : null;
   const isFounder = !!character?.isFounder;
 
   // Refresh balance in background every time the modal opens so the chip
@@ -779,6 +931,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
   const [showEarnGuide,   setShowEarnGuide]   = useState(false);
   const [catalogItems,    setCatalogItems]    = useState<ShopItem[]>(FALLBACK_CATALOG);
   const [previewItems,    setPreviewItems]    = useState<ShopItem[]>([]);
+  const [tryOnItem,       setTryOnItem]       = useState<ShopItem | null>(null);
   const [purchasing,      setPurchasing]      = useState<string | null>(null);
   const [purchaseVersion, setPurchaseVersion] = useState(0);
   const [toast,        setToast]        = useState<{ message: string; type: ToastProps['type'] } | null>(null);
@@ -788,7 +941,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
 
   // Reset to shop tab + clear category filter when modal re-opens
   useEffect(() => {
-    if (visible) { setActiveTab('shop'); setFilterCat(null); }
+    if (visible) { setActiveTab('shop'); setFilterCat(null); setTryOnItem(null); }
   }, [visible]);
 
   // Load catalog — always fetch fresh from API (no stale cache reads)
@@ -936,12 +1089,21 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
           </TouchableOpacity>
         </View>
 
-        {/* Tab switcher */}
-        <View style={styles.tabSwitcherWrap}>
-          <TabSwitcher active={activeTab} onChange={setActiveTab} colors={colors} />
-        </View>
+        {!tryOnItem && (
+          <View style={styles.tabSwitcherWrap}>
+            <TabSwitcher active={activeTab} onChange={setActiveTab} colors={colors} />
+          </View>
+        )}
 
-        {activeTab === 'shop' ? (
+        {tryOnItem ? (
+          <ProfileTryOnPreview
+            item={tryOnItem}
+            character={character}
+            activeOutfit={activeOutfit}
+            activeCosmetics={activeCosmetics}
+            onBack={() => setTryOnItem(null)}
+          />
+        ) : activeTab === 'shop' ? (
           <>
             {/* Balance */}
             <View style={[styles.balanceRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
@@ -1051,6 +1213,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                     canAfford={canAfford(item)}
                     onBuy={handleBuy}
                     onActivate={it => setActiveCosmetic(it.id)}
+                    onPreview={setTryOnItem}
                     purchasing={purchasing === item.id}
                     founderLocked={founderOnly && !isFounder}
                   />
@@ -1282,7 +1445,7 @@ const pv = StyleSheet.create({
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.52)',
   },
   sheet: {
@@ -1362,6 +1525,48 @@ const styles = StyleSheet.create({
     fontFamily: 'Satoshi-Bold',
     letterSpacing: 0.2,
   },
+  tryOnScreen: {
+    flex: 1,
+    minHeight: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 12,
+  },
+  tryOnBack: {
+    alignSelf: 'flex-start',
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 18,
+  },
+  tryOnBackText: { fontSize: 22, lineHeight: 24 },
+  tryOnBackLabel: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  tryOnCopy: { gap: 3 },
+  tryOnEyebrow: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8 },
+  tryOnTitle: { fontSize: 18, fontFamily: 'Satoshi-Bold' },
+  tryOnDescription: { fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 17 },
+  tryOnStage: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: 20,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  tryOnIdentity: {
+    height: 194,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  tryOnName: { maxWidth: '84%', fontSize: 14, fontFamily: 'Satoshi-Bold', marginTop: 1 },
+  tryOnHandle: { maxWidth: '84%', fontSize: 11, fontFamily: 'Satoshi-Regular' },
+  tryOnItemVisual: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 64 },
+  tryOnVisualLabel: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  tryOnNotice: { textAlign: 'center', fontSize: 11, fontFamily: 'Satoshi-Regular', lineHeight: 16 },
+  tryOnReturnButton: { width: '100%', minHeight: 40 },
 
   // Balance
   balanceRow: {
@@ -1495,6 +1700,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
+  previewTapLabel: {
+    position: 'absolute',
+    left: 6,
+    bottom: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    opacity: 0.94,
+  },
+  previewTapLabelText: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
   cardStatus: {
     position: 'absolute',
     top: 6,

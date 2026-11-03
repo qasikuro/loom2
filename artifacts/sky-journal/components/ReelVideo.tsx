@@ -3,14 +3,15 @@ import { useColors } from '@/hooks/useColors';
 import { canonicalMediaUri } from '@/utils/mediaAccess';
 import { canWarmNextReel } from '@/utils/reelBuffer';
 import { hintReelWebPreload } from '@/utils/reelWebPreload';
-import { Video, ResizeMode } from 'expo-av';
+import { createReelDiagnosticPlayer, markReelDiagnostic } from '@/utils/reelDiagnostics';
+import { ResizeMode, VideoSurface as Video } from '@/components/VideoSurface';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 /** A bounded, paused preloader and the visible reel share the same player. */
-export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
-  uri: string; playing: boolean; muted: boolean; onPrepared: (allowed: boolean) => void;
+export function ReelVideo({ diagnosticKey, uri: originalUri, playing, muted, onPrepared }: {
+  diagnosticKey: string; uri: string; playing: boolean; muted: boolean; onPrepared: (allowed: boolean) => void;
 }) {
   const colors = useColors();
   const { t } = useTranslation();
@@ -18,20 +19,45 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
   // path immediately; the media route still checks live public visibility.
   // Avoid waiting for a read-URL request that returns this same public path.
   const uri = useMemo(() => canonicalMediaUri(originalUri), [originalUri]);
-  const source = useMemo(() => uri ? { uri } : undefined, [uri]);
   const [attempt, setAttempt] = useState(0);
   const [firstFrame, setFirstFrame] = useState(false);
   const [failed, setFailed] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
   const identity = `${uri ?? originalUri}:${attempt}`;
+  // Captured only when this player identity is created. Enabling diagnostics
+  // never changes the source/headers of an already playing player.
+  const diagnosticTrace = useMemo(() => createReelDiagnosticPlayer(diagnosticKey), [diagnosticKey, identity]);
+  const source = useMemo(() => uri ? {
+    uri,
+    ...(diagnosticTrace ? { headers: { 'X-Storigam-Reel-Trace': diagnosticTrace } } : {}),
+  } : undefined, [uri, diagnosticTrace]);
+  const diagnosticState = useMemo(() => ({
+    loaded: false, position: false, buffering: undefined as boolean | undefined,
+  }), [identity]);
   const currentIdentity = useRef(identity);
   currentIdentity.current = identity;
-  const hostRef = useRef<View>(null);
+  const hostRef = useRef<React.ComponentRef<typeof View>>(null);
   const firstFrameRef = useRef(false);
   const preloadAllowed = useRef(false);
   const wasPlaying = useRef(playing);
   const preparedCallback = useRef(onPrepared);
   preparedCallback.current = onPrepared;
+
+  useEffect(() => {
+    markReelDiagnostic(diagnosticTrace, 'player_commit');
+    return () => markReelDiagnostic(diagnosticTrace, 'released');
+  }, [diagnosticTrace]);
+
+  useEffect(() => {
+    markReelDiagnostic(diagnosticTrace, playing ? 'play_requested' : 'pause_requested');
+  }, [diagnosticTrace, playing]);
+
+  useEffect(() => {
+    if (!firstFrame || !diagnosticTrace) return;
+    markReelDiagnostic(diagnosticTrace, 'visibility_commit');
+    const frame = requestAnimationFrame(() => markReelDiagnostic(diagnosticTrace, 'visibility_animation_frame'));
+    return () => cancelAnimationFrame(frame);
+  }, [firstFrame, playing, diagnosticTrace]);
 
   useEffect(() => {
     firstFrameRef.current = false;
@@ -43,7 +69,7 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    // expo-av's web backend leaves preload to browser defaults (often only
+    // Expo Video's web backend leaves preload to browser defaults (often only
     // metadata). Use the standard DOM hint on its existing video element,
     // without resetting src/load() when this paused player becomes visible.
     const host = hostRef.current as unknown as HTMLElement | null;
@@ -100,8 +126,8 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
       {source && !hasError && (
         <Video
           // The key/source deliberately do not depend on playing: promotion
-          // reuses the paused player's native buffer. expo-av unloads this
-          // player on unmount when it leaves the bounded preparation window.
+            // reuses the paused player's native buffer. The hook releases the
+            // player on unmount when it leaves the bounded preparation window.
           key={identity}
           source={source}
           shouldPlay={playing}
@@ -112,10 +138,30 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
           progressUpdateIntervalMillis={playing ? 500 : 1500}
           style={[StyleSheet.absoluteFill, { opacity: firstFrame ? 1 : 0 }]}
           pointerEvents="none"
-          onReadyForDisplay={() => { if (currentIdentity.current === identity) revealFirstFrame(); }}
+          onLoadStart={() => markReelDiagnostic(diagnosticTrace, 'load_start')}
+          onLoad={() => {
+            if (currentIdentity.current !== identity) return;
+            markReelDiagnostic(diagnosticTrace, 'load_complete');
+          }}
+          onReadyForDisplay={() => {
+            if (currentIdentity.current !== identity) return;
+            markReelDiagnostic(diagnosticTrace, 'ready_display_signal');
+            // Expo Go only reports a JS first-frame callback, not native timing.
+            revealFirstFrame();
+          }}
           onPlaybackStatusUpdate={status => {
             if (currentIdentity.current !== identity) return;
             if (status.isLoaded) {
+              if (diagnosticTrace) {
+                if (diagnosticState.buffering !== status.isBuffering) {
+                  diagnosticState.buffering = status.isBuffering;
+                  markReelDiagnostic(diagnosticTrace, status.isBuffering ? 'buffer_start' : 'buffer_end');
+                }
+                if (!diagnosticState.position && status.isPlaying && status.positionMillis > 0) {
+                  diagnosticState.position = true;
+                  markReelDiagnostic(diagnosticTrace, 'playing_position_signal');
+                }
+              }
               if (status.isPlaying && status.positionMillis > 0) revealFirstFrame();
               if (playing) {
                 const allowed = canWarmNextReel(status, preloadAllowed.current);
@@ -124,9 +170,15 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
                   preparedCallback.current(allowed);
                 }
               }
-            } else if (status.error) setFailed(true);
+            } else if (status.error) {
+              markReelDiagnostic(diagnosticTrace, 'error');
+              setFailed(true);
+            }
           }}
-          onError={() => { if (currentIdentity.current === identity) setFailed(true); }}
+          onError={() => { if (currentIdentity.current === identity) {
+            markReelDiagnostic(diagnosticTrace, 'error');
+            setFailed(true);
+          } }}
         />
       )}
       {playing && (hasError || (showLoading && !firstFrame)) && (

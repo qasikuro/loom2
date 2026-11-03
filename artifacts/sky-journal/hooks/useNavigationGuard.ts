@@ -1,5 +1,5 @@
 import { useNavigation } from 'expo-router';
-import { usePreventRemove } from '@react-navigation/native';
+import { usePreventRemove } from 'expo-router';
 import { useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 

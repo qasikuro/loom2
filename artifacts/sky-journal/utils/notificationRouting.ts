@@ -42,6 +42,32 @@ export function resolveNotificationRoute(push: Push, data: Record<string, unknow
     case "friend_accepted":
       if (actorId) push(`/user/${actorId}`);
       break;
+    case "content_comment":
+    case "content_reply": {
+      if (!refId) break;
+      let commentReference: string;
+      try {
+        commentReference = decodeURIComponent(refId);
+      } catch {
+        break;
+      }
+      const [contentType, contentId, commentId, parentId, ...extra] = commentReference.split(":");
+      const validContentTypes = ["story", "video", "outfit", "book", "tutorial", "session"];
+      if (
+        extra.length === 0 &&
+        parentId !== undefined &&
+        validContentTypes.includes(contentType) &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(contentId ?? "") &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(commentId ?? "") &&
+        (!parentId || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(parentId))
+      ) {
+        push({
+          pathname: "/content-comments",
+          params: { contentType, contentId, commentId, ...(parentId ? { parentId } : {}) },
+        });
+      }
+      break;
+    }
     case "new_outfit":
     case "badge_granted":
     case "badge_removed":

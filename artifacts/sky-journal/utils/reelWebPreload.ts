@@ -1,5 +1,5 @@
 /**
- * Use browser-native preload hints on expo-av's existing <video>.
+ * Use browser-native preload hints on expo-video's existing <video>.
  * They are advisory: browsers, not JS, ultimately choose the transfer budget.
  * Never change src or call load(), which would discard a prepared buffer.
  */

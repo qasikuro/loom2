@@ -1,8 +1,9 @@
-import { clerkMiddleware, getAuth } from "@clerk/express";
+import { clerkMiddleware, clerkClient, getAuth } from "@clerk/express";
 import type { RequestHandler, Request, Response, NextFunction } from "express";
-import { db, characterTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { db, characterTable, deletedAccountHashesTable, accountDeletionJobsTable } from "@workspace/db";
+import { and, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { hashAuthUserId } from "../services/accountDeletion";
 
 // ── Presence heartbeat ────────────────────────────────────────────────────────
 // Update last_seen_at at most once per 2 minutes per user (in-process throttle).
@@ -22,47 +23,46 @@ function touchLastSeen(userId: string) {
 export const clerkAuth = clerkMiddleware() as RequestHandler;
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  // Step 3 — trace what getAuth() returns after clerkMiddleware() has run.
-  // REMOVE once the token-rejection root cause is confirmed.
   let userId: string | null = null;
-  let sessionId: string | null = null;
-  let getAuthErr: string | null = null;
   try {
     const auth = getAuth(req);
     userId    = auth.userId    ?? null;
-    sessionId = auth.sessionId ?? null;
-  } catch (e) {
-    getAuthErr = String(e);
-    logger.error({ getAuthErr }, '[CLERK-TRACE-3] getAuth() threw exception in requireAuth');
+  } catch {
+    logger.warn({ hasAuthHeader: !!req.headers.authorization }, "Authentication state unavailable");
   }
 
-  logger.info({
-    userId,
-    sessionId,
-    getAuthErr,
-    hasAuthHeader: !!req.headers.authorization,
-    path: req.path,
-  }, '[CLERK-TRACE-3] requireAuth — getAuth() result');
-
   if (!userId) {
-    // Step 4 — userId is null: log why before returning 401.
-    logger.warn({
-      hasAuthHeader: !!req.headers.authorization,
-      getAuthErr,
-      path: req.path,
-    }, '[CLERK-TRACE-4] userId is null — returning 401');
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
   try {
     const [row] = await db
-      .select({ isBanned: characterTable.isBanned })
+      .select({
+        isBanned: characterTable.isBanned,
+        suspendedUntil: characterTable.suspendedUntil,
+      })
       .from(characterTable)
       .where(eq(characterTable.userId, userId))
       .limit(1);
 
-    if (row?.isBanned) {
+    if (!row) {
+      const [deleted] = await db.select({ userIdHash: deletedAccountHashesTable.userIdHash })
+        .from(deletedAccountHashesTable)
+        .where(and(
+          eq(deletedAccountHashesTable.userIdHash, hashAuthUserId(userId)),
+          gt(deletedAccountHashesTable.expiresAt, new Date()),
+        ))
+        .limit(1);
+      const [pendingDeletion] = await db.select({ userId: accountDeletionJobsTable.userId })
+        .from(accountDeletionJobsTable).where(eq(accountDeletionJobsTable.userId, userId)).limit(1);
+      if (deleted || pendingDeletion) {
+        res.status(403).json({ error: "This account has been deleted" });
+        return;
+      }
+    }
+
+    if (row?.isBanned || (row?.suspendedUntil && row.suspendedUntil > new Date())) {
       res.status(403).json({ error: "Account suspended" });
       return;
     }
@@ -89,18 +89,48 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
   }
   try {
     const [row] = await db
-      .select({ isAdmin: characterTable.isAdmin, isBanned: characterTable.isBanned })
+      .select({
+        isAdmin: characterTable.isAdmin,
+        isBanned: characterTable.isBanned,
+        suspendedUntil: characterTable.suspendedUntil,
+      })
       .from(characterTable)
       .where(eq(characterTable.userId, userId))
       .limit(1);
 
-    if (row?.isBanned) {
+    if (row?.isBanned || (row?.suspendedUntil && row.suspendedUntil > new Date())) {
       res.status(403).json({ error: "Account suspended" });
       return;
     }
     if (!row?.isAdmin) {
-      res.status(403).json({ error: "Forbidden" });
-      return;
+      // Optional owner recovery, configured out-of-band by the project owner.
+      // Never trust an email/role supplied by the browser or grant by email alone.
+      const ownerId = process.env.ADMIN_OWNER_USER_ID?.trim();
+      const ownerEmail = process.env.ADMIN_OWNER_EMAIL?.trim().toLowerCase();
+      if (!row || !ownerId || ownerId !== userId || !ownerEmail) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      const owner = await clerkClient.users.getUser(userId);
+      const primary = owner.emailAddresses.find(email => email.id === owner.primaryEmailAddressId);
+      if (owner.id !== userId || primary?.verification?.status !== "verified" ||
+          primary.emailAddress.trim().toLowerCase() !== ownerEmail) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      // Re-check restrictions in the write itself so a concurrent suspension
+      // cannot be bypassed between the initial read and identity verification.
+      const [recovered] = await db.update(characterTable).set({ isAdmin: true })
+        .where(and(
+          eq(characterTable.userId, userId),
+          eq(characterTable.isBanned, false),
+          or(isNull(characterTable.suspendedUntil), lte(characterTable.suspendedUntil, new Date())),
+        ))
+        .returning({ userId: characterTable.userId });
+      if (!recovered) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
     }
     next();
   } catch {

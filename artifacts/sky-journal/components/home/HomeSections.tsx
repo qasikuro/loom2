@@ -349,7 +349,7 @@ export function WhatsNewCarousel({ items, active }: { items: HomeAnnouncement[];
   const { reduced, foreground } = useAmbientState();
   const [index, setIndex] = useState(0);
   const [touching, setTouching] = useState(false);
-  const ref = useRef<ScrollView>(null);
+  const ref = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const cardW = Math.min(width, 760) - 32;
   const count = items.length;
   useEffect(() => { if (index > 0 && index >= count) { setIndex(0); ref.current?.scrollTo({ x: 0, animated: false }); } }, [count, index]);

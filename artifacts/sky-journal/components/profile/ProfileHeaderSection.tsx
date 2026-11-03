@@ -39,7 +39,7 @@ interface Props {
   collapseScrollY?: Animated.Value;
   collapseAt?: number;
   /** Slot measured by the screen; the real avatar is rendered by the flight overlay. */
-  avatarSlotRef?: React.RefObject<View | null>;
+  avatarSlotRef?: React.RefObject<React.ComponentRef<typeof View> | null>;
   onAvatarSlotLayout?: () => void;
   /** When false (no measurement yet), render the avatar inline as fallback. */
   avatarInOverlay?: boolean;

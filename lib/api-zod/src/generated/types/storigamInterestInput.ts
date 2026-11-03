@@ -6,10 +6,19 @@
  * OpenAPI spec version: 0.2.0
  */
 import type { StorigamInterestInputInterestsItem } from "./storigamInterestInputInterestsItem";
+import type { StorigamInterestInputLanguage } from "./storigamInterestInputLanguage";
 
 export interface StorigamInterestInput {
   /** @maxLength 254 */
   email: string;
+  /**
+   * Name used to personalize the beta welcome email.
+   * @minLength 1
+   * @maxLength 100
+   */
+  name: string;
+  /** Selected website language for the signup emails. */
+  language?: StorigamInterestInputLanguage;
   /**
    * @minItems 1
    * @maxItems 2

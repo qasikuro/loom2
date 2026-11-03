@@ -1,12 +1,18 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { ReplitConnectors } from "@replit/connectors-sdk";
 import {
   SubmitStorigamInterestBody,
   SubmitStorigamInterestResponse,
 } from "@workspace/api-zod";
 import { db, storigamInterestSignupTable } from "@workspace/db";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import {
+  buildStorigamInterestWelcomeEmail,
+  normalizeStorigamInterestLanguage,
+} from "./storigam-interest-welcome-email";
+import { buildStorigamBetaBadgeEmail } from "./storigam-beta-badge-email";
 
 const router: IRouter = Router();
 
@@ -27,6 +33,8 @@ router.post("/storigam-interest", signupRateLimit, async (req, res): Promise<voi
   const normalizedBody = {
     ...body,
     email: typeof body.email === "string" ? body.email.trim() : body.email,
+    name: typeof body.name === "string" ? body.name.replace(/\s+/g, " ").trim() : body.name,
+    language: normalizeStorigamInterestLanguage(body.language),
   };
   const parsed = SubmitStorigamInterestBody.safeParse(normalizedBody);
 
@@ -37,7 +45,11 @@ router.post("/storigam-interest", signupRateLimit, async (req, res): Promise<voi
 
   // Quietly accept honeypot submissions so basic bots do not retry the form.
   if (parsed.data.website?.trim()) {
-    res.status(200).json(SubmitStorigamInterestResponse.parse({ ok: true }));
+    res.status(200).json(SubmitStorigamInterestResponse.parse({
+      ok: true,
+      welcomeEmailStatus: "pending",
+      badgeInvitationEmailStatus: "not_applicable",
+    }));
     return;
   }
 
@@ -49,21 +61,288 @@ router.post("/storigam-interest", signupRateLimit, async (req, res): Promise<voi
   const email = parsed.data.email.toLowerCase();
   const interests = [...new Set(parsed.data.interests)];
   const now = new Date();
+  const unsubscribeToken = randomBytes(32).toString("hex");
 
   try {
     await db
       .insert(storigamInterestSignupTable)
       .values({
-        email, interests, consentedAt: now, updatedAt: now,
-        unsubscribeToken: randomBytes(32).toString("hex"),
+        email,
+        name: parsed.data.name,
+        preferredLanguage: parsed.data.language ?? "en",
+        interests,
+        consentedAt: now,
+        updatedAt: now,
+        unsubscribeToken,
+        welcomeEmailStatus: "pending",
+        betaBadgeEmailStatus: interests.includes("beta_tester") ? "pending" : "not_applicable",
       })
       .onConflictDoUpdate({
         target: storigamInterestSignupTable.email,
-        set: { interests, consentedAt: now, updatedAt: now },
+        set: {
+          name: parsed.data.name,
+          preferredLanguage: parsed.data.language ?? "en",
+          interests,
+          consentedAt: now,
+          updatedAt: now,
+          unsubscribedAt: null,
+          unsubscribeToken: sql`COALESCE(${storigamInterestSignupTable.unsubscribeToken}, ${unsubscribeToken})`,
+          welcomeEmailStatus: sql`
+            CASE
+              WHEN ${storigamInterestSignupTable.welcomeEmailStatus} = 'legacy'
+                OR ${storigamInterestSignupTable.unsubscribedAt} IS NOT NULL
+              THEN 'pending'
+              ELSE ${storigamInterestSignupTable.welcomeEmailStatus}
+            END
+          `,
+          betaBadgeEmailStatus: interests.includes("beta_tester")
+            ? sql`
+                CASE
+                  WHEN ${storigamInterestSignupTable.betaBadgeEmailStatus} IN ('accepted', 'sending', 'uncertain')
+                    THEN ${storigamInterestSignupTable.betaBadgeEmailStatus}
+                  ELSE 'pending'
+                END
+              `
+            : sql`
+                CASE
+                  WHEN ${storigamInterestSignupTable.betaBadgeEmailStatus} IN ('accepted', 'sending', 'uncertain')
+                    THEN ${storigamInterestSignupTable.betaBadgeEmailStatus}
+                  ELSE 'not_applicable'
+                END
+              `,
+        },
       });
 
-    res.status(200).json(SubmitStorigamInterestResponse.parse({ ok: true }));
-  } catch (err) {
+    // Claim one welcome-email attempt at a time. A duplicate form submission
+    // cannot send a second copy while the first request is in flight.
+    let welcomeEmailStatus: "accepted" | "failed" | "pending" = "pending";
+    const [claimedSignup] = await db
+      .update(storigamInterestSignupTable)
+      .set({ welcomeEmailStatus: "sending", updatedAt: new Date() })
+      .where(and(
+        eq(storigamInterestSignupTable.email, email),
+        inArray(storigamInterestSignupTable.welcomeEmailStatus, ["pending", "failed"]),
+      ))
+      .returning({
+        name: storigamInterestSignupTable.name,
+        preferredLanguage: storigamInterestSignupTable.preferredLanguage,
+        unsubscribeToken: storigamInterestSignupTable.unsubscribeToken,
+      });
+
+    if (claimedSignup) {
+      try {
+        if (!claimedSignup.unsubscribeToken) {
+          throw new Error("Missing unsubscribe token");
+        }
+        const publicOrigin = process.env.STORIGAM_PUBLIC_ORIGIN?.trim() || "https://storigam.com";
+        const unsubscribeUrl = new URL("/api/storigam-interest/unsubscribe", publicOrigin);
+        unsubscribeUrl.searchParams.set("token", claimedSignup.unsubscribeToken);
+        const { subject, text } = buildStorigamInterestWelcomeEmail(
+          claimedSignup.name,
+          claimedSignup.preferredLanguage,
+          unsubscribeUrl.toString(),
+        );
+        const idempotencyKey = `storigam-beta-welcome-v1-${createHash("sha256")
+          .update(email)
+          .digest("hex")
+          .slice(0, 32)}`;
+        const from = process.env.RESEND_FROM_EMAIL?.trim()
+          || "Storigam <no-reply@contact.storigam.com>";
+        const response = await new ReplitConnectors().proxy("resend", "/emails", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyKey,
+          },
+          body: JSON.stringify({ from, to: [email], subject, text }),
+        });
+
+        if (!response.ok) {
+          await db.update(storigamInterestSignupTable)
+            .set({ welcomeEmailStatus: "failed", updatedAt: new Date() })
+            .where(and(
+              eq(storigamInterestSignupTable.email, email),
+              eq(storigamInterestSignupTable.welcomeEmailStatus, "sending"),
+            ));
+          welcomeEmailStatus = "failed";
+          req.log.warn({ providerStatus: response.status }, "Resend rejected beta welcome email");
+        } else {
+          const result = await response.json() as { id?: unknown };
+          if (typeof result.id !== "string") {
+            throw new Error("Resend returned no email ID");
+          }
+          await db.update(storigamInterestSignupTable)
+            .set({
+              welcomeEmailStatus: "accepted",
+              welcomeEmailId: result.id,
+              welcomeEmailSentAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(and(
+              eq(storigamInterestSignupTable.email, email),
+              eq(storigamInterestSignupTable.welcomeEmailStatus, "sending"),
+            ));
+          welcomeEmailStatus = "accepted";
+          req.log.info({ emailId: result.id }, "Beta welcome email accepted by Resend");
+        }
+      } catch (error) {
+        await db.update(storigamInterestSignupTable)
+          .set({ welcomeEmailStatus: "uncertain", updatedAt: new Date() })
+          .where(and(
+            eq(storigamInterestSignupTable.email, email),
+            eq(storigamInterestSignupTable.welcomeEmailStatus, "sending"),
+          ))
+          .catch(() => undefined);
+        welcomeEmailStatus = "pending";
+        req.log.error(
+          { reason: error instanceof Error ? error.name : "unknown" },
+          "Beta welcome email outcome is uncertain",
+        );
+      }
+    } else {
+      try {
+        const [savedSignup] = await db
+          .select({ status: storigamInterestSignupTable.welcomeEmailStatus })
+          .from(storigamInterestSignupTable)
+          .where(eq(storigamInterestSignupTable.email, email))
+          .limit(1);
+        if (savedSignup?.status === "accepted" || savedSignup?.status === "failed") {
+          welcomeEmailStatus = savedSignup.status;
+        }
+      } catch {
+        // The interest is already saved; don't turn a status-read hiccup into a signup failure.
+      }
+    }
+
+    let badgeInvitationEmailStatus: "accepted" | "failed" | "pending" | "not_applicable" =
+      interests.includes("beta_tester") ? "pending" : "not_applicable";
+
+    // The badge invitation follows the welcome email and is sent only to
+    // consented beta testers. Its own claim/status prevents duplicate mail
+    // and allows a later form retry after a definite provider rejection.
+    if (interests.includes("beta_tester") && welcomeEmailStatus === "accepted") {
+      const [claimedBadgeEmail] = await db
+        .update(storigamInterestSignupTable)
+        .set({ betaBadgeEmailStatus: "sending", updatedAt: new Date() })
+        .where(and(
+          eq(storigamInterestSignupTable.email, email),
+          inArray(storigamInterestSignupTable.betaBadgeEmailStatus, ["pending", "failed"]),
+        ))
+        .returning({
+          preferredLanguage: storigamInterestSignupTable.preferredLanguage,
+          unsubscribeToken: storigamInterestSignupTable.unsubscribeToken,
+        });
+
+      if (claimedBadgeEmail) {
+        try {
+          if (!claimedBadgeEmail.unsubscribeToken) {
+            throw new Error("Missing unsubscribe token");
+          }
+          const publicOrigin = process.env.STORIGAM_PUBLIC_ORIGIN?.trim() || "https://storigam.com";
+          const unsubscribeUrl = new URL("/api/storigam-interest/unsubscribe", publicOrigin);
+          unsubscribeUrl.searchParams.set("token", claimedBadgeEmail.unsubscribeToken);
+          const { subject, text } = buildStorigamBetaBadgeEmail(
+            claimedBadgeEmail.preferredLanguage,
+            unsubscribeUrl.toString(),
+          );
+          const idempotencyKey = `storigam-beta-badge-v1-${createHash("sha256")
+            .update(email)
+            .digest("hex")
+            .slice(0, 32)}`;
+          const from = process.env.RESEND_FROM_EMAIL?.trim()
+            || "Storigam <no-reply@contact.storigam.com>";
+          const response = await new ReplitConnectors().proxy("resend", "/emails", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Idempotency-Key": idempotencyKey,
+            },
+            body: JSON.stringify({
+              from,
+              to: [email],
+              reply_to: "support@storigam.com",
+              subject,
+              text,
+            }),
+          });
+
+          if (!response.ok) {
+            await db.update(storigamInterestSignupTable)
+              .set({ betaBadgeEmailStatus: "failed", updatedAt: new Date() })
+              .where(and(
+                eq(storigamInterestSignupTable.email, email),
+                eq(storigamInterestSignupTable.betaBadgeEmailStatus, "sending"),
+              ));
+            badgeInvitationEmailStatus = "failed";
+            req.log.warn({ providerStatus: response.status }, "Resend rejected beta badge invitation");
+          } else {
+            const result = await response.json() as { id?: unknown };
+            if (typeof result.id !== "string") {
+              throw new Error("Resend returned no email ID");
+            }
+            await db.update(storigamInterestSignupTable)
+              .set({
+                betaBadgeEmailStatus: "accepted",
+                betaBadgeEmailId: result.id,
+                betaBadgeEmailSentAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where(and(
+                eq(storigamInterestSignupTable.email, email),
+                eq(storigamInterestSignupTable.betaBadgeEmailStatus, "sending"),
+              ));
+            badgeInvitationEmailStatus = "accepted";
+            req.log.info({ emailId: result.id }, "Beta badge invitation accepted by Resend");
+          }
+        } catch (error) {
+          await db.update(storigamInterestSignupTable)
+            .set({ betaBadgeEmailStatus: "uncertain", updatedAt: new Date() })
+            .where(and(
+              eq(storigamInterestSignupTable.email, email),
+              eq(storigamInterestSignupTable.betaBadgeEmailStatus, "sending"),
+            ))
+            .catch(() => undefined);
+          badgeInvitationEmailStatus = "pending";
+          req.log.error(
+            { reason: error instanceof Error ? error.name : "unknown" },
+            "Beta badge invitation outcome is uncertain",
+          );
+        }
+      } else {
+        try {
+          const [savedSignup] = await db
+            .select({ status: storigamInterestSignupTable.betaBadgeEmailStatus })
+            .from(storigamInterestSignupTable)
+            .where(eq(storigamInterestSignupTable.email, email))
+            .limit(1);
+          if (savedSignup?.status === "accepted" || savedSignup?.status === "failed") {
+            badgeInvitationEmailStatus = savedSignup.status;
+          }
+        } catch {
+          // The signup is saved; a status-read hiccup should not undo it.
+        }
+      }
+    } else if (interests.includes("beta_tester")) {
+      try {
+        const [savedSignup] = await db
+          .select({ status: storigamInterestSignupTable.betaBadgeEmailStatus })
+          .from(storigamInterestSignupTable)
+          .where(eq(storigamInterestSignupTable.email, email))
+          .limit(1);
+        if (savedSignup?.status === "accepted" || savedSignup?.status === "failed") {
+          badgeInvitationEmailStatus = savedSignup.status;
+        }
+      } catch {
+        // The signup is saved; a status-read hiccup should not undo it.
+      }
+    }
+
+    res.status(200).json(SubmitStorigamInterestResponse.parse({
+      ok: true,
+      welcomeEmailStatus,
+      badgeInvitationEmailStatus,
+    }));
+  } catch {
     req.log.error("Failed to save Storigam beta interest");
     res.status(500).json({ error: "We couldn't save your interest. Please try again." });
   }
@@ -103,10 +382,27 @@ router.post("/storigam-interest/unsubscribe", async (req, res): Promise<void> =>
     res.status(404).type("html").send(unsubscribePage("This unsubscribe link is unavailable."));
     return;
   }
-  const updated = await db.update(storigamInterestSignupTable)
-    .set({ unsubscribedAt: new Date() })
-    .where(eq(storigamInterestSignupTable.unsubscribeToken, token))
-    .returning({ email: storigamInterestSignupTable.email });
+  const updated = await db.transaction(async tx => {
+    const [signupToUnsubscribe] = await tx.select({ email: storigamInterestSignupTable.email })
+      .from(storigamInterestSignupTable)
+      .where(eq(storigamInterestSignupTable.unsubscribeToken, token))
+      .limit(1);
+    if (!signupToUnsubscribe) return [];
+    // Serialize opt-out confirmation with any campaign send for this address.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(
+      hashtext('storigam-campaign-email'), hashtext(${signupToUnsubscribe.email})
+    )`);
+    const signup = await tx.update(storigamInterestSignupTable)
+      .set({ unsubscribedAt: new Date() })
+      .where(eq(storigamInterestSignupTable.unsubscribeToken, token))
+      .returning({ email: storigamInterestSignupTable.email });
+    if (signup[0]) {
+      await tx.execute(sql`UPDATE storigam_email_recipients
+        SET status = 'skipped'
+        WHERE email = ${signup[0].email} AND status = 'pending'`);
+    }
+    return signup;
+  });
   if (!updated.length) {
     res.status(404).type("html").send(unsubscribePage("This unsubscribe link is unavailable."));
     return;

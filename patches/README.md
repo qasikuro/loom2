@@ -12,11 +12,11 @@ They are applied by normal and frozen-lockfile installations, including CI.
   DigestAlgorithm sequences and nonempty NULL parameters. Valid SHA-256
   signatures, including absent optional NULL parameters, remain supported
   (CVE-2026-85393 / incomplete fix for CVE-2026-33894).
-- The existing `expo-av.patch` is retained for native compatibility.
-- `metro@0.83.3.patch`: reads image assets into buffers before passing them
-  to image-size 2, whose filename-based API was removed. This retains asset
-  bundling without changing React Native/Expo native versions.
-
+- `zod@3.25.76.patch`: rejects arrays exceeding a declared `.max()` or
+  `.length()` bound before validating their elements, in both the Zod 3 API
+  and its bundled Zod 4 API. Zod has no fixed 3.x release for
+  GHSA-mrhx-c7xc-m3w5; the project’s separate Zod 4 consumer uses the upstream
+  fix.
 The first two packages currently have no patched registry release. Version-only
 dependency scanners will still report them; do not suppress those warnings or
 claim a clean audit. Replace these backports with official fixed releases when

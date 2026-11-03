@@ -195,7 +195,7 @@ export const ReelCard = React.memo(function ReelCard({
           ? t(paused ? 'reels.resumeVideo' : 'reels.pauseVideo', { defaultValue: paused ? 'Resume video' : 'Pause video' })
           : t('reels.readNamed', { title: post.chapterTitle })}
       />
-      {isVideo && prepareVideo && <ReelVideo uri={post.videoUri!} playing={playing && !paused} muted={muted} onPrepared={allowed => onVideoReady(post.id, allowed)} />}
+      {isVideo && prepareVideo && <ReelVideo diagnosticKey={post.id} uri={post.videoUri!} playing={playing && !paused} muted={muted} onPrepared={allowed => onVideoReady(post.id, allowed)} />}
       {isVideo && playing && paused && (
         <View pointerEvents="none" style={styles.pauseIndicator}>
           <Icon name="play" size={35} color="white" />
@@ -276,7 +276,7 @@ export const ReelCard = React.memo(function ReelCard({
 const styles = StyleSheet.create({
   card: { width: '100%', overflow: 'hidden', backgroundColor: '#100B22' },
   pauseIndicator: { position: 'absolute', top: '45%', alignSelf: 'center', padding: 18, borderRadius: 40, backgroundColor: 'rgba(8,6,24,0.58)' },
-  backdropTint: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,6,24,0.34)' },
+  backdropTint: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(8,6,24,0.34)' },
   topShade: { position: 'absolute', left: 0, right: 0, top: 0, height: 260 },
   bottomShade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 355 },
   authorRow: { position: 'absolute', left: 19, right: 19, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },

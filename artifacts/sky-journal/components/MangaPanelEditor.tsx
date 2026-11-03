@@ -257,7 +257,7 @@ const pm = StyleSheet.create({
   },
 
   stateOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
@@ -295,7 +295,7 @@ const pm = StyleSheet.create({
   },
 
   imageEditOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingBottom: 16,

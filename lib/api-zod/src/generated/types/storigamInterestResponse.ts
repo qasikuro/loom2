@@ -5,7 +5,13 @@
  * Sky Journal API
  * OpenAPI spec version: 0.2.0
  */
+import type { StorigamInterestResponseBadgeInvitationEmailStatus } from "./storigamInterestResponseBadgeInvitationEmailStatus";
+import type { StorigamInterestResponseWelcomeEmailStatus } from "./storigamInterestResponseWelcomeEmailStatus";
 
 export interface StorigamInterestResponse {
   ok: boolean;
+  /** Whether Resend accepted the welcome email or it needs attention. */
+  welcomeEmailStatus: StorigamInterestResponseWelcomeEmailStatus;
+  /** Delivery status for the beta badge invitation. */
+  badgeInvitationEmailStatus: StorigamInterestResponseBadgeInvitationEmailStatus;
 }

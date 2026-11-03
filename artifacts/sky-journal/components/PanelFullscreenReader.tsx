@@ -31,6 +31,9 @@ export interface ReaderPanel {
   imageUri?:         string;
   bgPreset?:         string;
   text:              string;
+  textFormat?:       'rich';
+  articleBlock?:     'paragraph' | 'heading' | 'quote' | 'bullet' | 'image';
+  articleEmphasis?:  'bold' | 'italic';
   bubbleText?:       string;
   overlays?:         PanelOverlay[];
   imageAspectRatio?: number;

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, asc, desc, eq, gt, ilike, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, isNull, or, sql } from "drizzle-orm";
 
 import {
   db,
@@ -12,6 +12,7 @@ import { requireAuth, getUserId } from "../middleware/auth";
 import { emitSSEEvent } from "../lib/sseEmitter";
 import { checkMsgRateLimit } from "../middleware/messageLimiter";
 import { sendPushNotification } from "../services/pushService";
+import { normalizePublicMediaFields } from "../lib/publicMediaUri";
 
 const router = Router();
 
@@ -74,18 +75,27 @@ router.get("/campfire", requireAuth, async (req, res) => {
       const [presenceRow] = await db
         .select({ souls: sql<number>`count(distinct ${campfireMessagesTable.userId})` })
         .from(campfireMessagesTable)
+        .innerJoin(characterTable, eq(campfireMessagesTable.userId, characterTable.userId))
         .where(and(
           eq(campfireMessagesTable.roomId, room.id),
           gt(campfireMessagesTable.createdAt, presenceCutoff),
           gt(campfireMessagesTable.expiresAt, now),
+          eq(characterTable.isHidden, false),
         ));
 
       const [lastMsg] = await db
-        .select()
+        .select({
+          authorName: campfireMessagesTable.authorName,
+          content: campfireMessagesTable.content,
+          expression: campfireMessagesTable.expression,
+          createdAt: campfireMessagesTable.createdAt,
+        })
         .from(campfireMessagesTable)
+        .leftJoin(characterTable, eq(campfireMessagesTable.userId, characterTable.userId))
         .where(and(
           eq(campfireMessagesTable.roomId, room.id),
           gt(campfireMessagesTable.expiresAt, now),
+          or(isNull(characterTable.userId), eq(characterTable.isHidden, false)),
         ))
         .orderBy(desc(campfireMessagesTable.createdAt))
         .limit(1);
@@ -163,6 +173,11 @@ router.get("/campfire/:roomId", requireAuth, async (req, res) => {
     .where(and(
       eq(campfireMessagesTable.roomId, roomId),
       gt(campfireMessagesTable.expiresAt, now),
+      or(
+        isNull(characterTable.userId),
+        eq(characterTable.isHidden, false),
+        eq(campfireMessagesTable.userId, userId),
+      ),
     ))
     .orderBy(desc(campfireMessagesTable.createdAt))
     .limit(MAX_MESSAGES);
@@ -171,10 +186,12 @@ router.get("/campfire/:roomId", requireAuth, async (req, res) => {
   const [presenceRow]  = await db
     .select({ souls: sql<number>`count(distinct ${campfireMessagesTable.userId})` })
     .from(campfireMessagesTable)
+    .innerJoin(characterTable, eq(campfireMessagesTable.userId, characterTable.userId))
     .where(and(
       eq(campfireMessagesTable.roomId, roomId),
       gt(campfireMessagesTable.createdAt, presenceCutoff),
       gt(campfireMessagesTable.expiresAt, now),
+      eq(characterTable.isHidden, false),
     ));
 
   return res.json({
@@ -206,10 +223,12 @@ router.get("/campfire/:roomId/presence", requireAuth, async (req, res) => {
     const recentRows = await db
       .select({ userId: campfireMessagesTable.userId })
       .from(campfireMessagesTable)
+      .innerJoin(characterTable, eq(campfireMessagesTable.userId, characterTable.userId))
       .where(and(
         eq(campfireMessagesTable.roomId, roomId),
         gt(campfireMessagesTable.createdAt, cutoff),
         gt(campfireMessagesTable.expiresAt, now),
+        eq(characterTable.isHidden, false),
       ))
       .orderBy(asc(campfireMessagesTable.createdAt));
 
@@ -231,7 +250,10 @@ router.get("/campfire/:roomId/presence", requireAuth, async (req, res) => {
         mood:      characterTable.mood,
       })
       .from(characterTable)
-      .where(sql`${characterTable.userId} = ANY(${userIds})`);
+      .where(and(
+        sql`${characterTable.userId} = ANY(${userIds})`,
+        eq(characterTable.isHidden, false),
+      ));
 
     const charMap = new Map(chars.map(c => [c.userId, c]));
 
@@ -246,7 +268,7 @@ router.get("/campfire/:roomId/presence", requireAuth, async (req, res) => {
       };
     });
 
-    return res.json(participants);
+    return res.json(normalizePublicMediaFields(participants));
   } catch (err) {
     req.log.error({ err }, "Failed to fetch campfire presence");
     return res.status(500).json({ error: "Internal server error" });
@@ -298,6 +320,7 @@ router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
   let resolvedName  = authorName?.trim() || "Wanderer";
   let isFounder     = false;
   let isBetaTester  = false;
+  let isHiddenUser  = false;
   {
     const [char] = await db
       .select({
@@ -305,6 +328,7 @@ router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
         username:     characterTable.username,
         isFounder:    characterTable.isFounder,
         isBetaTester: characterTable.isBetaTester,
+        isHidden:     characterTable.isHidden,
       })
       .from(characterTable)
       .where(eq(characterTable.userId, userId));
@@ -312,6 +336,7 @@ router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
       if (!authorName && char.name) resolvedName = char.name;
       isFounder    = char.isFounder    ?? false;
       isBetaTester = char.isBetaTester ?? false;
+      isHiddenUser = char.isHidden;
     }
   }
 
@@ -342,10 +367,12 @@ router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
   };
 
   // Notify all SSE clients watching this campfire room
-  emitSSEEvent(`campfire:${roomId}`, { type: "new_message", message: payload });
+  if (!isHiddenUser) {
+    emitSSEEvent(`campfire:${roomId}`, { type: "new_message", message: payload });
+  }
 
   // ── @mention push notifications (fire-and-forget) ──────────────────────────
-  if (content?.trim()) {
+  if (content?.trim() && !isHiddenUser) {
     const handles = parseMentions(content);
     if (handles.length > 0) {
       sendMentionNotifications(handles, userId, resolvedName, content, roomId).catch(() => null);

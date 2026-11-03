@@ -16,6 +16,10 @@ import { publishableKeyFromHost } from "@clerk/shared/keys";
 import { GetAppConfigResponse } from "@workspace/api-zod";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { getFeatureUsagePolicy } from "./lib/featureUsage";
+import { featureUsageMiddleware } from "./middleware/feature-usage";
+import supportFeedbackRouter from "./routes/support-feedback";
+import storigamInterestRouter from "./routes/storigam-interest";
 import {
   CLERK_PROXY_PATH,
   clerkProxyMiddleware,
@@ -25,6 +29,11 @@ import {
 const app: Express = express();
 
 const isDev = process.env.NODE_ENV !== "production";
+
+// Replit forwards the originating client address in X-Forwarded-For. Trust the
+// single deployment ingress hop so IP-based limits apply per client instead of
+// grouping every visitor behind the same proxy address.
+app.set("trust proxy", 1);
 
 // ── Security headers ───────────────────────────────────────────────────────────
 // Disable CSP + COEP so the API can be called from Expo web previews.
@@ -107,19 +116,13 @@ const skipForUpload = (fn: express.RequestHandler): express.RequestHandler =>
 app.use(skipForUpload(express.json({ limit: "1mb" })));
 app.use(skipForUpload(express.urlencoded({ extended: true, limit: "1mb" })));
 
+// Feedback is intentionally public so visitors can contact support without an account.
+app.use("/api", supportFeedbackRouter);
+// The beta-interest form is also a public website flow; mount it before Clerk
+// so anonymous visitors can submit without an account or session.
+app.use("/api", storigamInterestRouter);
+
 // ── Auth ───────────────────────────────────────────────────────────────────────
-// Wrap clerkMiddleware() so we can trace every step of the auth pipeline.
-// This answers the exact question: "where does Clerk lose the token?"
-//
-// Step 1 — log the raw Authorization header before Clerk sees it.
-// Step 2 — run clerkMiddleware(), then log what it placed on req.auth.
-// Step 3 — logged inside requireAuth (auth.ts) after getAuth() is called.
-// Step 4 — logged inside requireAuth when userId is null → 401.
-//
-// Field names deliberately differ from req.headers.authorization so pino's
-// redact list does not strip them.
-//
-// REMOVE these wrappers once the token-rejection root cause is confirmed.
 // Resolve the publishable key from the incoming request host so the same
 // server binary can serve both dev (pk_test) and prod (pk_live) — Replit
 // automatically swaps the key at publish time, and publishableKeyFromHost
@@ -130,84 +133,8 @@ const clerkMw = clerkMiddleware((req) => ({
     process.env.CLERK_PUBLISHABLE_KEY,
   ),
 }));
-app.use((req: Request, res: Response, next: NextFunction) => {
-  // Step 1 — request received, before Clerk.
-  const authHeader = req.headers.authorization as string | undefined;
-  // Extract just the JWT token part (after "Bearer ") and log enough to
-  // decode header + payload in base64 for debugging (first 300 chars of token).
-  const rawToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  // Decode JWT header and payload without verifying signature.
-  let jwtHeader: unknown = null;
-  let jwtPayload: unknown = null;
-  if (rawToken) {
-    try {
-      const parts = rawToken.split('.');
-      if (parts.length >= 2) {
-        const decode = (b64: string) => JSON.parse(
-          Buffer.from(b64, 'base64url').toString('utf8')
-        );
-        jwtHeader  = decode(parts[0]);
-        jwtPayload = decode(parts[1]);
-      }
-    } catch { /* malformed JWT — leave null */ }
-  }
-  logger.info({
-    path: req.path,
-    hasAuthHeader: !!authHeader,
-    // Full JWT header + payload decoded — reveals alg, kid, iss, aud, azp, exp, sub.
-    // Field names differ from req.headers.authorization so pino redact doesn't strip them.
-    jwtHeader,
-    jwtPayload,
-  }, '[CLERK-TRACE-1] request received — pre-clerkMiddleware');
-
-  clerkMw(req, res, (err?: unknown) => {
-    if (err) {
-      logger.error({ err }, '[CLERK-TRACE-2] clerkMiddleware() called next(err) — middleware threw');
-      return next(err);
-    }
-
-    // Step 2 — read what clerkMiddleware() placed on req.auth.
-    // Log the FULL auth state including reason/status so we can see exactly
-    // which verification step rejected the token.
-    let clerkUserId: string | null = null;
-    let clerkSessionId: string | null = null;
-    let clerkStateErr: string | null = null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let fullAuthState: Record<string, unknown> = {};
-    try {
-      // In @clerk/express v2, req.auth is a function that returns the auth object.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const authState = (req as any).auth?.() ?? {};
-      clerkUserId    = authState?.userId    ?? null;
-      clerkSessionId = authState?.sessionId ?? null;
-      // Capture every field — reason/status reveal the exact rejection cause.
-      fullAuthState = {
-        userId:         authState?.userId         ?? null,
-        sessionId:      authState?.sessionId      ?? null,
-        orgId:          authState?.orgId          ?? null,
-        reason:         authState?.reason         ?? null,
-        message:        authState?.message        ?? null,
-        status:         authState?.status         ?? null,
-        tokenType:      authState?.tokenType      ?? null,
-        // x-clerk-auth-reason/status headers set on the response by Clerk
-        xClerkReason:   res.getHeader('x-clerk-auth-reason')  ?? null,
-        xClerkStatus:   res.getHeader('x-clerk-auth-status')  ?? null,
-      };
-    } catch (e) {
-      clerkStateErr = String(e);
-    }
-
-    logger.info({
-      clerkUserId,
-      clerkSessionId,
-      clerkStateErr,
-      hasAuthHeader: !!(req.headers.authorization),
-      authState: fullAuthState,
-    }, '[CLERK-TRACE-2] clerkMiddleware() completed — post-middleware auth state');
-
-    next();
-  });
-});
+// Never decode or log bearer tokens, token claims, or session identifiers.
+app.use(clerkMw);
 
 // ── Public app config (feature flags, maintenance mode, min version) ──────────
 // The mobile app calls this on startup to receive server-controlled settings.
@@ -217,9 +144,12 @@ const DEFAULT_APP_FEATURES: Record<string, boolean> = {
   music: true,
   shop: true,
   season: true,
+  shop_button: false,
+  season_button: false,
   campfire: true,
   guides: true,
   notifications: true,
+  image_generation: true,
 };
 
 function normalizeAppFeatures(value: unknown): Record<string, boolean> {
@@ -237,22 +167,27 @@ function normalizeAppFeatures(value: unknown): Record<string, boolean> {
 app.get("/api/config", async (_req: Request, res: Response) => {
   try {
     const { db, appSettingsTable } = await import("@workspace/db");
-    const rows = await db.select().from(appSettingsTable);
+    const [rows, imageGenerationPolicy] = await Promise.all([
+      db.select().from(appSettingsTable),
+      getFeatureUsagePolicy("image-generation"),
+    ]);
     const cfg: Record<string, unknown> = {};
     for (const row of rows) cfg[row.key] = row.value;
     // safe defaults if table is empty / row missing
     if (!("maintenance_mode" in cfg)) cfg.maintenance_mode = false;
     if (!("min_app_version"  in cfg)) cfg.min_app_version  = "1.0.0";
-    cfg.features = normalizeAppFeatures(cfg.features);
+    const features = normalizeAppFeatures(cfg.features);
+    // The image-generation usage policy is the creator's own availability switch.
+    // Keep it separate from the global AI Access flag in Admin Settings.
+    features.image_generation = imageGenerationPolicy.enabled;
+    cfg.features = features;
     res.setHeader("Cache-Control", "no-store");
     return res.json(GetAppConfigResponse.parse(cfg));
   } catch (err) {
     logger.error({ err }, "GET /api/config failed");
-    return res.json(GetAppConfigResponse.parse({
-      maintenance_mode: false,
-      min_app_version: "1.0.0",
-      features: { ...DEFAULT_APP_FEATURES },
-    }));
+    // Reject failed reads: clients retain their last good config instead of
+    // replacing hidden/disabled flags with fabricated success defaults.
+    return res.status(503).json({ error: "App configuration is temporarily unavailable." });
   }
 });
 
@@ -402,6 +337,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // ── API routes ─────────────────────────────────────────────────────────────────
+app.use("/api", featureUsageMiddleware);
 app.use("/api", router);
 
 // ── 404 handler ────────────────────────────────────────────────────────────────

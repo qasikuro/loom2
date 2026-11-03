@@ -86,12 +86,13 @@ vi.mock('expo-notifications', () => ({}));
 
 // ── Import the function under test ────────────────────────────────────────────
 
-import { resolveNotificationRoute } from '../_layout';
+import { resolveNotificationRoute } from '@/utils/notificationRouting';
+import type { Href } from 'expo-router';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makePush() {
-  return vi.fn<(href: string) => void>();
+  return vi.fn<(href: Href) => void>();
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -119,6 +120,11 @@ describe('resolveNotificationRoute — data.url present (deep link takes priorit
   it('does NOT call push for an empty url string', () => {
     resolveNotificationRoute(push, { url: '' });
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it('does not route to an external URL from notification data', () => {
+    resolveNotificationRoute(push, { url: 'https://example.com', type: 'follow', refId: 'user1' });
+    expect(push).toHaveBeenCalledWith('/user/user1');
   });
 
   it('does NOT call push when url is not a string', () => {
@@ -158,6 +164,16 @@ describe('resolveNotificationRoute — type-based routing (no data.url)', () => 
     expect(push).toHaveBeenCalledWith('/story/story-z');
   });
 
+  it('routes "resonate" notifications to the related story', () => {
+    resolveNotificationRoute(push, { type: 'resonate', refId: 'story-r' });
+    expect(push).toHaveBeenCalledWith('/story/story-r');
+  });
+
+  it('routes outfit and badge notifications to the actor profile', () => {
+    resolveNotificationRoute(push, { type: 'new_outfit', actorId: 'creator-1' });
+    expect(push).toHaveBeenCalledWith('/user/creator-1');
+  });
+
   it('routes "new_chapter" notification to /book-public with bookId param', () => {
     resolveNotificationRoute(push, { type: 'new_chapter', refId: 'book-uuid-1' });
     expect(push).toHaveBeenCalledOnce();
@@ -182,6 +198,42 @@ describe('resolveNotificationRoute — type-based routing (no data.url)', () => 
   it('routes accepted friend requests to the accepting friend profile', () => {
     resolveNotificationRoute(push, { type: 'friend_accepted', actorId: 'friend-5' });
     expect(push).toHaveBeenCalledWith('/user/friend-5');
+  });
+
+  it('routes a comment notification to the content comments screen', () => {
+    resolveNotificationRoute(push, {
+      type: 'content_comment',
+      refId: 'story:123e4567-e89b-42d3-a456-426614174000:223e4567-e89b-42d3-a456-426614174000:',
+    });
+    expect(push).toHaveBeenCalledWith({
+      pathname: '/content-comments',
+      params: {
+        contentType: 'story',
+        contentId: '123e4567-e89b-42d3-a456-426614174000',
+        commentId: '223e4567-e89b-42d3-a456-426614174000',
+      },
+    });
+  });
+
+  it('opens the reply thread for a comment reply notification', () => {
+    resolveNotificationRoute(push, {
+      type: 'content_reply',
+      refId: 'video:123e4567-e89b-42d3-a456-426614174000:223e4567-e89b-42d3-a456-426614174000:323e4567-e89b-42d3-a456-426614174000',
+    });
+    expect(push).toHaveBeenCalledWith({
+      pathname: '/content-comments',
+      params: {
+        contentType: 'video',
+        contentId: '123e4567-e89b-42d3-a456-426614174000',
+        commentId: '223e4567-e89b-42d3-a456-426614174000',
+        parentId: '323e4567-e89b-42d3-a456-426614174000',
+      },
+    });
+  });
+
+  it('does not route malformed comment references', () => {
+    resolveNotificationRoute(push, { type: 'content_comment', refId: 'story:not-a-uuid' });
+    expect(push).not.toHaveBeenCalled();
   });
 
   it('does NOT push for "follow" when refId is absent', () => {

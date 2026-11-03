@@ -34,12 +34,12 @@ describe('loading treatment', () => {
     expect(splash).toMatch(/setTimeout\(\(\) => setShowLoadingMark\(true\), 450\)/);
     expect(splash).toMatch(/pointerEvents="none"/);
     const config = JSON.parse(read('app.json'));
-    expect(config.expo.splash.image).toBe('./assets/images/storigam-mark.png');
-    expect(config.expo.splash.backgroundColor).toBe('#030014');
+    expect(config.expo).not.toHaveProperty('splash');
     const splashPlugin = config.expo.plugins.find(
-      (plugin: string | [string, { image?: string }]) =>
+      (plugin: unknown): plugin is [string, { image?: string; backgroundColor?: string }] =>
         Array.isArray(plugin) && plugin[0] === 'expo-splash-screen',
     );
-    expect(splashPlugin[1].image).toBe('./assets/images/storigam-mark.png');
+    expect(splashPlugin?.[1].image).toBe('./assets/images/storigam-mark.png');
+    expect(splashPlugin?.[1].backgroundColor).toBe('#030014');
   });
 });

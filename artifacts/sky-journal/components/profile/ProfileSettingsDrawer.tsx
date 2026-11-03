@@ -11,11 +11,12 @@ import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { router } from 'expo-router';
 import React from 'react';
-import { Alert, Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, AppState, Linking, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useGlobalChatButtonSettings } from '@/context/GlobalChatButtonSettingsContext';
 import { useClerk } from '@clerk/expo';
-import { useDeleteMyAccount } from '@workspace/api-client-react';
+import { registerPushDevice, useDeleteMyAccount } from '@workspace/api-client-react';
+import { cachePushToken, getExpoPushToken, getPushPermissionState, getPushPlatform, requestPushPermission, type PushPermissionState } from '@/utils/pushNotifications';
 
 const HELP_CENTER_URL = 'https://www.storigam.com/storigam/help';
 const FEEDBACK_URL = 'https://www.storigam.com/storigam/help#feedback';
@@ -43,6 +44,111 @@ function SoundToggle() {
           transform: [{ translateX: soundEnabled ? 16 : 0 }],
         }]} />
       </View>
+    </TouchableOpacity>
+  );
+}
+
+function PushNotificationsSetting() {
+  const { t } = useTranslation();
+  const colors = useColors();
+  const [permission, setPermission] = React.useState<PushPermissionState>("undetermined");
+  const [canAskAgain, setCanAskAgain] = React.useState(true);
+  const [busy, setBusy] = React.useState(false);
+  const [checking, setChecking] = React.useState(true);
+
+  const refreshPermission = React.useCallback(async () => {
+    try {
+      const next = await getPushPermissionState();
+      setPermission(next.state);
+      setCanAskAgain(next.canAskAgain);
+    } catch {
+      setPermission("unavailable");
+      setCanAskAgain(false);
+    } finally {
+      setChecking(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void refreshPermission();
+    const subscription = AppState.addEventListener("change", state => {
+      if (state === "active") void refreshPermission();
+    });
+    return () => subscription.remove();
+  }, [refreshPermission]);
+
+  const openDeviceSettings = async () => {
+    try {
+      await Linking.openSettings();
+    } catch {
+      Alert.alert(
+        t("settings.notifications", { defaultValue: "Notifications" }),
+        t("settings.openNotificationSettingsError", { defaultValue: "Open your device settings to manage notifications." }),
+      );
+    }
+  };
+
+  const handlePress = async () => {
+    if (busy || checking || permission === "unavailable") return;
+    if (permission === "granted" || (permission === "denied" && !canAskAgain)) {
+      await openDeviceSettings();
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const granted = await requestPushPermission();
+      if (!granted) {
+        await refreshPermission();
+        return;
+      }
+      const token = await getExpoPushToken();
+      if (!token) throw new Error("Push token unavailable");
+      await registerPushDevice({ token, platform: getPushPlatform() });
+      await cachePushToken(token);
+      await refreshPermission();
+    } catch {
+      Alert.alert(
+        t("settings.notifications", { defaultValue: "Notifications" }),
+        t("settings.notificationSetupError", { defaultValue: "Notifications could not be enabled. Check your connection and try again." }),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const detail = permission === "granted"
+    ? t("settings.notificationsEnabled", { defaultValue: "Enabled · Tap to manage" })
+    : permission === "unavailable"
+      ? t("settings.notificationsUnavailable", { defaultValue: "Unavailable on this device" })
+      : busy
+        ? t("common.loading", { defaultValue: "Working…" })
+        : t("settings.notificationsDisabled", { defaultValue: "Tap to enable" });
+  const stateLabel = permission === "granted" ? "On" : permission === "unavailable" ? "—" : "Off";
+
+  return (
+    <TouchableOpacity
+      style={s.drawerItem}
+      accessibilityRole="button"
+      accessibilityLabel={`${t("settings.notifications", { defaultValue: "Notifications" })}: ${detail}`}
+      accessibilityState={{ disabled: busy || checking || permission === "unavailable" }}
+      disabled={busy || checking || permission === "unavailable"}
+      onPress={() => { Haptics.selectionAsync(); void handlePress(); }}
+      activeOpacity={0.7}
+    >
+      <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}>
+        <Icon name="bell" size={15} color={colors.mutedForeground} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>
+          {t("settings.notifications", { defaultValue: "Notifications" })}
+        </Text>
+        <Text style={{ color: colors.mutedForeground, fontSize: 11, marginTop: 2 }}>{detail}</Text>
+      </View>
+      <Text style={{ color: permission === "granted" ? colors.primary : colors.mutedForeground, fontSize: 12, fontWeight: "700" }}>
+        {stateLabel}
+      </Text>
+      <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
     </TouchableOpacity>
   );
 }
@@ -335,6 +441,13 @@ export function ProfileSettingsDrawer({
           <Text style={[s.drawerSectionLabel, { color: colors.mutedForeground }]}>{t('settings.sound')}</Text>
           <View style={[s.drawerGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <SoundToggle />
+          </View>
+
+          <Text style={[s.drawerSectionLabel, { color: colors.mutedForeground }]}>
+            {t('settings.notifications', { defaultValue: 'Notifications' })}
+          </Text>
+          <View style={[s.drawerGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <PushNotificationsSetting />
           </View>
 
           <Text style={[s.drawerSectionLabel, { color: colors.mutedForeground }]}>{t('settings.myAccount')}</Text>

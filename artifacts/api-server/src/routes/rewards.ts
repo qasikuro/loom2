@@ -3,6 +3,7 @@ import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { syncConstellation } from "../services/constellationService";
+import { FOUNDER_REGALIA_ID, founderCardFrame } from "../services/founderRegalia";
 
 const router: IRouter = Router();
 const FOUNDER_AURORA_ITEM_ID = "effect_aurora_clouds";
@@ -13,7 +14,8 @@ export interface ShopItem {
   name:            string;
   description:     string;
   icon:            string;
-  category:        "frame" | "accent" | "theme" | "effect";
+  category:        "frame" | "accent" | "theme" | "effect" | "card_frame";
+  founderOnly?:    boolean;
   cost:            { stars?: number; aura?: number; shards?: number };
   seasonal?:       boolean;
   seasonalLabel?:  string;
@@ -29,6 +31,15 @@ function isItemAvailable(item: ShopItem, month: number): boolean {
 }
 
 export const SHOP_CATALOG: ShopItem[] = [
+  {
+    id: FOUNDER_REGALIA_ID,
+    name: "Founder Regalia",
+    description: "Sculpted gold filigree, luminous amethyst crystals and a shimmering crescent. Included with Founder status.",
+    icon: "✦",
+    category: "card_frame",
+    founderOnly: true,
+    cost: { stars: 0 },
+  },
   // ── Animated profile-picture frames ───────────────────────────────────────
   {
     id:          "frame_moonlight",
@@ -110,6 +121,14 @@ export const SHOP_CATALOG: ShopItem[] = [
     icon:        "✦",
     category:    "effect",
     cost:        { stars: 600 },
+  },
+  {
+    id:          "effect_moonlit_muse",
+    name:        "Moonlit Muse",
+    description: "A gothic anime muse arrives in a moonlit burst of violet ribbons, petals, and starlight.",
+    icon:        "✦",
+    category:    "effect",
+    cost:        { stars: 350 },
   },
   {
     id:          "effect_cosmic_arrival",
@@ -254,7 +273,7 @@ router.get("/rewards/shop", requireAuth, async (req, res) => {
 
     const purchasedIds = [...new Set([
       ...purchases.map((p) => p.itemId),
-      ...(characterRows[0]?.isFounder ? [FOUNDER_AURORA_ITEM_ID] : []),
+      ...(characterRows[0]?.isFounder ? [FOUNDER_AURORA_ITEM_ID, FOUNDER_REGALIA_ID] : []),
     ])];
     const rawActive        = (rewardsRow[0]?.activeCosmetics ?? {}) as Record<string, string>;
     // Sanitise: only keep active entries where the item is actually owned
@@ -262,6 +281,9 @@ router.get("/rewards/shop", requireAuth, async (req, res) => {
     for (const [category, itemId] of Object.entries(rawActive)) {
       if (purchasedIds.includes(itemId)) activeCosmetics[category] = itemId;
     }
+    const regalia = founderCardFrame(Boolean(characterRows[0]?.isFounder), rawActive.card_frame);
+    if (regalia) activeCosmetics.card_frame = regalia;
+    else delete activeCosmetics.card_frame;
 
     // Split catalog: currently-available items vs out-of-season seasonal previews
     const currentMonth = new Date().getMonth() + 1; // 1-indexed
@@ -302,11 +324,21 @@ router.put("/rewards/active-cosmetics", requireAuth, async (req, res) => {
     ]);
     const purchasedIds = [
       ...purchases.map((p) => p.itemId),
-      ...(characterRows[0]?.isFounder ? [FOUNDER_AURORA_ITEM_ID] : []),
+      ...(characterRows[0]?.isFounder ? [FOUNDER_AURORA_ITEM_ID, FOUNDER_REGALIA_ID] : []),
     ];
 
     const sanitised: Record<string, string> = {};
     for (const [category, itemId] of Object.entries(activeCosmetics)) {
+      if (category === "card_frame") {
+        if (itemId === "") sanitised.card_frame = "";
+        else if (itemId === FOUNDER_REGALIA_ID && characterRows[0]?.isFounder) {
+          sanitised.card_frame = FOUNDER_REGALIA_ID;
+        } else return res.status(403).json({ error: "founder_exclusive" });
+        continue;
+      }
+      if (itemId === FOUNDER_REGALIA_ID) {
+        return res.status(400).json({ error: "invalid_cosmetic_category" });
+      }
       if (typeof itemId === "string" && purchasedIds.includes(itemId)) {
         sanitised[category] = itemId;
       }
@@ -456,7 +488,6 @@ class AlreadyOwnedError extends Error {
 router.post("/rewards/spend", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   const { itemId } = req.body as { itemId?: string };
-
   if (!itemId) {
     return res.status(400).json({ error: "itemId is required" });
   }
@@ -477,6 +508,12 @@ router.post("/rewards/spend", requireAuth, async (req, res) => {
   const shardsNeeded = item.cost.shards ?? 0;
 
   try {
+    if (itemId === FOUNDER_REGALIA_ID) {
+      const [character] = await db.select({ isFounder: characterTable.isFounder })
+        .from(characterTable).where(eq(characterTable.userId, userId)).limit(1);
+      return res.status(character?.isFounder ? 409 : 403)
+        .json({ error: character?.isFounder ? "already_owned" : "founder_exclusive" });
+    }
     if (itemId === FOUNDER_AURORA_ITEM_ID) {
       const [character] = await db
         .select({ isFounder: characterTable.isFounder })

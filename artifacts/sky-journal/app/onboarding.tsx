@@ -244,7 +244,7 @@ const s = StyleSheet.create({
   previewCard: { alignItems: 'center', borderRadius: 24, padding: 22, backgroundColor: 'rgba(255,255,255,0.035)', borderWidth: 1, borderColor: 'rgba(181,140,255,0.18)', marginBottom: 18 },
   avatar: { width: 92, height: 92, borderRadius: 46, overflow: 'hidden', borderWidth: 2, borderColor: '#A986F4' },
   camera: { position: 'absolute', right: 4, bottom: 4, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7B52CF' },
-  avatarBusy: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(8,4,20,0.65)' },
+  avatarBusy: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(8,4,20,0.65)' },
   previewName: { color: '#F3ECFF', fontFamily: 'Satoshi-Bold', fontSize: 17, marginTop: 12 }, previewHint: { color: 'rgba(218,205,248,0.42)', fontFamily: 'Satoshi-Regular', fontSize: 11, marginTop: 4 },
   inputWrap: { height: 54, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(181,140,255,0.35)', backgroundColor: 'rgba(255,255,255,0.05)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
   at: { color: '#B99AF6', fontFamily: 'Satoshi-Bold', fontSize: 16 }, input: { flex: 1, color: '#fff', fontFamily: 'Satoshi-Medium', fontSize: 16, paddingHorizontal: 5 },

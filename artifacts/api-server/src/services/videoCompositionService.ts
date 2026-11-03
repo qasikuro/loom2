@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { mkdir, rm, stat } from "node:fs/promises";
 import { promisify } from "node:util";
+import { mediaToolPath } from "../lib/mediaTools";
 
 const execFileAsync = promisify(execFile);
 
@@ -39,12 +40,12 @@ export type ComposeVideoResult = {
   fileSize: number;
 };
 
-type VideoCompositionErrorCode = "invalid" | "tool" | "output";
+type VideoCompositionErrorCode = "invalid" | "tool" | "output" | "unavailable";
 
 export class VideoCompositionError extends Error {
   readonly code: VideoCompositionErrorCode;
-  constructor(message: string, code: VideoCompositionErrorCode = "invalid") {
-    super(message);
+  constructor(message: string, code: VideoCompositionErrorCode = "invalid", options?: ErrorOptions) {
+    super(message, options);
     this.name = "VideoCompositionError";
     this.code = code;
   }
@@ -82,13 +83,13 @@ export function validateVolume(value: number | undefined, field: string): number
 }
 
 async function runTool(
-  command: string,
+  command: "ffmpeg" | "ffprobe",
   args: string[],
   signal?: AbortSignal,
 ): Promise<{ stdout: string; stderr: string }> {
   if (signal?.aborted) throw new VideoCompositionError("Media processing was cancelled.", "tool");
   try {
-    return await execFileAsync(command, args, {
+    return await execFileAsync(mediaToolPath(command), args, {
       signal,
       timeout: 15 * 60 * 1000,
       maxBuffer: 4 * 1024 * 1024,
@@ -96,6 +97,13 @@ async function runTool(
   } catch (error) {
     if (signal?.aborted) {
       throw new VideoCompositionError("Media processing was cancelled.", "tool");
+    }
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw new VideoCompositionError(
+        "Video processing is temporarily unavailable. Please try again later.",
+        "unavailable",
+        { cause: error },
+      );
     }
     const detail = error instanceof Error ? error.message : "media tool failed";
     throw new VideoCompositionError(`Media processing failed: ${detail.slice(0, 500)}`, "tool");

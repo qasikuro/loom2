@@ -1,10 +1,12 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { getApiBase } from '@/utils/apiBase';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { getAuthToken } from '@/context/AppContext';
 import type { StoryMusic } from '@/context/mappers';
 import { ImageUploadError } from '@/utils/persistImage';
 import { isAbortError } from '@/utils/isAbortError';
+import { prepareNativeVideo, shouldPrepareNativeVideo } from '@/utils/nativeVideoComposition';
 
 export type ComposeVideoResult = {
   compositionId: string;
@@ -86,56 +88,82 @@ export function composeVideo(options: ComposeVideoOptions): ComposeVideoControll
 
     const apiBase = resolveApiBase();
     const url = `${apiBase}/media/compose-video`;
-    const data = fields(options);
+    const prepared = shouldPrepareNativeVideo(
+      Platform.OS,
+      Constants.appOwnership,
+      Constants.executionEnvironment,
+    )
+      ? await prepareNativeVideo(options, () => cancelled)
+      : null;
+    const uploadOptions: ComposeVideoOptions = prepared
+      ? {
+          ...options,
+          videoUri: prepared.uri,
+          mimeType: 'video/mp4',
+          fileName: 'prepared-video.mp4',
+          videoStartSeconds: 0,
+          videoDurationSeconds: prepared.durationSeconds,
+          music: null,
+          musicStartSeconds: 0,
+          originalVolume: 1,
+          musicVolume: 1,
+        }
+      : options;
+    const data = fields(uploadOptions);
     let response: Response | FileSystem.FileSystemUploadResult;
 
-    if (Platform.OS === 'web') {
-      const source = await fetch(options.videoUri, { signal: controller.signal });
-      if (!source.ok) throw new ImageUploadError('Could not read the selected video. Please try again.');
-      const blob = await source.blob();
-      const form = new FormData();
-      form.append('file', blob, filename(options));
-      Object.entries(data).forEach(([key, value]) => form.append(key, value));
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-        signal: controller.signal,
-      });
-    } else {
-      const taskOptions: FileSystem.FileSystemUploadOptions = {
-        httpMethod: 'POST',
-        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        fieldName: 'file',
-        mimeType: options.mimeType ?? 'video/mp4',
-        headers: { Authorization: `Bearer ${token}` },
-        parameters: data,
-      };
-      nativeTask = FileSystem.createUploadTask(
-        url,
-        options.videoUri,
-        taskOptions,
-        progress => {
-          const total = progress.totalBytesExpectedToSend;
-          options.onProgress?.(total > 0 ? progress.totalBytesSent / total : 0);
-        },
-      );
-      const uploadResult = await nativeTask.uploadAsync();
-      if (!uploadResult) throw new ImageUploadError('Video processing was cancelled.');
-      response = uploadResult;
-    }
+    try {
+      if (cancelled) throw new ImageUploadError('Video processing was cancelled.');
+      if (Platform.OS === 'web') {
+        const source = await fetch(uploadOptions.videoUri, { signal: controller.signal });
+        if (!source.ok) throw new ImageUploadError('Could not read the selected video. Please try again.');
+        const blob = await source.blob();
+        const form = new FormData();
+        form.append('file', blob, filename(uploadOptions));
+        Object.entries(data).forEach(([key, value]) => form.append(key, value));
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+          signal: controller.signal,
+        });
+      } else {
+        const taskOptions: FileSystem.FileSystemUploadOptions = {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          fieldName: 'file',
+          mimeType: uploadOptions.mimeType ?? 'video/mp4',
+          headers: { Authorization: `Bearer ${token}` },
+          parameters: data,
+        };
+        nativeTask = FileSystem.createUploadTask(
+          url,
+          uploadOptions.videoUri,
+          taskOptions,
+          progress => {
+            const total = progress.totalBytesExpectedToSend;
+            options.onProgress?.(total > 0 ? progress.totalBytesSent / total : 0);
+          },
+        );
+        const uploadResult = await nativeTask.uploadAsync();
+        if (!uploadResult) throw new ImageUploadError('Video processing was cancelled.');
+        response = uploadResult;
+      }
 
-    if (cancelled) throw new ImageUploadError('Video processing was cancelled.');
-    const status = response.status;
-    const body = await ('json' in response
-      ? response.json()
-      : Promise.resolve(JSON.parse(response.body || '{}')));
-    if (status < 200 || status >= 300) {
-      const message = (body as { error?: string })?.error;
-      throw new ImageUploadError(message || `Video processing failed (${status}). Please try again.`);
+      if (cancelled) throw new ImageUploadError('Video processing was cancelled.');
+      const status = response.status;
+      const body = await ('json' in response
+        ? response.json()
+        : Promise.resolve(JSON.parse(response.body || '{}')));
+      if (status < 200 || status >= 300) {
+        const message = (body as { error?: string })?.error;
+        throw new ImageUploadError(message || `Video processing failed (${status}). Please try again.`);
+      }
+      options.onProgress?.(1);
+      return normalizeResult(body);
+    } finally {
+      await prepared?.cleanup();
     }
-    options.onProgress?.(1);
-    return normalizeResult(body);
   })().catch(error => {
     if (isAbortError(error)) {
       throw new ImageUploadError('Video processing was cancelled.');

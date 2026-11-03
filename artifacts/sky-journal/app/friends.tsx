@@ -247,7 +247,6 @@ export default function FriendsScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
         data={[]}
-        renderItem={null}
         contentContainerStyle={[styles.content, { maxWidth: Math.min(width, 680), paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={accentColor} />}

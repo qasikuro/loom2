@@ -1,4 +1,4 @@
-type NativeAudio = typeof import('expo-av')['Audio'];
+type NativeAudio = typeof import('@/utils/audioCompat')['Audio'];
 
 let audioModulePromise: Promise<NativeAudio> | null = null;
 let audioModePromise: Promise<void> | null = null;
@@ -10,7 +10,7 @@ let audioModePromise: Promise<void> | null = null;
  */
 export function prepareNativeOutfitAudio(): Promise<NativeAudio> {
   if (!audioModulePromise) {
-    audioModulePromise = import('expo-av')
+    audioModulePromise = import('@/utils/audioCompat')
       .then(({ Audio }) => Audio)
       .catch((error) => {
         audioModulePromise = null;

@@ -385,7 +385,7 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             ListEmptyComponent={renderEmpty()}
-            ListFooterComponent={tab === 'all' && !picking && dmThreadsLoading && rows.length ? <Spinner color={accent} /> : null}
+            ListFooterComponent={tab === 'all' && !picking && dmThreadsLoading && rows.length ? <Spinner color={accent} /> : undefined}
             contentContainerStyle={{ flexGrow: 1 }}
           />
 
@@ -400,7 +400,7 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
 }
 
 const st = StyleSheet.create({
-  fill: { ...StyleSheet.absoluteFillObject },
+  fill: { ...StyleSheet.absoluteFill },
   overlay: { zIndex: 100, elevation: 30 },
   drawer: { position: 'absolute', top: 0, bottom: 0, right: 0, borderLeftWidth: StyleSheet.hairlineWidth, borderTopLeftRadius: 24, borderBottomLeftRadius: 24, overflow: 'hidden' },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 16, paddingRight: 8, paddingBottom: 4 },

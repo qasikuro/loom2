@@ -25,6 +25,44 @@ export async function runStartupMigrations(): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query(`
+      CREATE TABLE IF NOT EXISTS push_devices (
+        token TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        platform TEXT NOT NULL DEFAULT 'unknown',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS push_devices_user_seen_idx
+      ON push_devices(user_id, last_seen_at)
+    `);
+    // Keep tokens registered by older app versions working while the fleet
+    // transitions to one row per installation.
+    await client.query(`
+      INSERT INTO push_devices (token, user_id)
+      SELECT push_token, user_id
+      FROM character
+      WHERE push_token LIKE 'ExponentPushToken[%]'
+      ON CONFLICT (token) DO NOTHING
+    `);
+    // A comment/reply event can create at most one inbox item per recipient.
+    // Keep the constraint limited to these event types to preserve existing
+    // notification semantics for older notification categories.
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS notifications_content_comment_event_idx
+      ON notifications (user_id, ref_id)
+      WHERE type IN ('content_comment', 'content_reply')
+    `);
+    // One active comment report per reporter and comment. This keeps retries
+    // idempotent without preventing a later report after moderator review.
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS reports_active_comment_reporter_idx
+      ON reports (reporter_id, target_type, target_id)
+      WHERE target_type = 'comment' AND status IN ('pending', 'reviewing')
+    `);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS lumi_state (
         user_id TEXT PRIMARY KEY,
         remember BOOLEAN NOT NULL DEFAULT FALSE,
@@ -193,6 +231,7 @@ export async function runStartupMigrations(): Promise<void> {
         ADD COLUMN IF NOT EXISTS from_user_id TEXT,
         ADD COLUMN IF NOT EXISTS to_user_id   TEXT,
         ADD COLUMN IF NOT EXISTS expression   TEXT,
+        ADD COLUMN IF NOT EXISTS image_uri    TEXT,
         ADD COLUMN IF NOT EXISTS is_read      BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS deleted_at   TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS deleted_for  TEXT

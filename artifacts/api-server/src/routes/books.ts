@@ -37,7 +37,7 @@ const BookInputSchema = z.object({
   genre:         z.array(z.string()).default([]),
   language:      z.string().default("English"),
   ageRating:     z.string().default("All Ages"),
-  visibility:    z.enum(["public", "private"]).default("public"),
+  visibility:    z.enum(["public", "friends", "private"]).default("public"),
   coverImageUri: z.string().max(2000).nullish().refine(value =>
     value == null || normalizeManagedMediaPath(value) !== null || z.string().url().safeParse(value).success,
   ),
@@ -351,13 +351,13 @@ async function fanOutChapterNotification(
       db.select({ followerId: followsTable.followerId })
         .from(followsTable)
         .where(eq(followsTable.followingId, userId)),
-      db.select({ name: characterTable.name })
+      db.select({ name: characterTable.name, isHidden: characterTable.isHidden })
         .from(characterTable)
         .where(eq(characterTable.userId, userId))
         .limit(1),
     ]);
 
-    if (followers.length === 0) return;
+    if (followers.length === 0 || actorRows[0]?.isHidden) return;
 
     const actorName = actorRows[0]?.name ?? "A sky child";
 

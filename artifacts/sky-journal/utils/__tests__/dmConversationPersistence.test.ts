@@ -32,6 +32,13 @@ const pending = (id = '00000000-0000-4000-8000-000000000001') => ({
   clientMessageId: id, createdAt: '2026-10-27T12:00:00.000Z',
   content: 'pending message', imageUri: null, expression: null, attempts: 1, retryAt: 1,
 });
+const pendingVideo = (id = '00000000-0000-4000-8000-000000000003') => ({
+  ...pending(id),
+  localVideoUri: 'file:///private/dm-video.mp4',
+  localThumbnailUri: 'file:///private/dm-video-thumbnail.jpg',
+  localVideoMimeType: 'video/mp4',
+  localVideoFileName: 'dm-video.mp4',
+});
 async function restart() {
   vi.resetModules();
   return import('../dmConversationCache');
@@ -89,6 +96,52 @@ describe('native secure DM persistence', () => {
     device.failChunks = false;
     cache = await restart();
     expect(await cache.hydrateDmOutbox('alice', 'bob')).toEqual([pending()]);
+  });
+
+  it('keeps a cancelled video and its optimistic row gone after reopening', async () => {
+    let cache = await restart();
+    const video = pendingVideo();
+    const optimistic = {
+      ...message(video.clientMessageId),
+      videoUri: video.localVideoUri,
+      thumbnailUri: video.localThumbnailUri,
+      deliveryState: 'sending' as const,
+    };
+    cache.rememberDmConversation('alice', 'bob', [message('confirmed'), optimistic]);
+    await cache.saveDmOutbox('alice', 'bob', [video]);
+    await cache.flushDmConversationCacheWrites();
+
+    // This is the successful-cancel path: remove the queued item, then save
+    // the latest chat history after removing its optimistic message.
+    await cache.saveDmOutbox('alice', 'bob', []);
+    cache.rememberDmConversation('alice', 'bob', [message('confirmed')]);
+    await cache.flushDmConversationCacheWrites();
+
+    cache = await restart();
+    expect(await cache.hydrateDmOutbox('alice', 'bob')).toEqual([]);
+    expect((await cache.hydrateDmConversationCache('alice', 'bob')).map(item => item.id))
+      .toEqual(['confirmed']);
+  });
+
+  it('retains video media and pauses its retry after cancellation storage fails', async () => {
+    let cache = await restart();
+    const video = pendingVideo();
+    await cache.saveDmOutbox('alice', 'bob', [video]);
+
+    device.failReads = true;
+    await expect(cache.saveDmOutbox('alice', 'bob', []))
+      .rejects.toThrow('simulated locked keychain');
+    device.failReads = false;
+
+    // The conversation screen pauses the restored item after a failed cancel
+    // save and does not discard its local media.
+    const pausedOutbox = cache.restorePausedDmOutboxItem([], video, 0);
+    const paused = pausedOutbox[0];
+    await cache.saveDmOutbox('alice', 'bob', pausedOutbox);
+    cache = await restart();
+    await expect(cache.hydrateDmOutbox('alice', 'bob')).resolves.toEqual([paused]);
+    expect(paused.localVideoUri).toBe(video.localVideoUri);
+    expect(paused.localThumbnailUri).toBe(video.localThumbnailUri);
   });
 
   it('forgets both history and queued sends when the current account deletes a chat', async () => {

@@ -1,4 +1,5 @@
-import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const notificationsTable = pgTable("notifications", {
   id:        uuid("id").primaryKey().defaultRandom(),
@@ -12,6 +13,9 @@ export const notificationsTable = pgTable("notifications", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   index("notifications_user_id_idx").on(table.userId),
+  uniqueIndex("notifications_content_comment_event_idx")
+    .on(table.userId, table.refId)
+    .where(sql`${table.type} IN ('content_comment', 'content_reply')`),
 ]);
 
 export type Notification      = typeof notificationsTable.$inferSelect;

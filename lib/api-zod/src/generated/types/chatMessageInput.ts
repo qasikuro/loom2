@@ -21,4 +21,14 @@ export interface ChatMessageInput {
    * @pattern ^/api/images/[\w.-]+$
    */
   imageUri?: string;
+  /**
+   * Canonical uploaded video path owned by the sender; never a temporary read URL.
+   * @pattern ^/api/videos/[\w.-]+$
+   */
+  videoUri?: string;
+  /**
+   * Optional canonical sender-owned video poster image.
+   * @pattern ^/api/images/[\w.-]+$
+   */
+  thumbnailUri?: string;
 }

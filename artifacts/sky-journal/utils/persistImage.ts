@@ -286,6 +286,8 @@ export async function persistImageUriSafe(uri: string): Promise<string | null> {
 export interface VideoUploadOptions {
   mimeType?: string;
   fileName?: string | null;
+  signal?: AbortSignal;
+  onProgress?: (progress: { bytesSent: number; totalBytes: number; fraction: number }) => void;
 }
 
 function inferVideoMimeType(uri: string, fileName?: string | null): string {
@@ -314,26 +316,56 @@ async function uploadVideoWeb(uri: string, options: VideoUploadOptions): Promise
 
   const mimeType = options.mimeType ?? inferVideoMimeType(uri, options.fileName);
   const controller = new AbortController();
+  const abortFromCaller = () => controller.abort();
+  options.signal?.addEventListener('abort', abortFromCaller, { once: true });
   const timeout = setTimeout(() => controller.abort(), 60_000);
 
   try {
-    const sourceResponse = await fetch(uri);
+    if (options.signal?.aborted) throw new ImageUploadError('Video upload was cancelled.');
+    const sourceResponse = await fetch(uri, { signal: controller.signal });
     if (!sourceResponse.ok) {
       throw new ImageUploadError('Could not read the selected video. Please try again.');
     }
 
     const sourceBlob = await sourceResponse.blob();
+    if (controller.signal.aborted) throw new ImageUploadError('Video upload was cancelled.');
     const blob = sourceBlob.type
       ? sourceBlob
       : new Blob([sourceBlob], { type: mimeType });
     const form = new FormData();
     form.append('file', blob, videoFileName(options, mimeType));
 
-    const result = await fetch(`${apiBase}/upload-video`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-      signal: controller.signal,
+    const result = await new Promise<Response>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open('POST', `${apiBase}/upload-video`);
+      request.setRequestHeader('Authorization', `Bearer ${token}`);
+      request.upload.onprogress = event => {
+        if (!event.lengthComputable) return;
+        options.onProgress?.({
+          bytesSent: event.loaded,
+          totalBytes: event.total,
+          fraction: event.total > 0 ? event.loaded / event.total : 0,
+        });
+      };
+      request.onload = () => resolve(new Response(request.responseText, {
+        status: request.status,
+        statusText: request.statusText,
+        headers: { 'Content-Type': request.getResponseHeader('Content-Type') ?? 'application/json' },
+      }));
+      request.onerror = () => reject(new Error('Upload request failed'));
+      request.onabort = () => {
+        const error = new Error('Upload aborted');
+        error.name = 'AbortError';
+        reject(error);
+      };
+      const abortRequest = () => request.abort();
+      controller.signal.addEventListener('abort', abortRequest, { once: true });
+      if (controller.signal.aborted) {
+        request.abort();
+        return;
+      }
+      request.onloadend = () => controller.signal.removeEventListener('abort', abortRequest);
+      request.send(form);
     });
 
     if (result.ok) {
@@ -355,12 +387,14 @@ async function uploadVideoWeb(uri: string, options: VideoUploadOptions): Promise
     throw new ImageUploadError(errMsg || `Upload failed (${result.status}) — please try again.`);
   } catch (err) {
     if (err instanceof ImageUploadError) throw err;
+    if (options.signal?.aborted) throw new ImageUploadError('Video upload was cancelled.', err);
     if (isAbortError(err)) {
       throw new ImageUploadError('Upload timed out — check your connection and try again.');
     }
     throw new ImageUploadError('Could not reach the server — check your connection and try again.', err);
   } finally {
     clearTimeout(timeout);
+    options.signal?.removeEventListener('abort', abortFromCaller);
   }
 }
 
@@ -373,6 +407,7 @@ async function uploadVideoWeb(uri: string, options: VideoUploadOptions): Promise
  */
 export async function persistVideoUri(uri: string, options: VideoUploadOptions = {}): Promise<string> {
   if (!uri) throw new ImageUploadError('No video was selected.');
+  if (options.signal?.aborted) throw new ImageUploadError('Video upload was cancelled.');
   if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
   if (Platform.OS === 'web') return uploadVideoWeb(uri, options);
 
@@ -381,28 +416,59 @@ export async function persistVideoUri(uri: string, options: VideoUploadOptions =
   if (!token) throw new ImageUploadError('You need to be signed in to upload videos.');
   const mimeType = options.mimeType ?? inferVideoMimeType(uri, options.fileName);
 
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(
-      () => reject(new ImageUploadError('Upload timed out — check your connection and try again.')),
-      60_000, // videos may be larger; give 60 s
-    ),
-  );
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let abortHandler: (() => void) | null = null;
+  const uploadPromise = new Promise<FileSystem.FileSystemUploadResult>((resolve, reject) => {
+    const task = FileSystem.createUploadTask(
+      `${apiBase}/upload-video`,
+      uri,
+      {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName: 'file',
+        mimeType,
+        headers: { Authorization: `Bearer ${token}` },
+      },
+      progress => {
+        options.onProgress?.({
+          bytesSent: progress.totalBytesSent,
+          totalBytes: progress.totalBytesExpectedToSend,
+          fraction: progress.totalBytesExpectedToSend > 0
+            ? progress.totalBytesSent / progress.totalBytesExpectedToSend
+            : 0,
+        });
+      },
+    );
+    abortHandler = () => { void task.cancelAsync().catch(() => undefined); };
+    options.signal?.addEventListener('abort', abortHandler, { once: true });
+    if (options.signal?.aborted) {
+      abortHandler();
+      reject(new ImageUploadError('Video upload was cancelled.'));
+      return;
+    }
+    timeoutId = setTimeout(() => {
+      void task.cancelAsync().catch(() => undefined);
+      reject(new ImageUploadError('Upload timed out — check your connection and try again.'));
+    }, 60_000);
+    void task.uploadAsync().then(result => {
+      if (!result) {
+        reject(new ImageUploadError('Video upload was cancelled.'));
+      } else {
+        resolve(result);
+      }
+    }, reject);
+  });
 
   let result: FileSystem.FileSystemUploadResult;
   try {
-    result = await Promise.race([
-      FileSystem.uploadAsync(`${apiBase}/upload-video`, uri, {
-        httpMethod:  'POST',
-        uploadType:  FileSystem.FileSystemUploadType.MULTIPART,
-        fieldName:   'file',
-        mimeType,
-        headers:     { Authorization: `Bearer ${token}` },
-      }),
-      timeoutPromise,
-    ]);
+    result = await uploadPromise;
   } catch (err) {
+    if (options.signal?.aborted) throw new ImageUploadError('Video upload was cancelled.', err);
     if (err instanceof ImageUploadError) throw err;
     throw new ImageUploadError('Could not reach the server — check your connection and try again.', err);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (abortHandler) options.signal?.removeEventListener('abort', abortHandler);
   }
 
   if (result.status >= 200 && result.status < 300) {

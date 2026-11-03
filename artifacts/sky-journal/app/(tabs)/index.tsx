@@ -4,6 +4,7 @@ import { Icon } from '@/components/Icon';
 import { FloatingMenu, type FloatingMenuItem } from '@/components/FloatingMenu';
 import { Images } from '@/assets/images';
 import { getDailyPrompt } from '@/constants/prompts';
+import { resolveNotificationRoute } from '@/utils/notificationRouting';
 import { getGetAppConfigQueryKey, useGetAppConfig } from '@workspace/api-client-react';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +22,6 @@ import { useAuth, useUser } from '@clerk/expo';
 import { accountCacheKey } from '@/utils/accountCache';
 import { LumiHomeCard } from '@/features/lumi/home/LumiHomeCard';
 import { NotificationsExperience } from '@/components/home/NotificationsExperience';
-import { resolveNotificationRoute } from '@/utils/notificationRouting';
 import {
   useApp, apiFetch, type GuideAvailability, type GuideProfile, type DiscoverPost,
   type ConstellationState, type RewardBalance as RewardBalanceData,
@@ -452,7 +452,7 @@ function StoryPanel({ post, wide = false }: { post: DiscoverPost; wide?: boolean
 }
 const sp = StyleSheet.create({
   wrap:    { borderRadius: 20, overflow: 'hidden', backgroundColor: '#0E0C2A', flex: 1, borderWidth: 0.5 },
-  grad:    { ...StyleSheet.absoluteFillObject },
+  grad:    { ...StyleSheet.absoluteFill },
   meta:    { position: 'absolute', bottom: 10, left: 10, right: 10, gap: 2 },
   moodRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 1 },
   moodDot: { width: 4, height: 4, borderRadius: 2 },
@@ -1120,7 +1120,7 @@ export default function HomeScreen() {
     activeOutfitId, setActiveOutfitId,
     friends, blockedIds, discoverPosts,
     rewards, serverNotifications,
-    markServerNotificationsRead, deleteServerNotification, dismissReward,
+    markServerNotificationsRead, deleteServerNotification, sendNotificationReaction, dismissReward,
     reloadData, myGuides, rewardBalance, constellation,
     unreadCampfireRooms, campfireBadgeSeenAt,
     dmUnread, unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
@@ -1173,15 +1173,10 @@ export default function HomeScreen() {
 
   const [showNotifs,  setShowNotifs]  = useState(false);
 
-  // Single entry point for opening the notifications sheet — ensures all
-  // unread sources (server notifications, campfire, DMs) are marked seen
-  // consistently regardless of which UI element the user taps.
+  // Wait until the inbox sheet is visible before clearing its unread indicators.
   const openNotificationsPanel = useCallback(() => {
     setShowNotifs(true);
-    markServerNotificationsRead();
-    markAllUnreadSeen();
-  }, [markServerNotificationsRead, markAllUnreadSeen]);
-
+  }, []);
   const openServerNotification = useCallback((notification: (typeof serverNotifications)[number]) => {
     setShowNotifs(false);
     setTimeout(() => resolveNotificationRoute(router.push, {
@@ -2331,6 +2326,7 @@ export default function HomeScreen() {
           markAllUnreadSeen();
         }}
         onOpenNotification={openServerNotification}
+        onSendReaction={sendNotificationReaction}
         onOpenFriend={userId => {
           setShowNotifs(false);
           setTimeout(() => router.push({
@@ -2385,7 +2381,7 @@ const s = StyleSheet.create({
   // The native tab scene can resolve a flex-only ScrollView to the height of
   // its first measured content block. Absolute fill keeps the viewport tied
   // to the Home scene, so content after the Lumi card remains scrollable.
-  dashboardScroll: { ...StyleSheet.absoluteFillObject },
+  dashboardScroll: { ...StyleSheet.absoluteFill },
   floatingMenuDock: {
     position: 'absolute',
     right: 0,
@@ -2734,7 +2730,7 @@ const ev = StyleSheet.create({
     alignSelf: 'center', marginBottom: 16,
   },
   sheetHeaderGrad: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
   },
   sheetTopRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
@@ -2824,7 +2820,6 @@ const ev = StyleSheet.create({
 const m = StyleSheet.create({
   overlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
   sheet:     { borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 1, paddingTop: 12, paddingHorizontal: 20 },
-  sheetTall: { maxHeight: '80%' },
   handle:    { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 18 },
   title:     { fontSize: 17, fontFamily: 'Satoshi-Bold', marginBottom: 4 },
   sub:       { fontSize: 12.5, fontFamily: 'Satoshi-Regular', marginBottom: 18 },
@@ -2833,15 +2828,4 @@ const m = StyleSheet.create({
   oImg:      { width: 68, height: 68, borderRadius: 10, overflow: 'hidden', marginBottom: 6 },
   oName:     { fontSize: 11, fontFamily: 'Satoshi-Medium', textAlign: 'center' },
   check:     { position: 'absolute', top: 4, right: 4, width: 17, height: 17, borderRadius: 8.5, alignItems: 'center', justifyContent: 'center' },
-  badge:     { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  badgeN:    { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#fff' },
-  closeX:    { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  empty:     { alignItems: 'center', paddingVertical: 36, gap: 10 },
-  emptyTxt:  { fontSize: 14, fontFamily: 'Satoshi-Regular' },
-  notif:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 14, borderWidth: 1 },
-  notifIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  notifTitle:{ fontSize: 13, fontFamily: 'Satoshi-Medium', lineHeight: 17 },
-  notifSub:  { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 1 },
-  unread:    { width: 7, height: 7, borderRadius: 3.5 },
-  deleteBtn: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
 });

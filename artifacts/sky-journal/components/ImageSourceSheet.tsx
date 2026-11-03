@@ -199,7 +199,7 @@ function Option({ iconName, iconBg, iconColor, label, labelColor, sub, onPress }
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(5,4,14,0.72)',
   },
   sheet: {

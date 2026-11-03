@@ -16,9 +16,12 @@ import {
   guideSessionAttendeesTable,
   guideSessionsTable,
   guideTutorialsTable,
+  notificationsTable,
   outfitsTable,
+  reportsTable,
   storiesTable,
 } from "@workspace/db";
+import { ReportContentCommentBody } from "@workspace/api-zod";
 import { clerkAuth, getUserId, requireAuth } from "../middleware/auth";
 import { friendsSql, readableContentSql, readableProfileSql } from "../lib/contentVisibility";
 import { normalizePublicMediaFields } from "../lib/publicMediaUri";
@@ -412,6 +415,7 @@ router.post("/content/:contentType/:contentId/comments", requireAuth, async (req
 
   try {
     const [profile] = await db.select({
+      name: characterTable.name,
       isBanned: characterTable.isBanned,
       suspendedUntil: characterTable.suspendedUntil,
     }).from(characterTable).where(eq(characterTable.userId, userId)).limit(1);
@@ -437,14 +441,51 @@ router.post("/content/:contentType/:contentId/comments", requireAuth, async (req
       if (parentIsReply) return res.status(400).json({ error: "Replies can only be one level deep" });
     }
 
-    const [created] = await db.insert(contentCommentsTable).values({
-      contentType: parsedType.data,
-      contentId,
-      userId,
-      parentId,
-      content: parsedBody.data.content,
-      kindnessTag: parsedBody.data.kindnessTag ?? null,
-    }).returning();
+    const recipients = new Map<string, { type: "content_comment" | "content_reply"; title: string }>();
+    const contentLabel = parsedType.data;
+    if (readable.ownerId !== userId) {
+      recipients.set(readable.ownerId, {
+        type: parentId ? "content_reply" : "content_comment",
+        title: parentId
+          ? `${profile.name ?? "A player"} replied on your ${contentLabel}.`
+          : `${profile.name ?? "A player"} left a kind comment on your ${contentLabel}.`,
+      });
+    }
+    if (parentId) {
+      const parent = await findComment(parentId);
+      if (parent && parent.authorId !== userId) {
+        recipients.set(parent.authorId, {
+          type: "content_reply",
+          title: `${profile.name ?? "A player"} replied to your comment on a ${contentLabel}.`,
+        });
+      }
+    }
+    const created = await db.transaction(async tx => {
+      const [comment] = await tx.insert(contentCommentsTable).values({
+        contentType: parsedType.data,
+        contentId,
+        userId,
+        parentId,
+        content: parsedBody.data.content,
+        kindnessTag: parsedBody.data.kindnessTag ?? null,
+      }).returning();
+      if (!comment) return null;
+
+      if (recipients.size > 0) {
+        const notificationRef = `${parsedType.data}:${contentId}:${comment.id}:${parentId ?? ""}`;
+        await tx.insert(notificationsTable).values(
+          [...recipients.entries()].map(([recipientId, notification]) => ({
+            userId: recipientId,
+            actorId: userId,
+            actorName: profile.name ?? "Player",
+            type: notification.type,
+            refId: notificationRef,
+            title: notification.title,
+          })),
+        ).onConflictDoNothing();
+      }
+      return comment;
+    });
     if (!created) return res.status(500).json({ error: "Comment was not saved" });
 
     const rows = await rowsForContent(parsedType.data, contentId, parentId);
@@ -453,7 +494,7 @@ router.post("/content/:contentType/:contentId/comments", requireAuth, async (req
       id: created.id,
       contentType: parsedType.data,
       contentId,
-      authorName: profile ? (await db.select({ name: characterTable.name }).from(characterTable).where(eq(characterTable.userId, userId)).limit(1))[0]?.name ?? "Player" : "Player",
+      authorName: profile.name ?? "Player",
       authorUsername: null,
       authorAvatarUri: null,
       parentId,
@@ -520,6 +561,44 @@ router.post("/content-comments/:commentId/like", requireAuth, async (req, res) =
   } catch (error) {
     req.log.error({ err: error }, "Failed to toggle comment like");
     return res.status(500).json({ error: "Unable to update like" });
+  }
+});
+
+router.post("/content-comments/:commentId/report", requireAuth, async (req, res) => {
+  const reporterId = getUserId(req);
+  const commentId = String(req.params.commentId);
+  const params = z.string().uuid().safeParse(commentId);
+  const body = ReportContentCommentBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    return res.status(400).json({ error: "Invalid comment report" });
+  }
+
+  try {
+    const comment = await findComment(commentId);
+    if (!comment || comment.isHidden || comment.authorId === reporterId) {
+      return res.status(comment?.authorId === reporterId ? 400 : 404).json({
+        error: comment?.authorId === reporterId ? "You cannot report your own comment" : "Comment is unavailable",
+      });
+    }
+    const contentType = contentTypeSchema.safeParse(comment.contentType);
+    if (!contentType.success) return res.status(404).json({ error: "Comment is unavailable" });
+    const readable = await getReadableContent(contentType.data, comment.contentId, reporterId);
+    if (!readable || await usersBlocked(reporterId, comment.authorId)) {
+      return res.status(404).json({ error: "Comment is unavailable" });
+    }
+
+    const [inserted] = await db.insert(reportsTable).values({
+      reporterId,
+      targetType: "comment",
+      targetId: commentId,
+      reason: body.data.reason,
+      details: body.data.details ?? "",
+    }).onConflictDoNothing().returning({ id: reportsTable.id });
+
+    return res.status(inserted ? 201 : 200).json({ ok: true, duplicate: !inserted });
+  } catch (error) {
+    req.log.error({ err: error }, "Failed to report content comment");
+    return res.status(500).json({ error: "Unable to send report" });
   }
 });
 

@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { getListGuideTutorialsQueryKey, useListGuideTutorials, type GuideTutorial } from '@workspace/api-client-react';
 import { Images } from '@/assets/images/index';
-import { Video, ResizeMode } from 'expo-av';
+import { ResizeMode, VideoSurface as Video } from '@/components/VideoSurface';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { TeyvatMemoryBoxArt } from '@/components/profile/TeyvatMemoryBoxArt';
 import {
@@ -444,7 +444,9 @@ interface Props {
   outfits:             Outfit[];
   stories:             Story[];
   openOutfit:          (id: string) => void;
+  deleteOutfit:        (id: string) => void;
   deleteStory:         (id: string) => void;
+  deleteGalleryPhoto:  (id: string) => void;
   gallery:             GalleryPhoto[];
   openPhoto:           (photo: GalleryPhoto) => void;
   handleAddGalleryPhoto: () => Promise<void>;
@@ -455,14 +457,14 @@ interface Props {
 
 export function ProfileStyleSection({
   userId,
-  outfits, stories, openOutfit, deleteStory,
+  outfits, stories, openOutfit, deleteOutfit, deleteStory, deleteGalleryPhoto,
   gallery, openPhoto,
   handleAddGalleryPhoto, galleryUploading, galleryError,
   activeOutfitId,
 }: Props) {
   const { t } = useTranslation();
   const colors = useColors();
-  const { character, updateStory, deleteOutfit, deleteGalleryPhoto } = useApp();
+  const { character, updateStory } = useApp();
   const { width: screenWidth } = useWindowDimensions();
   const [activeStory,  setActiveStory]  = useState<Story | null>(null);
   const [playingVideo, setPlayingVideo] = useState<Story | null>(null);

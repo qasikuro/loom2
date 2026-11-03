@@ -1,0 +1,19 @@
+kind = "design-system"
+previewPath = "/storigam-kindness/"
+title = "Storigam Kindness"
+description = "A warm, accessible component system for positive comments and creator appreciation across Storigam stories, outfits, videos, books, tutorials, and sessions."
+version = "1.0.0"
+id = "artifacts/storigam-kindness"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/storigam-kindness/" ]
+localPort = 18084
+
+[services.development]
+run = "pnpm --filter @workspace/storigam-kindness run dev"
+
+[services.env]
+PORT = "18084"
+BASE_PATH = "/storigam-kindness/"

@@ -18,11 +18,18 @@ export interface ImageEditOptions {
   inputFidelity?: "low" | "high";
 }
 
+export interface ImageEditUsage {
+  inputTokens: number;
+  inputImageTokens: number;
+  inputTextTokens: number;
+  outputTokens: number;
+}
+
 export async function editImageBuffers(
   images: Array<{ buffer: Buffer; filename: string }>,
   prompt: string,
   options: ImageEditOptions = {},
-): Promise<Buffer> {
+): Promise<{ buffer: Buffer; usage: ImageEditUsage | null }> {
   const files = await Promise.all(
     images.map(({ buffer, filename }) => toFile(buffer, filename, { type: "image/jpeg" })),
   );
@@ -36,5 +43,21 @@ export async function editImageBuffers(
   });
   const base64 = response.data?.[0]?.b64_json;
   if (!base64) throw new Error("OpenAI returned no image");
-  return Buffer.from(base64, "base64");
+  const usage = response.usage;
+  const tokenDetails = usage?.input_tokens_details;
+  const hasCompleteUsage = Boolean(
+    usage &&
+    tokenDetails &&
+    Number.isFinite(tokenDetails.image_tokens) &&
+    Number.isFinite(tokenDetails.text_tokens),
+  );
+  return {
+    buffer: Buffer.from(base64, "base64"),
+    usage: hasCompleteUsage && usage && tokenDetails ? {
+      inputTokens: usage.input_tokens,
+      inputImageTokens: usage.input_tokens_details.image_tokens,
+      inputTextTokens: tokenDetails.text_tokens,
+      outputTokens: usage.output_tokens,
+    } : null,
+  };
 }

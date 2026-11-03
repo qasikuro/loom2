@@ -4,10 +4,18 @@ import { z } from "zod/v4";
 
 export const storigamInterestSignupTable = pgTable("storigam_interest_signups", {
   email: text("email").primaryKey(),
+  name: text("name").notNull().default(""),
+  preferredLanguage: text("preferred_language").notNull().default("en"),
   interests: text("interests").array().notNull(),
   consentedAt: timestamp("consented_at", { withTimezone: true }).notNull(),
   unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
   unsubscribeToken: text("unsubscribe_token"),
+  welcomeEmailStatus: text("welcome_email_status").notNull().default("legacy"),
+  welcomeEmailId: text("welcome_email_id"),
+  welcomeEmailSentAt: timestamp("welcome_email_sent_at", { withTimezone: true }),
+  betaBadgeEmailStatus: text("beta_badge_email_status").notNull().default("not_applicable"),
+  betaBadgeEmailId: text("beta_badge_email_id"),
+  betaBadgeEmailSentAt: timestamp("beta_badge_email_sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

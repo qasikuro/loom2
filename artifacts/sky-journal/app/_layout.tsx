@@ -3,13 +3,12 @@ import '@/i18n';
 
 import { ClerkLoaded, ClerkLoading, ClerkProvider, useAuth, useSession } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
-import Constants from 'expo-constants';
 import * as Font from 'expo-font';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Stack, router, usePathname, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // Do not mount react-native-keyboard-controller at the navigation root.
 // Its Android provider adds a native event view to the app root; that view can
@@ -36,7 +35,19 @@ import { LumiMusicProvider } from '@/features/lumi/music/LumiMusicProvider';
 import { GlobalChatButton } from '@/components/GlobalChatButton';
 import { setMediaAuthScope } from '@/utils/mediaAccess';
 import { GlobalChatButtonSettingsProvider } from '@/context/GlobalChatButtonSettingsContext';
-import { setBaseUrl } from '@workspace/api-client-react';
+import { registerPushDevice, setBaseUrl, unregisterPushDevice } from '@workspace/api-client-react';
+import { TeyvatMemoryBrowserPreview } from '@/components/profile/TeyvatMemoryBrowserPreview';
+import { RiveIconBrowserPreview } from '@/components/RiveIconBrowserPreview';
+import {
+  cachePushToken,
+  clearCachedPushToken,
+  getCachedPushToken,
+  getExpoPushToken,
+  getPushNotificationsModule,
+  getPushPermissionState,
+  getPushPlatform,
+} from '@/utils/pushNotifications';
+import { resolveNotificationRoute } from '@/utils/notificationRouting';
 
 setBaseUrl(getApiOrigin());
 
@@ -44,12 +55,10 @@ setBaseUrl(getApiOrigin());
 // notifications were removed. Lazy-require it so the error can't crash _layout.tsx
 // and prevent ClerkProvider from mounting.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-let Notifications: typeof import('expo-notifications') | null = null;
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-try { Notifications = require('expo-notifications'); } catch { /* not available in Expo Go */ }
+const Notifications = getPushNotificationsModule();
 
 // Configure how notifications appear when the app is in the foreground.
-if (Platform.OS !== 'web' && Notifications) {
+if (Platform.OS !== 'web' && Notifications?.setNotificationHandler) {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert:  true,
@@ -115,6 +124,9 @@ function AuthTokenBridge() {
 
   const { reloadData, clearUserData } = useApp();
   const prevSignedIn = useRef<boolean | null>(null);
+  const accountIdRef = useRef<string | null>(null);
+  const lastAuthTokenRef = useRef<string | null>(null);
+  const registeredPushRef = useRef<{ userId: string; token: string } | null>(null);
 
   useLayoutEffect(() => {
     if (!isLoaded) return;
@@ -131,12 +143,16 @@ function AuthTokenBridge() {
     setAuthTokenGetter(async () => {
       try {
         const t = await getToken();
-        if (t) return t;
+        if (t) {
+          lastAuthTokenRef.current = t;
+          return t;
+        }
       } catch (e) {
         console.warn('[AuthTokenBridge] getToken() (path 1) threw:', e);
       }
       try {
         const t = await sessionRef.current?.getToken();
+        if (t) lastAuthTokenRef.current = t;
         return t ?? null;
       } catch (e) {
         console.warn('[AuthTokenBridge] sessionRef.getToken() (path 2) threw:', e);
@@ -147,35 +163,82 @@ function AuthTokenBridge() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (isSignedIn && prevSignedIn.current !== true) {
+    if (isSignedIn && (prevSignedIn.current !== true || accountIdRef.current !== userId)) {
+      accountIdRef.current = userId ?? null;
       reloadData();
-      if (Platform.OS !== 'web' && Notifications) {
-        (async () => {
-          try {
-            const perms = await Notifications!.requestPermissionsAsync();
-            // PermissionResponse base type doesn't resolve cleanly in this TS config;
-            // cast to access the runtime-present `granted` field.
-            const granted = (perms as unknown as { granted?: boolean }).granted
-              ?? (perms.ios?.status === 1 || perms.ios?.status === 3);
-            if (!granted) return;
-            const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-            if (!projectId) return;
-            const tokenData = await Notifications!.getExpoPushTokenAsync({ projectId });
-            // Use sessionRef for push registration too — same reason as above.
-            const authToken = await getToken() ?? await sessionRef.current?.getToken();
-            if (!authToken) return;
-            const apiUrl = getApiBase();
-            await fetch(`${apiUrl}/push/register`, {
-              method:  'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-              body:    JSON.stringify({ token: tokenData.data }),
-            });
-          } catch { /* push token registration requires a dev/prod build — silently skip in Expo Go */ }
-        })();
-      }
     }
+
+    const syncPushDevice = async (rotatedToken?: string) => {
+      if (!isSignedIn || !userId || Platform.OS === 'web' || !Notifications) return;
+      try {
+        const permission = await getPushPermissionState();
+        if (permission.state !== 'granted') {
+          const current = registeredPushRef.current;
+          const token = current?.userId === userId ? current.token : await getCachedPushToken();
+          if (token) {
+            await unregisterPushDevice({ token });
+            registeredPushRef.current = null;
+            await clearCachedPushToken();
+          }
+          return;
+        }
+        const token = rotatedToken ?? await getExpoPushToken();
+        if (!token) return;
+        await registerPushDevice({ token, platform: getPushPlatform() });
+        await cachePushToken(token);
+        registeredPushRef.current = { userId, token };
+      } catch (error) {
+        console.warn('[AuthTokenBridge] push registration failed', {
+          error: error instanceof Error ? error.name : 'unknown',
+        });
+      }
+    };
+
+    if (isSignedIn) {
+      void syncPushDevice();
+      const tokenSubscription = Notifications?.addPushTokenListener?.(token => {
+        void syncPushDevice(token.data);
+      });
+      const appStateSubscription = AppState.addEventListener('change', state => {
+        if (state === 'active') void syncPushDevice();
+      });
+      prevSignedIn.current = true;
+      return () => {
+        tokenSubscription?.remove();
+        appStateSubscription.remove();
+      };
+    }
+
     if (!isSignedIn && prevSignedIn.current === true) {
       setAuthTokenGetter(async () => null);
+      const current = registeredPushRef.current;
+      const authToken = lastAuthTokenRef.current;
+      registeredPushRef.current = null;
+      if (authToken) {
+        void (async () => {
+          try {
+            const token = current?.token ?? await getCachedPushToken() ?? await getExpoPushToken();
+            if (!token) return;
+            const response = await fetch(`${getApiBase()}/push/register`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({ token }),
+            });
+            if (!response.ok) {
+              console.warn('[AuthTokenBridge] push sign-out cleanup rejected', { status: response.status });
+              return;
+            }
+            await clearCachedPushToken();
+          } catch {
+            console.warn('[AuthTokenBridge] push sign-out cleanup failed');
+          }
+        })();
+      }
+      lastAuthTokenRef.current = null;
+      accountIdRef.current = null;
       clearUserData();
     }
     prevSignedIn.current = isSignedIn ?? false;
@@ -184,7 +247,7 @@ function AuthTokenBridge() {
   // spurious getter re-registrations or double reloadData() calls on session
   // updates such as token rotation).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn, getToken]);
+  }, [isLoaded, isSignedIn, userId, getToken, reloadData, clearUserData]);
 
   return null;
 }
@@ -275,58 +338,40 @@ function AppOverlays() {
  * @param data  - the notification payload's `data` field
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function resolveNotificationRoute(push: (href: any) => void, data: Record<string, unknown>): void {
-  // Admin broadcast deep link — takes priority over type-based routing
-  if (typeof data?.url === 'string' && data.url) {
-    push(data.url);
-    return;
-  }
-  if (!data?.type) return;
-  switch (data.type) {
-    case 'follow':
-      if (data.refId) push(`/user/${data.refId}`);
-      break;
-    case 'witness':
-    case 'save':
-    case 'new_story':
-      if (data.refId) push(`/story/${data.refId}`);
-      break;
-    case 'new_chapter':
-      // refId is the bookId — route to the public book page
-      if (data.refId) push({ pathname: '/book-public', params: { bookId: data.refId } });
-      break;
-    case 'message':
-      if (data.refId) push(`/messages/${data.refId}`);
-      break;
-    default:
-      break;
-  }
-}
-
 function NotificationDeepLinkHandler() {
   const router = useRouter();
+  const { refreshServerNotifications } = useApp();
 
   const navigate = useCallback((data: Record<string, unknown>) => {
     resolveNotificationRoute(router.push, data);
-  }, [router]);
+    void refreshServerNotifications().catch(() => null);
+  }, [router, refreshServerNotifications]);
 
   useEffect(() => {
-    if (Platform.OS === 'web' || !Notifications) return;
+    if (Platform.OS === 'web' || !Notifications?.addNotificationResponseReceivedListener) return;
 
     // Handle notification taps when the app is already open
-    const sub = Notifications.addNotificationResponseReceivedListener(response => {
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
       navigate(response.notification.request.content.data as Record<string, unknown>);
+    });
+    const receivedSubscription = Notifications.addNotificationReceivedListener?.(() => {
+      void refreshServerNotifications().catch(() => null);
     });
 
     // Handle cold-start: app launched by tapping a notification
-    Notifications.getLastNotificationResponseAsync().then(response => {
-      if (response) {
-        navigate(response.notification.request.content.data as Record<string, unknown>);
-      }
-    }).catch(() => null);
+    if (Notifications.getLastNotificationResponseAsync) {
+      Notifications.getLastNotificationResponseAsync().then(response => {
+        if (response) {
+          navigate(response.notification.request.content.data as Record<string, unknown>);
+        }
+      }).catch(() => null);
+    }
 
-    return () => sub.remove();
-  }, [navigate]);
+    return () => {
+      responseSubscription.remove();
+      receivedSubscription?.remove();
+    };
+  }, [navigate, refreshServerNotifications]);
 
   return null;
 }
@@ -368,6 +413,7 @@ function AuthNavigator({ onRouteReady }: { onRouteReady: () => void }) {
 }
 
 export default function RootLayout() {
+  const pathname = usePathname();
   const [fontsReady,  setFontsReady]  = useState(false);
   const [splashDone,  setSplashDone]  = useState(false);
   const [initialRouteReady, setInitialRouteReady] = useState(false);
@@ -405,6 +451,27 @@ export default function RootLayout() {
     setInitialRouteReady(true);
     setSplashDone(true);
   }, []);
+
+  // This asset-only preview is development-only and contains no account data.
+  // Render it outside Clerk so it can be checked in a browser before a native build.
+  if (__DEV__ && Platform.OS === 'web' && pathname === '/teyvat-preview') {
+    return (
+      <SafeAreaProvider>
+        <TeyvatMemoryBrowserPreview />
+      </SafeAreaProvider>
+    );
+  }
+
+  // Let the asset-only Rive preview load without waiting for Clerk or the app splash.
+  if (__DEV__ && Platform.OS === 'web' && pathname === '/rive-icons-preview') {
+    return (
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <RiveIconBrowserPreview />
+        </SafeAreaProvider>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider>
@@ -464,6 +531,14 @@ export default function RootLayout() {
                             <Stack.Screen
                               name="create-outfit"
                               options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
+                              name="story-format"
+                              options={{ presentation: 'card', animation: 'slide_from_right' }}
+                            />
+                            <Stack.Screen
+                              name="text-story"
+                              options={{ presentation: 'card', animation: 'slide_from_bottom' }}
                             />
                             <Stack.Screen
                               name="chapter-editor"
@@ -541,7 +616,7 @@ export default function RootLayout() {
         </ClerkProvider>
 
         {fontsReady && splashDone && !initialRouteReady && (
-          <StorigamLoadingOverlay transparent />
+          <StorigamLoadingOverlay transparent message="Opening Storigam…" />
         )}
 
         {/* Custom splash — overlays everything, fades out when ready */}

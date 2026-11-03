@@ -636,7 +636,7 @@ export function ChatStickerAnimation({ type, mainEmoji, mainSticker, onComplete 
   }, [type, particles, width, height, mainScale, mainOpacity, flashOpacity]);
 
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {/* Soft flash for the impact/shatter reactions */}
       <Animated.View style={[styles.flash, { opacity: flashOpacity }]} />
 
@@ -710,7 +710,7 @@ export function ChatStickerAnimation({ type, mainEmoji, mainSticker, onComplete 
 
 const styles = StyleSheet.create({
   flash: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#FFF4DF',
   },
   mainSticker: {

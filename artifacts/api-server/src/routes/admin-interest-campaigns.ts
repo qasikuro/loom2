@@ -36,14 +36,20 @@ interface CampaignRow {
 
 const campaignQuery = `
   SELECT c.id, c.audience, c.subject, c.message, c.created_at,
-    COUNT(r.email)::int AS total,
+    COUNT(r.email) FILTER (
+      WHERE r.status <> 'skipped'
+        AND ((s.email IS NOT NULL AND s.unsubscribed_at IS NULL) OR r.status <> 'pending')
+    )::int AS total,
     COUNT(r.email) FILTER (WHERE r.status = 'accepted')::int AS accepted,
     COUNT(r.email) FILTER (WHERE r.status = 'failed')::int AS failed,
-    COUNT(r.email) FILTER (WHERE r.status = 'pending')::int AS pending,
+    COUNT(r.email) FILTER (
+      WHERE r.status = 'pending' AND s.email IS NOT NULL AND s.unsubscribed_at IS NULL
+    )::int AS pending,
     COUNT(r.email) FILTER (WHERE r.status IN ('sending', 'uncertain'))::int AS uncertain,
     COUNT(r.email) FILTER (WHERE r.status = 'skipped')::int AS skipped
   FROM storigam_email_campaigns c
   LEFT JOIN storigam_email_recipients r ON r.campaign_id = c.id
+  LEFT JOIN storigam_interest_signups s ON s.email = r.email
 `;
 
 function present(row: CampaignRow) {
@@ -71,13 +77,28 @@ async function getCampaign(id: string) {
 }
 
 router.get("/admin/interest/subscribers", requireAdmin, async (req, res): Promise<void> => {
+  const parseIntegerQuery = (value: unknown, fallback: number): number | null => {
+    if (value === undefined) return fallback;
+    if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  };
+  const limit = parseIntegerQuery(req.query.limit, 50);
+  const offset = parseIntegerQuery(req.query.offset, 0);
+  if (limit === null || limit < 1 || limit > 100 || offset === null) {
+    res.status(400).json({ error: "Use a limit from 1 to 100 and a non-negative integer offset." });
+    return;
+  }
+
   try {
     const [list, counts] = await Promise.all([
       pool.query<{
         email: string; interests: string[]; consented_at: Date;
         created_at: Date; unsubscribed_at: Date | null;
       }>(`SELECT email, interests, consented_at, created_at, unsubscribed_at
-         FROM storigam_interest_signups ORDER BY created_at DESC LIMIT 500`),
+         FROM storigam_interest_signups
+         ORDER BY created_at DESC, email ASC
+         LIMIT $1 OFFSET $2`, [limit, offset]),
       pool.query<{ total: number; active_total: number; beta_total: number; creator_total: number }>(
         `SELECT COUNT(*)::int AS total,
            COUNT(*) FILTER (WHERE unsubscribed_at IS NULL)::int AS active_total,
@@ -86,6 +107,7 @@ router.get("/admin/interest/subscribers", requireAdmin, async (req, res): Promis
          FROM storigam_interest_signups`,
       ),
     ]);
+    res.setHeader("Cache-Control", "no-store");
     res.json(ListInterestSubscribersResponse.parse({
       subscribers: list.rows.map(row => ({
         email: row.email,
@@ -101,6 +123,7 @@ router.get("/admin/interest/subscribers", requireAdmin, async (req, res): Promis
         beta_tester: counts.rows[0]?.beta_total ?? 0,
         content_creator: counts.rows[0]?.creator_total ?? 0,
       },
+      _ts: Date.now(),
     }));
   } catch {
     req.log.error("Could not list landing subscribers");
@@ -208,47 +231,44 @@ router.post("/admin/interest/campaigns/:id/dispatch", requireAdmin, dispatchLimi
     let rateLimited = false;
     for (const { email } of claimed.rows) {
       processed++;
+      const client = await pool.connect();
+      let transactionOpen = false;
       try {
-        const signup = await pool.query<{ unsubscribe_token: string | null; unsubscribed_at: Date | null }>(
-          `SELECT unsubscribe_token, unsubscribed_at FROM storigam_interest_signups WHERE email = $1`,
+        await client.query("BEGIN");
+        transactionOpen = true;
+        // Share this lock with unsubscribe confirmation so either the opt-out
+        // wins before sending, or the send completes before confirmation.
+        await client.query(
+          "SELECT pg_advisory_xact_lock(hashtext('storigam-campaign-email'), hashtext($1))",
+          [email],
+        );
+        const signup = await client.query<{ unsubscribe_token: string | null; unsubscribed_at: Date | null }>(
+          `SELECT unsubscribe_token, unsubscribed_at
+           FROM storigam_interest_signups WHERE email = $1 FOR UPDATE`,
           [email],
         );
         if (!signup.rows[0] || signup.rows[0].unsubscribed_at) {
-          await pool.query(
+          await client.query(
             `UPDATE storigam_email_recipients SET status = 'skipped'
              WHERE campaign_id = $1 AND email = $2`,
             [id, email],
           );
+          await client.query("COMMIT");
+          transactionOpen = false;
           continue;
         }
         let token = signup.rows[0].unsubscribe_token;
         if (!token) {
           const newToken = randomBytes(32).toString("hex");
-          const saved = await pool.query<{ unsubscribe_token: string }>(
+          const saved = await client.query<{ unsubscribe_token: string }>(
             `UPDATE storigam_interest_signups SET unsubscribe_token = $1
              WHERE email = $2 AND unsubscribe_token IS NULL
              RETURNING unsubscribe_token`,
             [newToken, email],
           );
-          token = saved.rows[0]?.unsubscribe_token
-            ?? (await pool.query<{ unsubscribe_token: string }>(
-              `SELECT unsubscribe_token FROM storigam_interest_signups WHERE email = $1`,
-              [email],
-            )).rows[0]?.unsubscribe_token;
+          token = saved.rows[0]?.unsubscribe_token ?? null;
         }
         if (!token) throw new Error("Missing unsubscribe token");
-        const latest = await pool.query<{ unsubscribed_at: Date | null }>(
-          `SELECT unsubscribed_at FROM storigam_interest_signups WHERE email = $1`,
-          [email],
-        );
-        if (!latest.rows[0] || latest.rows[0].unsubscribed_at) {
-          await pool.query(
-            `UPDATE storigam_email_recipients SET status = 'skipped'
-             WHERE campaign_id = $1 AND email = $2`,
-            [id, email],
-          );
-          continue;
-        }
         const unsubscribeUrl = new URL(baseUrl);
         unsubscribeUrl.searchParams.set("token", token);
         const body = `${campaign.message}\n\n—\nYou received this because you signed up for Storigam updates.\nStop these emails: ${unsubscribeUrl.toString()}`;
@@ -267,39 +287,48 @@ router.post("/admin/interest/campaigns/:id/dispatch", requireAdmin, dispatchLimi
           req.log.warn({ campaignId: id, providerStatus: response.status }, "Campaign message rejected");
           if (response.status === 429 || response.status >= 500) {
             // Retryable provider rejection: do not consume this recipient or continue this batch.
-            await pool.query(
+            await client.query(
               `UPDATE storigam_email_recipients SET status = 'pending'
                WHERE campaign_id = $1 AND email = $2`,
               [id, email],
             );
+            await client.query("COMMIT");
+            transactionOpen = false;
             rateLimited = true;
             break;
           }
-          await pool.query(
+          await client.query(
             `UPDATE storigam_email_recipients SET status = 'failed'
              WHERE campaign_id = $1 AND email = $2`,
             [id, email],
           );
+          await client.query("COMMIT");
+          transactionOpen = false;
           break; // A provider outage should not reject the whole audience.
         }
         const result = await response.json() as { id?: unknown };
         if (typeof result.id !== "string") throw new Error("Provider returned no email ID");
-        await pool.query(
+        await client.query(
           `UPDATE storigam_email_recipients
            SET status = 'accepted', provider_id = $3, sent_at = NOW()
            WHERE campaign_id = $1 AND email = $2`,
           [id, email, result.id],
         );
+        await client.query("COMMIT");
+        transactionOpen = false;
         // Resend's standard API limit is low; do not flood it with a campaign.
         if (processed < claimed.rows.length) await new Promise(resolve => setTimeout(resolve, 600));
       } catch {
+        if (transactionOpen) await client.query("ROLLBACK").catch(() => {});
         req.log.error({ campaignId: id }, "Campaign send outcome uncertain; manual review required");
-        await pool.query(
+        await client.query(
           `UPDATE storigam_email_recipients SET status = 'uncertain'
            WHERE campaign_id = $1 AND email = $2`,
           [id, email],
         );
         break; // Do not auto-retry: the provider may have accepted the request.
+      } finally {
+        client.release();
       }
     }
     // Rows claimed but not attempted remain safe to resume.

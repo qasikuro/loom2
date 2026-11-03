@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore }
 import { AppState } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import type { ImageErrorEventData, ImageProps } from 'expo-image';
+import type { ImageSourcePropType } from 'react-native';
 import {
   canonicalMediaUri,
   getMediaAuthScope,
@@ -9,7 +10,9 @@ import {
   subscribeMediaAuthScope,
 } from '../utils/mediaAccess';
 
-function uriFromSource(source: ImageProps['source']): string | undefined {
+type SecureImageSource = ImageProps['source'] | ImageSourcePropType;
+
+function uriFromSource(source: SecureImageSource): string | undefined {
   if (typeof source === 'string') return source;
   if (source && typeof source === 'object' && 'uri' in source && typeof source.uri === 'string') {
     return source.uri;
@@ -18,7 +21,12 @@ function uriFromSource(source: ImageProps['source']): string | undefined {
 }
 
 /** Drop-in Expo Image that renews managed API media on entry, resume, and load failure. */
-export function SecureImage({ source, onError, recyclingKey: callerRecyclingKey, ...props }: ImageProps) {
+export function SecureImage({
+  source,
+  onError,
+  recyclingKey: callerRecyclingKey,
+  ...props
+}: Omit<ImageProps, 'source'> & { source?: SecureImageSource }) {
   const originalUri = uriFromSource(source);
   const mediaScope = useSyncExternalStore(subscribeMediaAuthScope, getMediaAuthScope, getMediaAuthScope);
   const sourceIdentity = originalUri ?? (typeof source === 'number' ? `asset:${source}` : null);
@@ -87,6 +95,9 @@ export function SecureImage({ source, onError, recyclingKey: callerRecyclingKey,
     : typeof source === 'string' && resolvedUri
       ? resolvedUri
       : source;
+  const expoSource = Array.isArray(renderedSource)
+    ? [...renderedSource] as ImageProps['source']
+    : renderedSource as ImageProps['source'];
 
-  return <ExpoImage {...props} recyclingKey={secureRecyclingKey} source={renderedSource} onError={handleError} />;
+  return <ExpoImage {...props} recyclingKey={secureRecyclingKey} source={expoSource} onError={handleError} />;
 }

@@ -15,11 +15,19 @@ export const mangaGenerationsTable = pgTable("manga_generations", {
   outputSize: text("output_size").notNull(),
   status: text("status").notNull().default("pending"),
   estimatedCostMicros: integer("estimated_cost_micros").notNull().default(0),
+  providerUsage: jsonb("provider_usage").$type<{
+    inputTokens: number;
+    inputImageTokens: number;
+    inputTextTokens: number;
+    outputTokens: number;
+  } | null>(),
+  providerCostMicros: integer("provider_cost_micros"),
   errorCode: text("error_code"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 }, table => [
   index("manga_generations_user_created_idx").on(table.userId, table.createdAt),
+  index("manga_generations_created_idx").on(table.createdAt),
   uniqueIndex("manga_generations_user_request_idx").on(table.userId, table.requestId),
 ]);
 

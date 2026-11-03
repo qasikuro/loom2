@@ -48,6 +48,10 @@ export interface StoryPanel {
   imageUri?:         string;
   bgPreset?:         string;
   text:              string;
+  /** Rich text article block metadata, persisted inside the existing panel JSON. */
+  textFormat?:       'rich';
+  articleBlock?:     'paragraph' | 'heading' | 'quote' | 'bullet' | 'image';
+  articleEmphasis?:  'bold' | 'italic';
   bubbleText?:       string;
   overlays?:         PanelOverlay[];
   imageAspectRatio?: number;
@@ -183,7 +187,16 @@ export interface DiscoverPost {
   vibe:             string;
   saved:            boolean;
   isFollowing:      boolean;
-  panels?:          { text: string; imageUri?: string; overlays?: PanelOverlay[] }[];
+  panels?:          {
+    text: string;
+    textFormat?: 'rich';
+    articleBlock?: 'paragraph' | 'heading' | 'quote' | 'bullet' | 'image';
+    articleEmphasis?: 'bold' | 'italic';
+    imageUri?: string;
+    imageAspectRatio?: number;
+    contentFit?: 'cover' | 'contain';
+    overlays?: PanelOverlay[];
+  }[];
   pages?:           StoryPage[];
   pageLayoutKey?:   string;
   /** Set when this post is a chapter from a book — routes to the book page instead of the standalone story viewer. */
@@ -249,6 +262,9 @@ export interface RawJournalEntryResponse {
 export interface RawStoryPanel {
   id?:               string;
   text?:             string;
+  textFormat?:       'rich';
+  articleBlock?:     'paragraph' | 'heading' | 'quote' | 'bullet' | 'image';
+  articleEmphasis?:  'bold' | 'italic';
   imageUri?:         string | null;
   bgPreset?:         string;
   overlays?:         unknown[];
@@ -320,7 +336,16 @@ export interface RawDiscoverApiItem {
   date?:            string;
   createdAt?:       string;
   chapterNumber?:   number;
-  panels?:          Array<{ text?: string; imageUri?: string | null; overlays?: unknown[] }>;
+  panels?:          Array<{
+    text?: string;
+    textFormat?: 'rich';
+    articleBlock?: 'paragraph' | 'heading' | 'quote' | 'bullet' | 'image';
+    articleEmphasis?: 'bold' | 'italic';
+    imageUri?: string | null;
+    imageAspectRatio?: number;
+    contentFit?: 'cover' | 'contain';
+    overlays?: unknown[];
+  }>;
   pages?:           unknown[];
   pageLayoutKey?:   string;
   bookId?:          string;
@@ -443,6 +468,9 @@ export function toAppStory(raw: RawStoryResponse, apiBase?: string): Story {
       ? raw.panels.map((p: RawStoryPanel): StoryPanel => ({
           id:               p.id ?? '',
           text:             p.text ?? '',
+          textFormat:       p.textFormat,
+          articleBlock:     p.articleBlock,
+          articleEmphasis:  p.articleEmphasis,
           imageUri:         resolveUri(p.imageUri ?? undefined, apiBase),
           bgPreset:         p.bgPreset,
           overlays:         p.overlays as PanelOverlay[] | undefined,
@@ -511,7 +539,12 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     vibe:             raw.mood ?? 'Hopeful',
     panels:           Array.isArray(raw.panels) ? raw.panels.map(p => ({
       text:     p.text     ?? '',
+      textFormat: p.textFormat,
+      articleBlock: p.articleBlock,
+      articleEmphasis: p.articleEmphasis,
       imageUri: resolveUri(p.imageUri ?? undefined, apiBase),
+      imageAspectRatio: p.imageAspectRatio,
+      contentFit: p.contentFit,
       overlays: Array.isArray(p.overlays) ? (p.overlays as PanelOverlay[]) : undefined,
     })) : [],
     pages:            Array.isArray(raw.pages) ? resolveStoryPages(raw.pages, apiBase) : undefined,

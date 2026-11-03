@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, AppState, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +23,10 @@ function MessagePhoto({ uri, width, maxHeight, onOpen, onLongPress, scope }: Pho
   const [attempt, setAttempt] = useState(0);
   const [readUri, setReadUri] = useState<string | null>(null);
   const [aspect, setAspect] = useState(1);
+  const imageSource = useMemo(
+    () => readUri ? { uri: readUri, cacheKey: JSON.stringify([scope, uri]) } : null,
+    [readUri, scope, uri],
+  );
   const mounted = useRef(true);
   const retrying = useRef(false);
   const generation = useRef(0);
@@ -158,7 +162,7 @@ export function ChatPhotoViewer({ uri, onClose, background, color }: {
 
 const styles = StyleSheet.create({
   messagePhoto: { borderRadius: 14, overflow: 'hidden' },
-  photoStatus: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 16 },
+  photoStatus: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 16 },
   photoStatusText: { fontFamily: 'Satoshi-Medium', fontSize: 13, textAlign: 'center' },
   draft: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, marginHorizontal: 16, marginBottom: 4, borderWidth: 1, borderRadius: 16 },
   thumbnail: { width: 64, height: 64, borderRadius: 10 },

@@ -1,6 +1,6 @@
 import { Icon } from '@/components/Icon';
 import { SecureImage } from '@/components/SecureImage';
-import { ResizeMode, Video } from 'expo-av';
+import { ResizeMode, VideoSurface as Video } from '@/components/VideoSurface';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, PillButton, gs } from './shared';

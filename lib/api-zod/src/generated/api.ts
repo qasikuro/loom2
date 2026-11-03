@@ -706,6 +706,43 @@ export const WitnessStoryResponse = zod.object({
 });
 
 /**
+ * @summary Send a sticker reaction to a story reactor from its notification
+ */
+export const ReplyToStoryReactionParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const ReplyToStoryReactionBody = zod.object({
+  notificationId: zod.string().uuid(),
+  stickerType: zod.enum([
+    "Hopeful",
+    "Peaceful",
+    "Lonely",
+    "Romantic",
+    "Chaotic",
+    "Adventurous",
+    "Dreamy",
+    "Soft",
+  ]),
+});
+
+export const ReplyToStoryReactionResponse = zod.object({
+  ok: zod.boolean(),
+  alreadySent: zod.boolean(),
+  recipientId: zod.string(),
+  stickerType: zod.enum([
+    "Hopeful",
+    "Peaceful",
+    "Lonely",
+    "Romantic",
+    "Chaotic",
+    "Adventurous",
+    "Dreamy",
+    "Soft",
+  ]),
+});
+
+/**
  * @summary List all outfit logs newest first
  */
 export const listOutfitsResponseMusicDurationMax = 3600;
@@ -858,8 +895,17 @@ export const ListNotificationsResponseItem = zod.object({
   id: zod.string(),
   actorId: zod.string(),
   actorName: zod.string(),
-  type: zod.string(),
-  refId: zod.string().nullish(),
+  type: zod
+    .string()
+    .describe(
+      "Includes content_comment for new comments and content_reply for replies.",
+    ),
+  refId: zod
+    .string()
+    .nullish()
+    .describe(
+      "For comment notifications, contentType:contentId:commentId:parentCommentId (empty parentCommentId for a top-level comment).",
+    ),
   title: zod.string().nullish(),
   isRead: zod.boolean(),
   createdAt: zod.coerce.date(),
@@ -867,6 +913,34 @@ export const ListNotificationsResponseItem = zod.object({
 export const ListNotificationsResponse = zod.array(
   ListNotificationsResponseItem,
 );
+
+/**
+ * @summary Register this installation for push notifications
+ */
+export const registerPushDeviceBodyTokenMax = 500;
+
+export const RegisterPushDeviceBody = zod.object({
+  token: zod.string().min(1).max(registerPushDeviceBodyTokenMax),
+  platform: zod.enum(["ios", "android", "unknown"]).optional(),
+});
+
+export const RegisterPushDeviceResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary Unregister this installation from push notifications
+ */
+export const unregisterPushDeviceBodyTokenMax = 500;
+
+export const UnregisterPushDeviceBody = zod.object({
+  token: zod.string().min(1).max(unregisterPushDeviceBodyTokenMax),
+  platform: zod.enum(["ios", "android", "unknown"]).optional(),
+});
+
+export const UnregisterPushDeviceResponse = zod.object({
+  ok: zod.boolean(),
+});
 
 /**
  * @summary Ranked discovery feed of public stories
@@ -2023,12 +2097,36 @@ export const AcceptFriendRequestParams = zod.object({
  */
 export const submitStorigamInterestBodyEmailMax = 254;
 
+export const submitStorigamInterestBodyNameMax = 100;
+
 export const submitStorigamInterestBodyInterestsMax = 2;
 
 export const submitStorigamInterestBodyWebsiteMax = 100;
 
 export const SubmitStorigamInterestBody = zod.object({
   email: zod.string().email().max(submitStorigamInterestBodyEmailMax),
+  name: zod
+    .string()
+    .min(1)
+    .max(submitStorigamInterestBodyNameMax)
+    .describe("Name used to personalize the beta welcome email."),
+  language: zod
+    .enum([
+      "en",
+      "ja",
+      "es",
+      "tr",
+      "fr",
+      "de",
+      "pt",
+      "ko",
+      "zh",
+      "ru",
+      "ar",
+      "it",
+    ])
+    .optional()
+    .describe("Selected website language for the signup emails."),
   interests: zod
     .array(zod.enum(["beta_tester", "content_creator"]))
     .min(1)
@@ -2043,6 +2141,14 @@ export const SubmitStorigamInterestBody = zod.object({
 
 export const SubmitStorigamInterestResponse = zod.object({
   ok: zod.boolean(),
+  welcomeEmailStatus: zod
+    .enum(["accepted", "failed", "pending"])
+    .describe(
+      "Whether Resend accepted the welcome email or it needs attention.",
+    ),
+  badgeInvitationEmailStatus: zod
+    .enum(["accepted", "failed", "pending", "not_applicable"])
+    .describe("Delivery status for the beta badge invitation."),
 });
 
 /**
@@ -2782,6 +2888,62 @@ export const SendChatPhotoBody = zod.object({
 });
 
 /**
+ * @summary Send a private video attachment with an optional caption and poster
+ */
+export const SendChatVideoParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const sendChatVideoBodyContentMax = 2000;
+
+export const sendChatVideoBodyVideoUriMax = 2048;
+
+export const sendChatVideoBodyVideoUriRegExp = new RegExp(
+  "^\/api\/videos\/[\\w.-]+$",
+);
+export const sendChatVideoBodyThumbnailUriMax = 2048;
+
+export const sendChatVideoBodyThumbnailUriRegExp = new RegExp(
+  "^\/api\/images\/[\\w.-]+$",
+);
+
+export const SendChatVideoBody = zod.object({
+  clientMessageId: zod
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      "Stable client-generated UUID used to make safe retries idempotent.",
+    ),
+  content: zod.string().min(1).max(sendChatVideoBodyContentMax).optional(),
+  videoUri: zod
+    .string()
+    .max(sendChatVideoBodyVideoUriMax)
+    .regex(sendChatVideoBodyVideoUriRegExp)
+    .describe("Canonical uploaded video path owned by the sender."),
+  thumbnailUri: zod
+    .string()
+    .max(sendChatVideoBodyThumbnailUriMax)
+    .regex(sendChatVideoBodyThumbnailUriRegExp)
+    .optional()
+    .describe("Optional sender-owned poster image for the video."),
+});
+
+export const SendChatVideoResponse = zod.object({
+  id: zod.string(),
+  fromUserId: zod.string(),
+  toUserId: zod.string(),
+  content: zod.string().nullable(),
+  expression: zod.string().nullable(),
+  imageUri: zod.string().nullish(),
+  videoUri: zod.string().nullish(),
+  thumbnailUri: zod.string().nullish(),
+  isRead: zod.boolean(),
+  createdAt: zod.string(),
+  isOwn: zod.boolean(),
+});
+
+/**
  * @summary Read a private direct-message conversation
  */
 export const GetChatConversationParams = zod.object({
@@ -2820,6 +2982,8 @@ export const GetChatConversationResponseItem = zod.object({
   content: zod.string().nullable(),
   expression: zod.string().nullable(),
   imageUri: zod.string().nullish(),
+  videoUri: zod.string().nullish(),
+  thumbnailUri: zod.string().nullish(),
   isRead: zod.boolean(),
   createdAt: zod.string(),
   isOwn: zod.boolean(),
@@ -2829,7 +2993,7 @@ export const GetChatConversationResponse = zod.array(
 );
 
 /**
- * @summary Send text, an expression, or an owned uploaded photo
+ * @summary Send text, an expression, or an owned uploaded photo or video
  */
 export const SendChatMessageParams = zod.object({
   userId: zod.coerce.string(),
@@ -2838,6 +3002,12 @@ export const SendChatMessageParams = zod.object({
 export const sendChatMessageBodyContentMax = 2000;
 
 export const sendChatMessageBodyImageUriRegExp = new RegExp(
+  "^\/api\/images\/[\\w.-]+$",
+);
+export const sendChatMessageBodyVideoUriRegExp = new RegExp(
+  "^\/api\/videos\/[\\w.-]+$",
+);
+export const sendChatMessageBodyThumbnailUriRegExp = new RegExp(
   "^\/api\/images\/[\\w.-]+$",
 );
 
@@ -2875,6 +3045,18 @@ export const SendChatMessageBody = zod.object({
     .describe(
       "Canonical uploaded image path owned by the sender; never a temporary read URL.",
     ),
+  videoUri: zod
+    .string()
+    .regex(sendChatMessageBodyVideoUriRegExp)
+    .optional()
+    .describe(
+      "Canonical uploaded video path owned by the sender; never a temporary read URL.",
+    ),
+  thumbnailUri: zod
+    .string()
+    .regex(sendChatMessageBodyThumbnailUriRegExp)
+    .optional()
+    .describe("Optional canonical sender-owned video poster image."),
 });
 
 export const SendChatMessageResponse = zod.object({
@@ -2884,6 +3066,8 @@ export const SendChatMessageResponse = zod.object({
   content: zod.string().nullable(),
   expression: zod.string().nullable(),
   imageUri: zod.string().nullish(),
+  videoUri: zod.string().nullish(),
+  thumbnailUri: zod.string().nullish(),
   isRead: zod.boolean(),
   createdAt: zod.string(),
   isOwn: zod.boolean(),
@@ -3076,6 +3260,30 @@ export const ToggleContentCommentLikeParams = zod.object({
 
 export const ToggleContentCommentLikeResponse = zod.object({
   liked: zod.boolean(),
+});
+
+/**
+ * @summary Privately report a comment for moderator review
+ */
+export const ReportContentCommentParams = zod.object({
+  commentId: zod.coerce.string().uuid(),
+});
+
+export const reportContentCommentBodyDetailsMax = 500;
+
+export const ReportContentCommentBody = zod.object({
+  reason: zod.enum([
+    "Inappropriate content",
+    "Spam or misleading",
+    "Harassment or hate speech",
+    "Other",
+  ]),
+  details: zod.string().max(reportContentCommentBodyDetailsMax).optional(),
+});
+
+export const ReportContentCommentResponse = zod.object({
+  ok: zod.boolean(),
+  duplicate: zod.boolean(),
 });
 
 /**

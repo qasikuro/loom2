@@ -4,7 +4,7 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq, inArray, sql } from "drizzle-orm";
 import { db, lumiStateTable } from "@workspace/db";
-import { isImmediateCrisis, lumiInputSchema, lumiOutputSchema } from "../lib/lumiCompanion";
+import { isImmediateCrisis, lumiInputSchema, lumiOutputSchema, prepareLumiResult } from "../lib/lumiCompanion";
 
 const { create } = vi.hoisted(() => ({ create: vi.fn() }));
 vi.mock("@anthropic-ai/sdk", () => ({
@@ -37,6 +37,32 @@ const modelReply = {
 };
 
 describe("Lumi companion contracts", () => {
+  it("accepts old responses while validating temporary mood and expression enums", () => {
+    const old = lumiOutputSchema.parse({ reply: "Hello", recommendations: [] });
+    expect(old).toMatchObject({ mood: "unknown", phase: "conversation", emotion: "thoughtful" });
+    expect(lumiOutputSchema.safeParse({ ...old, mood: "diagnosed_depression" }).success).toBe(false);
+    expect(lumiOutputSchema.safeParse({ ...old, emotion: "execute_action" }).success).toBe(false);
+  });
+  it("asks before choosing instead of showing an activity menu during a check-in", () => {
+    const output = lumiOutputSchema.parse({
+      reply: "Would you prefer company or quiet time?",
+      mood: "sad", phase: "check_in", emotion: "affectionate",
+      recommendations: [{ type: "campfire", title: "Find company", reason: "Talk with players." }],
+    });
+    expect(prepareLumiResult(output, "I feel sad")).toMatchObject({
+      mood: "sad", phase: "check_in", recommendations: [],
+    });
+    expect(prepareLumiResult({ ...output, phase: "suggest" }, "I want company").recommendations).toHaveLength(1);
+  });
+  it("prioritizes urgent support over all social/music recommendations", () => {
+    const output = lumiOutputSchema.parse({
+      reply: "Please get immediate support.", phase: "suggest", emotion: "excited",
+      recommendations: [{ type: "music", title: "Music", reason: "Listen." }],
+    });
+    expect(prepareLumiResult(output, "I might kill myself")).toMatchObject({
+      phase: "support", emotion: "affectionate", recommendations: [],
+    });
+  });
   it("rejects arbitrary actions and extra execution fields", () => {
     expect(lumiOutputSchema.safeParse({ reply: "Hi", recommendations: [{ type: "raw_sql", title: "Run it", reason: "x" }] }).success).toBe(false);
     expect(lumiOutputSchema.safeParse({ reply: "Hi", recommendations: [{ type: "music", title: "Play", reason: "x", url: "https://example.com" }] }).success).toBe(false);
@@ -90,6 +116,20 @@ describe("private Lumi API", () => {
     await request(app).post("/drift/companion").set("x-test-user-id", ids[0]).send({ message: "Hi" }).expect(200);
     const [state] = await db.select().from(lumiStateTable).where(eq(lumiStateTable.userId, ids[0]));
     expect(state).toBeUndefined();
+  });
+  it("returns mood metadata but never persists it as preferences or history fields", async () => {
+    create.mockResolvedValue({ content: [{ type: "text", text: JSON.stringify({
+      reply: "Would you like company or some quiet time?", mood: "lonely", phase: "check_in", emotion: "affectionate",
+      recommendations: [{ type: "campfire", title: "Campfires", reason: "Find company." }],
+    }) }] });
+    await request(app).put("/drift/companion-state").set("x-test-user-id", ids[0]).send({ remember: true });
+    const response = await request(app).post("/drift/companion").set("x-test-user-id", ids[0])
+      .send({ message: "I feel lonely" }).expect(200);
+    expect(response.body).toMatchObject({ mood: "lonely", phase: "check_in", emotion: "affectionate", recommendations: [] });
+    const state = await request(app).get("/drift/companion-state").set("x-test-user-id", ids[0]);
+    expect(state.body.preferences).toEqual({});
+    expect(state.body.messages).toHaveLength(2);
+    expect(state.body.messages.every((m: Record<string, unknown>) => Object.keys(m).sort().join(",") === "content,role")).toBe(true);
   });
   it("returns a marked fallback without leaking provider errors", async () => {
     create.mockRejectedValue(new Error("SECRET provider internals"));

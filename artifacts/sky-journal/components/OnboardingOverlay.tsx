@@ -833,7 +833,7 @@ export async function markOnboardingDone(uid: string): Promise<void> {
 
 const s = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems:     'center',
     justifyContent: 'center',
     zIndex:         9999,

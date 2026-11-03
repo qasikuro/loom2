@@ -1050,7 +1050,7 @@ export default function CampfireRoom() {
 }
 
 const PR = StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(4,2,14,0.65)' },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(4,2,14,0.65)' },
   sheet: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: '#0E0B24',

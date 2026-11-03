@@ -23,9 +23,10 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { objectStorageClient } from "../lib/objectStorage";
-import { registerPendingUpload, startOrphanCleanup } from "../lib/uploadTracking";
+import { discardPendingUpload, registerPendingUpload, startOrphanCleanup } from "../lib/uploadTracking";
 import { pool } from "@workspace/db";
 import { mediaOwnerMetadata } from "../lib/mediaAccess";
+import { mediaToolPath } from "../lib/mediaTools";
 
 const BUCKET_ID     = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
 const MAX_DIM       = 1600;
@@ -120,7 +121,7 @@ async function getVideoDurationSeconds(buf: Buffer, extension: string): Promise<
   const tempFile = join(tempDirectory, `upload.${extension}`);
   try {
     await writeFile(tempFile, buf);
-    const { stdout } = await execFileAsync("ffprobe", [
+    const { stdout } = await execFileAsync(mediaToolPath("ffprobe"), [
       "-v", "error",
       "-show_entries", "format=duration",
       "-of", "default=noprint_wrappers=1:nokey=1",
@@ -224,7 +225,7 @@ async function processAndSave(
 
     // L-3: Register the uploaded file so the orphan-cleanup interval can
     // delete it after 24 h if no story/outfit create ever claims it.
-    registerPendingUpload(publicPath, `images/${fname}`);
+    registerPendingUpload(publicPath, `images/${fname}`, getUserId(req));
 
     return res.status(201).json({ path: publicPath });
   } catch (err) {
@@ -348,7 +349,7 @@ router.post(
         "Video saved",
       );
 
-      registerPendingUpload(`/api/videos/${fname}`, `videos/${fname}`);
+      registerPendingUpload(`/api/videos/${fname}`, `videos/${fname}`, getUserId(req));
       return res.status(201).json({ path: `/api/videos/${fname}` });
     } catch (err) {
       req.log.error({ err }, "Failed to save uploaded video");
@@ -356,5 +357,32 @@ router.post(
     }
   },
 );
+
+router.delete("/upload-media", requireAuth, async (req, res) => {
+  const parsed = z.object({
+    paths: z.array(z.string().max(2048).regex(/^\/api\/(?:images|videos)\/[\w.-]+$/)).min(1).max(3),
+  }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Invalid upload paths" });
+  if (!BUCKET_ID) return res.status(503).json({ error: "Storage not configured" });
+
+  const userId = getUserId(req);
+  try {
+    let deleted = 0;
+    for (const apiPath of new Set(parsed.data.paths)) {
+      const didDelete = await discardPendingUpload(apiPath, userId, path =>
+        objectStorageClient.bucket(BUCKET_ID).file(path).delete().then(() => undefined),
+      );
+      if (!didDelete) continue;
+      deleted++;
+      if (apiPath.startsWith("/api/images/")) {
+        await pool.query("DELETE FROM uploaded_images WHERE path = $1 AND user_id = $2", [apiPath, userId]);
+      }
+    }
+    return res.json({ deleted });
+  } catch (err) {
+    req.log.error({ err }, "Failed to discard unused upload");
+    return res.status(500).json({ error: "Could not remove the unused upload" });
+  }
+});
 
 export default router;

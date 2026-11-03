@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { StorigamAnimatedMark } from './StorigamAnimatedMark';
 import { StorigamFluidBackdrop, StorigamLogo } from './StorigamBrand';
 import { STORIGAM_BRAND } from '@/constants/brand';
@@ -35,12 +35,15 @@ export function AppSplashScreen({ onReady, ready = true }: Props) {
 
   useEffect(() => {
     const maximum = setTimeout(dismiss, 6000);
+    // Keep a visible indicator even when the brand image's native/web load
+    // callback is delayed or unavailable.
+    const loader = setTimeout(() => setShowLoadingMark(true), 450);
     // Guarantee unmount even if native animation callbacks are delayed.
     const fallback = setTimeout(finish, 6500);
     return () => {
       clearTimeout(maximum);
+      clearTimeout(loader);
       clearTimeout(fallback);
-      if (loaderTimer.current) clearTimeout(loaderTimer.current);
       fade.stopAnimation();
     };
   }, [dismiss, finish, fade]);
@@ -74,13 +77,14 @@ export function AppSplashScreen({ onReady, ready = true }: Props) {
           }}
         />
         <View style={styles.loaderSlot}>
-          {showLoadingMark && (
+          {showLoadingMark ? (
             <StorigamAnimatedMark
               size={Math.min(width * 0.12, height * 0.055, 48)}
               accessible={false}
             />
-          )}
+          ) : null}
         </View>
+        <Text style={styles.loadingText}>Opening Storigam…</Text>
       </View>
     </Animated.View>
   );
@@ -88,11 +92,17 @@ export function AppSplashScreen({ onReady, ready = true }: Props) {
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 9999,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: STORIGAM_BRAND.background,
   },
   loaderSlot: { height: 56, marginTop: 12, alignItems: 'center', justifyContent: 'center' },
+  loadingText: {
+    color: 'rgba(232,224,255,0.72)',
+    fontSize: 13,
+    letterSpacing: 0.4,
+    marginTop: 2,
+  },
 });

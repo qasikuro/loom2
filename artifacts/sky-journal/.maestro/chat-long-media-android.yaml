@@ -1,0 +1,39 @@
+appId: com.storigam.app
+---
+- openLink: storigam://messages/${THREAD_USER_ID}
+- extendedWaitUntil:
+    visible:
+      id: dm-message-history
+    timeout: 30000
+- assertVisible:
+    id: chat-photo-row
+- assertVisible:
+    id: chat-video-row
+- extendedWaitUntil:
+    visible:
+      id: chat-photo-thumbnail-ready
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: chat-video-thumbnail-ready
+    timeout: 20000
+- repeat:
+    times: 36
+    commands:
+      - swipe:
+          direction: DOWN
+          duration: 450
+      - waitForAnimationToEnd:
+          timeout: 1000
+- assertVisible:
+    id: chat-message-${OLDER_MESSAGE_ID}
+- repeat:
+    times: 36
+    commands:
+      - swipe:
+          direction: UP
+          duration: 450
+      - waitForAnimationToEnd:
+          timeout: 1000
+- assertVisible:
+    id: dm-message-history

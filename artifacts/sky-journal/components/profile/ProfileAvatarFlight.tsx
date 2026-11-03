@@ -14,8 +14,8 @@ export const PROFILE_AVATAR_RENDER_BOUNDS = 240;
  * Measurement happens on layout only (never per scroll frame).
  */
 export function useAvatarAnchor(scrollOffsetRef: React.MutableRefObject<number>) {
-  const rootRef = useRef<View>(null);
-  const slotRef = useRef<View>(null);
+  const rootRef = useRef<React.ComponentRef<typeof View>>(null);
+  const slotRef = useRef<React.ComponentRef<typeof View>>(null);
   const [anchor, setAnchor] = useState<AvatarAnchor | null>(null);
   const anchorRef = useRef<AvatarAnchor | null>(null);
 

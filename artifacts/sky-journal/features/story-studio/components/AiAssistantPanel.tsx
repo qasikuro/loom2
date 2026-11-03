@@ -280,7 +280,7 @@ export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssi
 
 const s = StyleSheet.create({
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   sheet: {

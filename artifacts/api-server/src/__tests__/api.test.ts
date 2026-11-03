@@ -1,6 +1,14 @@
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest';
 import supertest from 'supertest';
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
+
+const { resendProxy } = vi.hoisted(() => ({
+  resendProxy: vi.fn(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ id: 're_test_welcome' }),
+  })),
+}));
 
 // ── Clerk mocks (hoisted by Vitest before any imports) ────────────────────────
 vi.mock('@clerk/express', () => ({
@@ -14,6 +22,11 @@ vi.mock('@clerk/shared/keys', () => ({
   publishableKeyFromHost: () => 'pk_test_placeholder_xxxxxxxxxxxxxxxx',
 }));
 
+// Signup tests must never send real mail.
+vi.mock('@replit/connectors-sdk', () => ({
+  ReplitConnectors: class { proxy = resendProxy; },
+}));
+
 import app from '../app';
 import {
   db, pool,
@@ -24,12 +37,14 @@ import {
   userRewardsTable,
   rewardEventsTable,
   constellationProgressTable,
+  storigamInterestSignupTable,
 } from '@workspace/db';
 
 // ── Unique test identities per run to avoid cross-run collisions ──────────────
 const RUN  = Date.now().toString(36);
 const UID_A = `tgn_a_${RUN}`;
 const UID_B = `tgn_b_${RUN}`;
+const INTEREST_EMAIL = `tgn_interest_${RUN}@example.invalid`;
 
 // ── Request helpers ───────────────────────────────────────────────────────────
 
@@ -48,6 +63,41 @@ const anon = {
   patch:  (path: string) => supertest(app).patch(`/api${path}`),
   delete: (path: string) => supertest(app).delete(`/api${path}`),
 };
+
+describe('Reserved user routes', () => {
+  it('serves the startup block list instead of treating blocked as a profile ID', async () => {
+    for (const uid of [UID_A, UID_B]) {
+      const res = await as(uid).get('/users/blocked');
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toEqual([]);
+    }
+  });
+});
+
+describe('Public website interest signup', () => {
+  it('accepts an anonymous beta-interest submission', async () => {
+    const response = await anon.post('/storigam-interest').send({
+      email: INTEREST_EMAIL,
+      name: 'Test Player',
+      language: 'en',
+      interests: ['beta_tester'],
+      consent: true,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      ok: true,
+      welcomeEmailStatus: 'accepted',
+      badgeInvitationEmailStatus: 'accepted',
+    });
+
+    const [signup] = await db.select({ email: storigamInterestSignupTable.email })
+      .from(storigamInterestSignupTable)
+      .where(eq(storigamInterestSignupTable.email, INTEREST_EMAIL));
+    expect(signup?.email).toBe(INTEREST_EMAIL);
+  });
+});
 
 // ── Seed data fixtures ────────────────────────────────────────────────────────
 const newStory = (overrides?: Record<string, unknown>) => ({
@@ -94,6 +144,7 @@ afterAll(async () => {
       db.delete(rewardEventsTable).where(inArray(rewardEventsTable.userId, users)),
       db.delete(userRewardsTable).where(inArray(userRewardsTable.userId, users)),
       db.delete(constellationProgressTable).where(inArray(constellationProgressTable.userId, users)),
+      db.delete(storigamInterestSignupTable).where(eq(storigamInterestSignupTable.email, INTEREST_EMAIL)),
     ]);
     await db.delete(characterTable).where(inArray(characterTable.userId, users));
   } finally {
@@ -276,6 +327,31 @@ describe('Story CRUD — full lifecycle', () => {
     expect(body.isPublic).toBe(false);
     expect(body.witnessedCount).toBe(0);
     createdId = body.id;
+  });
+
+  it('POST /stories preserves rich text block types and emphasis', async () => {
+    const richPanel = {
+      id: 'quote-1',
+      text: 'I promise.',
+      textFormat: 'rich',
+      articleBlock: 'quote',
+      articleEmphasis: 'italic',
+    };
+    const res = await as(UID_A).post('/stories').send(newStory({
+      panels: [richPanel],
+      pages: [{ id: 'page-1', layoutKey: '1', panels: [richPanel] }],
+    }));
+    expect(res.status).toBe(201);
+    expect(res.body.panels[0]).toMatchObject({
+      textFormat: 'rich',
+      articleBlock: 'quote',
+      articleEmphasis: 'italic',
+    });
+    expect(res.body.pages[0].panels[0]).toMatchObject({
+      textFormat: 'rich',
+      articleBlock: 'quote',
+      articleEmphasis: 'italic',
+    });
   });
 
   it('POST /stories with missing chapterTitle → 400', async () => {

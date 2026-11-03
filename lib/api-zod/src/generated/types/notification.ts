@@ -10,7 +10,9 @@ export interface Notification {
   id: string;
   actorId: string;
   actorName: string;
+  /** Includes content_comment for new comments and content_reply for replies. */
   type: string;
+  /** For comment notifications, contentType:contentId:commentId:parentCommentId (empty parentCommentId for a top-level comment). */
   refId?: string | null;
   title?: string | null;
   isRead: boolean;

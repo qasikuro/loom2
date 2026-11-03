@@ -27,8 +27,15 @@ import {
 } from "@workspace/db";
 import { clerkAuth, requireAuth, getUserId } from "../middleware/auth";
 import { getAuth } from "@clerk/express";
+import { normalizePublicMediaFields } from "../lib/publicMediaUri";
+import { readableContentSql } from "../lib/contentVisibility";
+import { withOwnerMediaUrls } from "../lib/mediaAccess";
 
 const router: IRouter = Router();
+function readerMedia<T>(data: T, viewer: string | null): T {
+  const normalized = normalizePublicMediaFields(data);
+  return viewer ? withOwnerMediaUrls(normalized, viewer) : normalized;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -63,13 +70,18 @@ router.get("/public-books", async (req, res) => {
         eq(chaptersTable.bookId, booksTable.id),
         eq(chaptersTable.status, "published"),
       ))
-      .leftJoin(characterTable, eq(characterTable.userId, booksTable.userId))
-      .where(eq(booksTable.visibility, "public"))
+      .innerJoin(characterTable, eq(characterTable.userId, booksTable.userId))
+      .where(and(
+        eq(booksTable.visibility, "public"),
+        eq(characterTable.isPublic, true),
+        eq(characterTable.isBanned, false),
+        eq(characterTable.isHidden, false),
+      ))
       .groupBy(booksTable.id, characterTable.name, characterTable.username, characterTable.avatarUri)
       .orderBy(desc(booksTable.updatedAt))
       .limit(60);
 
-    return res.json(rows.map(r => ({
+    return res.json(rows.map(r => normalizePublicMediaFields({
       id:              r.book.id,
       title:           r.book.title,
       subtitle:        r.book.subtitle,
@@ -97,6 +109,7 @@ router.get("/public-books", async (req, res) => {
  */
 router.get("/users/:userId/books", async (req, res) => {
   const authorId = String(req.params.userId);
+  const viewer = tryGetUserId(req);
   try {
     const rows = await db
       .select({
@@ -104,25 +117,27 @@ router.get("/users/:userId/books", async (req, res) => {
         chapterCount: count(chaptersTable.id),
       })
       .from(booksTable)
+      .innerJoin(characterTable, eq(characterTable.userId, booksTable.userId))
       .leftJoin(chaptersTable, and(
         eq(chaptersTable.bookId, booksTable.id),
         eq(chaptersTable.status, "published"),
       ))
       .where(and(
         eq(booksTable.userId, authorId),
-        eq(booksTable.visibility, "public"),
+        readableContentSql(booksTable.userId, viewer ?? "", booksTable.visibility),
+        eq(characterTable.isHidden, false),
       ))
       .groupBy(booksTable.id)
       .orderBy(desc(booksTable.updatedAt));
 
-    return res.json(rows.map(r => ({
+    return res.json(rows.map(r => readerMedia({
       id:             r.book.id,
       title:          r.book.title,
       subtitle:       r.book.subtitle,
       genre:          r.book.genre,
       coverImageUri:  r.book.coverImageUri ?? null,
       chapterCount:   Number(r.chapterCount),
-    })));
+    }, viewer)));
   } catch (err) {
     req.log.error({ err }, "Failed to list user books");
     return res.status(500).json({ error: "Internal server error" });
@@ -145,10 +160,16 @@ router.get("/books/:id/public", clerkAuth, async (req, res) => {
     const books = await db
       .select()
       .from(booksTable)
-      .where(and(eq(booksTable.id, bookId), eq(booksTable.visibility, "public")))
+      .where(and(eq(booksTable.id, bookId), readableContentSql(booksTable.userId, userId ?? "", booksTable.visibility)))
       .limit(1);
     if (!books.length) return res.status(404).json({ error: "Not found" });
     const book = books[0]!;
+    const [authorVisibility] = await db
+      .select({ isHidden: characterTable.isHidden })
+      .from(characterTable)
+      .where(eq(characterTable.userId, book.userId))
+      .limit(1);
+    if (!authorVisibility || authorVisibility.isHidden) return res.status(404).json({ error: "Not found" });
 
     // Published chapters (no auth check — public)
     const chapters = await db
@@ -182,7 +203,7 @@ router.get("/books/:id/public", clerkAuth, async (req, res) => {
       .where(eq(characterTable.userId, book.userId))
       .limit(1);
 
-    return res.json({
+    return res.json(readerMedia({
       id:             book.id,
       title:          book.title,
       subtitle:       book.subtitle,
@@ -206,7 +227,7 @@ router.get("/books/:id/public", clerkAuth, async (req, res) => {
         pageCount:   c.pageCount,
         readCount:   (c as unknown as { readCount?: number }).readCount ?? 0,
       })),
-    });
+    }, userId));
   } catch (err) {
     req.log.error({ err }, "Failed to get public book");
     return res.status(500).json({ error: "Internal server error" });
@@ -228,11 +249,13 @@ router.get("/chapters/:id/read", async (req, res) => {
       .select({ chapter: chaptersTable })
       .from(chaptersTable)
       .innerJoin(booksTable, eq(booksTable.id, chaptersTable.bookId))
+      .innerJoin(characterTable, eq(characterTable.userId, booksTable.userId))
       .where(
         and(
           eq(chaptersTable.id, chapterId),
           eq(chaptersTable.status, "published"),
-          eq(booksTable.visibility, "public"),
+          readableContentSql(booksTable.userId, tryGetUserId(req) ?? "", booksTable.visibility),
+          eq(characterTable.isHidden, false),
         )
       )
       .limit(1);
@@ -251,7 +274,7 @@ router.get("/chapters/:id/read", async (req, res) => {
       orderIndex:  chapter.orderIndex,
       publishedAt: chapter.publishedAt?.toISOString() ?? null,
       pageCount:   chapter.pageCount,
-      pages:       chapter.pages,
+      pages:       readerMedia(chapter.pages, tryGetUserId(req)),
     });
   } catch (err) {
     req.log.error({ err }, "Failed to read chapter");
@@ -282,11 +305,13 @@ router.get("/chapters/:id/comments", async (req, res) => {
       .select({ id: chaptersTable.id })
       .from(chaptersTable)
       .innerJoin(booksTable, eq(booksTable.id, chaptersTable.bookId))
+      .innerJoin(characterTable, eq(characterTable.userId, booksTable.userId))
       .where(
         and(
           eq(chaptersTable.id, chapterId),
           eq(chaptersTable.status, "published"),
-          eq(booksTable.visibility, "public"),
+          readableContentSql(booksTable.userId, tryGetUserId(req) ?? "", booksTable.visibility),
+          eq(characterTable.isHidden, false),
         )
       )
       .limit(1);
@@ -350,11 +375,13 @@ router.post("/chapters/:id/comments", requireAuth, async (req, res) => {
       .select({ id: chaptersTable.id })
       .from(chaptersTable)
       .innerJoin(booksTable, eq(booksTable.id, chaptersTable.bookId))
+      .innerJoin(characterTable, eq(characterTable.userId, booksTable.userId))
       .where(
         and(
           eq(chaptersTable.id, chapterId),
           eq(chaptersTable.status, "published"),
-          eq(booksTable.visibility, "public"),
+          readableContentSql(booksTable.userId, tryGetUserId(req) ?? "", booksTable.visibility),
+          eq(characterTable.isHidden, false),
         )
       )
       .limit(1);

@@ -21,7 +21,13 @@ import { Images } from '@/assets/images';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/context/ThemeContext';
 import { useAiFeatureAccess } from '@/features/ai/aiFeatureAccess';
-import { getResumableStoryDraft, type ResumableStoryDraft } from '@/utils/entryDraftStore';
+import {
+  getCreateDestination,
+  getDraftResumeDestination,
+  getResumableStoryDraft,
+  type CreateDestination,
+  type ResumableStoryDraft,
+} from '@/utils/entryDraftStore';
 import { useColors as useDesignSystemColors } from '@workspace/storigam-kindness/hooks/use-colors';
 
 const MORE_MODES = [
@@ -147,27 +153,34 @@ export default function CreateScreen() {
     });
   }
 
-  function selectMode(route: string, extraParams?: Record<string, string>) {
+  function selectMode(route: string | CreateDestination, extraParams?: Record<string, string>) {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     closeAfterAnimation(() => {
-      const params = {
-        ...(hasEventContext && eventPrompt ? { eventPrompt: String(eventPrompt) } : {}),
-        ...(hasEventContext && eventMood ? { eventMood: String(eventMood) } : {}),
-        ...extraParams,
-      };
-      if (Object.keys(params).length > 0) {
+      const destination = typeof route === 'string'
+        ? getCreateDestination(
+          route,
+          hasEventContext && eventPrompt ? String(eventPrompt) : undefined,
+          hasEventContext && eventMood ? String(eventMood) : undefined,
+          extraParams,
+        )
+        : route;
+      if (destination.params) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        router.push({ pathname: route as any, params } as any);
+        router.push({ pathname: destination.pathname as any, params: destination.params } as any);
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        router.push(route as any);
+        router.push(destination.pathname as any);
       }
     });
   }
 
   function resumeSavedDraft(draft: ResumableStoryDraft) {
-    const route = draft.kind === 'manga' ? '/quick-moment' : '/chapter-editor';
-    selectMode(route, { resumeDraft: '1' });
+    const destination = getDraftResumeDestination(
+      draft,
+      hasEventContext && eventPrompt ? String(eventPrompt) : undefined,
+      hasEventContext && eventMood ? String(eventMood) : undefined,
+    );
+    selectMode(destination);
   }
 
   const visibleModes = MORE_MODES.filter(mode => mode.id !== 'quick' || aiAccess.enabled);
@@ -263,10 +276,10 @@ export default function CreateScreen() {
 
           <TouchableOpacity
             style={[s.storyCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-            onPress={() => selectMode('/chapter-editor')}
+            onPress={() => selectMode('/story-format')}
             activeOpacity={0.86}
             accessibilityRole="button"
-            accessibilityLabel={`${t('create.createStory')}. ${t('feature.create.chapterDesc')}`}
+            accessibilityLabel={`${t('create.createStory')}. ${t('studioEditor.chooseFormatSubtitle')}`}
             testID="create-story"
           >
             <Image
@@ -295,7 +308,7 @@ export default function CreateScreen() {
                 {t('create.createStory')}
               </Text>
               <Text style={[s.storyDescription, { color: colors.mutedForeground, fontFamily: colors.fontFamily.regular }]} numberOfLines={2}>
-                {t('feature.create.chapterDesc').replace('\n', ' ')}
+                {t('studioEditor.chooseFormatSubtitle')}
               </Text>
             <View style={[s.storyAction, { backgroundColor: colors.primary, borderRadius: colors.radius }]}>
                 <Text style={[s.storyActionText, { color: colors.primaryForeground, fontFamily: colors.fontFamily.bold }]}>
@@ -382,7 +395,7 @@ export default function CreateScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
-  scrim: { ...StyleSheet.absoluteFillObject },
+  scrim: { ...StyleSheet.absoluteFill },
   dismissArea: { flex: 1 },
   sheet: {
     position: 'absolute',
@@ -458,7 +471,7 @@ const s = StyleSheet.create({
     width: '68%',
     height: '100%',
   },
-  storyArtWash: { ...StyleSheet.absoluteFillObject },
+  storyArtWash: { ...StyleSheet.absoluteFill },
   storyCopy: { width: '76%', paddingHorizontal: 16, paddingVertical: 12, alignItems: 'flex-start' },
   storyIcon: {
     width: 38,
@@ -481,7 +494,7 @@ const s = StyleSheet.create({
   },
   storyActionText: { fontSize: 12 },
   storyCardBorder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderWidth: 1,
     borderRadius: 20,
   },

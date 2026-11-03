@@ -11,6 +11,7 @@ export const outfitsTable = pgTable("outfits", {
   tags:        jsonb("tags").$type<string[]>().notNull().default([]),
   music:       jsonb("music").$type<StoryMusic | null>(),
   isPublic:    boolean("is_public").notNull().default(false),
+  visibility:  text("visibility").notNull().default("private"),
   isHidden:    boolean("is_hidden").notNull().default(false),
   date:        timestamp("date", { withTimezone: true }).notNull(),
   createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

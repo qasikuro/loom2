@@ -20,6 +20,7 @@ import {
   hydrateDmOutbox,
   markDmConversationOpened,
   rememberDmConversation,
+  restorePausedDmOutboxItem,
   saveDmOutbox,
   wasDmConversationOpened,
   type DmOutboxItem,
@@ -27,7 +28,7 @@ import {
   type DmCachedMessage,
 } from '@/utils/dmConversationCache';
 import { mergeChatMessages, upsertChatMessages } from '@/utils/chatMessageHistory';
-import { CHAT_HISTORY_LIST_CONFIG } from '@/utils/chatListPerformance';
+import { CHAT_HISTORY_LIST_CONFIG, getDmUploadProgressUpdate } from '@/utils/chatListPerformance';
 import { nextDmRetry } from '@/utils/dmRetryPolicy';
 import { useSound } from '@/context/SoundContext';
 import { useSSE } from '@/hooks/useSSE';
@@ -51,6 +52,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  type StyleProp,
+  type ViewStyle,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -83,17 +86,27 @@ const CHAT_VIDEO_MAX_DURATION_MS = 60_000;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Message = DmCachedMessage;
-
 type VideoDraft = {
   uri: string;
   thumbnailUri: string | null;
   mimeType?: string | null;
   fileName?: string | null;
 };
+type ActiveVideoUpload = { messageId: string; thumbnailUri?: string | null; progress: number };
+type VideoUploadRecord = {
+  controller: AbortController;
+  stage: 'uploading' | 'preparing' | 'posting';
+  paths: string[];
+  thumbnailUri?: string | null;
+  cancelRequested?: boolean;
+  cleanupOnCancel?: boolean;
+};
 
 type ListItem =
   | { type: 'date'; date: string; key: string }
   | { type: 'msg';  msg: Message; key: string };
+
+const getDmListItemKey = (item: ListItem) => item.key;
 
 // ── Sticker registry ──────────────────────────────────────────────────────────
 
@@ -192,6 +205,14 @@ function outboxMessage(
   };
 }
 
+function discardPendingChatMedia(paths: string[]): void {
+  if (!paths.length) return;
+  void apiFetch('/upload-media', {
+    method: 'DELETE',
+    body: JSON.stringify({ paths: [...new Set(paths)] }),
+  }).catch(() => undefined);
+}
+
 // ── Star background decoration ────────────────────────────────────────────────
 const STARS = Array.from({ length: 28 }, (_, i) => ({
   key: `s${i}`,
@@ -200,6 +221,20 @@ const STARS = Array.from({ length: 28 }, (_, i) => ({
   size: Math.random() < 0.18 ? 2.2 : 1.2,
   opacity: 0.12 + Math.random() * 0.3,
 }));
+
+const DmStarField = React.memo(function DmStarField({ color, isDark }: { color: string; isDark: boolean }) {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {STARS.map(star => (
+        <View key={star.key} style={{
+          position: 'absolute', left: star.left, top: star.top,
+          width: star.size, height: star.size, borderRadius: star.size / 2,
+          backgroundColor: color, opacity: isDark ? star.opacity : star.opacity * 0.6,
+        }} />
+      ))}
+    </View>
+  );
+});
 
 // ── Sticker bubble (in chat history) ─────────────────────────────────────────
 function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, textColor, onLongPress, onRetry }: {
@@ -426,7 +461,6 @@ export default function MessagesScreen() {
   );
 }
 
-
 function MessagesScreenContent() {
   const { t } = useTranslation();
   const {
@@ -512,6 +546,7 @@ function MessagesScreenContent() {
   const [input,         setInput]         = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [videoDraft, setVideoDraft] = useState<VideoDraft | null>(null);
+  const [activeVideoUpload, setActiveVideoUpload] = useState<ActiveVideoUpload | null>(null);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
   const [viewingVideo, setViewingVideo] = useState<string | null>(null);
   const [pickingPhoto, setPickingPhoto] = useState(false);
@@ -537,6 +572,7 @@ function MessagesScreenContent() {
     setError(null);
     setPhotoUri(null);
     setVideoDraft(null);
+    setActiveVideoUpload(null);
     setViewingPhoto(null);
     setViewingVideo(null);
     setPickingPhoto(false);
@@ -546,10 +582,14 @@ function MessagesScreenContent() {
     recentReactionsRef.current.clear();
     setReactionEvents([]);
     uploadedPhotoRef.current = null;
+    const sendControllers = sendControllersRef.current;
+    const videoUploads = videoUploadsRef.current;
     return () => {
       photoIdentityRef.current = '';
-      for (const controller of sendControllersRef.current.values()) controller.abort();
-      sendControllersRef.current.clear();
+      for (const controller of sendControllers.values()) controller.abort();
+      sendControllers.clear();
+      for (const upload of videoUploads.values()) upload.controller.abort();
+      videoUploads.clear();
     };
   }, [photoIdentity]);
 
@@ -592,6 +632,7 @@ function MessagesScreenContent() {
   const outboxRef = useRef<DmOutboxItem[]>(initialOutbox);
   const retryingMessageIdsRef = useRef(new Set<string>());
   const sendControllersRef = useRef(new Map<string, AbortController>());
+  const videoUploadsRef = useRef(new Map<string, VideoUploadRecord>());
   const markPartnerUnavailable = useCallback(() => {
     setDeletedPartner(true);
     void refreshDmThreads();
@@ -1032,7 +1073,7 @@ function MessagesScreenContent() {
 
   // Inverted list: offset 0 is the newest message, so the keyboard resizing the
   // list never needs a scrollToEnd — the bottom anchor holds by construction.
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const jumpToNewest = useCallback(() => {
     flatRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
@@ -1107,6 +1148,20 @@ function MessagesScreenContent() {
       return;
     }
     retryingMessageIdsRef.current.add(item.clientMessageId);
+    const videoUpload: VideoUploadRecord | null = !item.videoUri && item.localVideoUri
+      ? {
+          controller: new AbortController(),
+          stage: 'uploading',
+          paths: [],
+          thumbnailUri: item.localThumbnailUri,
+          cleanupOnCancel: false,
+        }
+      : null;
+    if (videoUpload) {
+      videoUploadsRef.current.set(item.clientMessageId, videoUpload);
+      sendControllersRef.current.set(item.clientMessageId, videoUpload.controller);
+      setActiveVideoUpload({ messageId: item.clientMessageId, thumbnailUri: videoUpload.thumbnailUri, progress: 0 });
+    }
     setMessages(previous => upsertChatMessages(
       previous,
       [outboxMessage(accountId, partnerId, item, 'sending')],
@@ -1125,12 +1180,38 @@ function MessagesScreenContent() {
         await saveDmOutbox(accountId, partnerId, outboxRef.current);
       }
       if (!prepared.videoUri && prepared.localVideoUri) {
+        const progressCheckpoint = { percent: 0, updatedAt: Date.now() };
         const uploaded = await persistVideoUri(prepared.localVideoUri, {
           mimeType: prepared.localVideoMimeType ?? undefined,
           fileName: prepared.localVideoFileName,
+          signal: videoUpload?.controller.signal,
+          onProgress: ({ fraction }) => {
+            if (!videoUpload || videoUpload.cancelRequested
+              || videoUploadsRef.current.get(prepared.clientMessageId) !== videoUpload) return;
+            const now = Date.now();
+            const update = getDmUploadProgressUpdate(fraction, now, progressCheckpoint);
+            if (!update) return;
+            progressCheckpoint.percent = update.percent;
+            progressCheckpoint.updatedAt = now;
+            setActiveVideoUpload(current => {
+              if (current?.messageId !== prepared.clientMessageId
+                || Math.round(current.progress * 100) === update.percent) return current;
+              return { ...current, progress: update.fraction };
+            });
+          },
         });
         const path = uploaded.startsWith('/') ? uploaded : new URL(uploaded).pathname;
         if (!/^\/api\/videos\/[\w.-]+$/.test(path)) throw new Error('Invalid uploaded video');
+        videoUpload?.paths.push(path);
+        if (videoUpload?.controller.signal.aborted) throw new ImageUploadError('Video upload was cancelled.');
+        if (videoUpload) {
+          videoUpload.stage = 'preparing';
+          setActiveVideoUpload({
+            messageId: prepared.clientMessageId,
+            thumbnailUri: videoUpload.thumbnailUri,
+            progress: 1,
+          });
+        }
         prepared = { ...prepared, videoUri: path };
         outboxRef.current = outboxRef.current.map(entry =>
           entry.clientMessageId === prepared.clientMessageId ? prepared : entry,
@@ -1138,9 +1219,11 @@ function MessagesScreenContent() {
         await saveDmOutbox(accountId, partnerId, outboxRef.current);
       }
       if (!prepared.thumbnailUri && prepared.localThumbnailUri) {
+        if (videoUpload?.controller.signal.aborted) throw new ImageUploadError('Video upload was cancelled.');
         const uploaded = await persistImageUri(prepared.localThumbnailUri);
         const path = uploaded.startsWith('/') ? uploaded : new URL(uploaded).pathname;
         if (!/^\/api\/images\/[\w.-]+$/.test(path)) throw new Error('Invalid video poster');
+        videoUpload?.paths.push(path);
         prepared = { ...prepared, thumbnailUri: path };
         outboxRef.current = outboxRef.current.map(entry =>
           entry.clientMessageId === prepared.clientMessageId ? prepared : entry,
@@ -1157,12 +1240,18 @@ function MessagesScreenContent() {
         ...(prepared.thumbnailUri ? { thumbnailUri: prepared.thumbnailUri } : {}),
       };
       const controller = new AbortController();
-      sendControllersRef.current.set(prepared.clientMessageId, controller);
-      const timeout = setTimeout(() => controller.abort(), 15_000);
+      if (videoUpload) {
+        if (videoUpload.controller.signal.aborted) throw new ImageUploadError('Video upload was cancelled.');
+        videoUpload.stage = 'posting';
+        setActiveVideoUpload(current => current?.messageId === prepared.clientMessageId ? null : current);
+      }
+      const requestController = videoUpload?.controller ?? controller;
+      sendControllersRef.current.set(prepared.clientMessageId, requestController);
+      const timeout = setTimeout(() => requestController.abort(), 15_000);
       let sent: Message;
       try {
         sent = await apiFetch<Message>(`/messages/${partnerId}${prepared.imageUri ? '/photos' : prepared.videoUri ? '/videos' : ''}`, {
-          method: 'POST', signal: controller.signal,
+          method: 'POST', signal: requestController.signal,
           body: JSON.stringify(body),
         });
       } finally {
@@ -1199,6 +1288,7 @@ function MessagesScreenContent() {
     } catch (err) {
       if (identity !== photoIdentityRef.current) return;
       if (!outboxRef.current.some(entry => entry.clientMessageId === prepared.clientMessageId)) return;
+      if (videoUpload?.cancelRequested) return;
       const status = err instanceof ApiError ? err.status : null;
       if (status === 404) {
         markPartnerUnavailable();
@@ -1242,8 +1332,52 @@ function MessagesScreenContent() {
       }
     } finally {
       retryingMessageIdsRef.current.delete(item.clientMessageId);
+      if (videoUploadsRef.current.get(item.clientMessageId) === videoUpload) {
+        videoUploadsRef.current.delete(item.clientMessageId);
+      }
+      if (videoUpload && sendControllersRef.current.get(item.clientMessageId) === videoUpload.controller) {
+        sendControllersRef.current.delete(item.clientMessageId);
+      }
+      if (videoUpload?.cancelRequested && videoUpload.cleanupOnCancel !== false && videoUpload.paths.length) {
+        discardPendingChatMedia(videoUpload.paths);
+      }
+      setActiveVideoUpload(current => current?.messageId === item.clientMessageId ? null : current);
     }
-  }, [myUserId, userId, isBlocked, deletedPartner, recordSharedReaction, t]);
+  }, [myUserId, userId, isBlocked, deletedPartner, recordSharedReaction, t, markPartnerUnavailable]);
+
+  const cancelVideoUpload = useCallback(async (messageId: string) => {
+    const upload = videoUploadsRef.current.get(messageId);
+    if (!upload || upload.stage === 'posting' || !myUserId || !userId) return;
+    upload.cancelRequested = true;
+    upload.controller.abort();
+    const current = outboxRef.current.find(entry => entry.clientMessageId === messageId);
+    if (!current) return;
+
+    const previousOutbox = outboxRef.current;
+    const originalPosition = previousOutbox.findIndex(entry => entry.clientMessageId === messageId);
+    const remaining = previousOutbox.filter(entry => entry.clientMessageId !== messageId);
+    outboxRef.current = remaining;
+    setMessages(previous => previous.filter(message => message.id !== messageId));
+    setActiveVideoUpload(state => state?.messageId === messageId ? null : state);
+    try {
+      await saveDmOutbox(myUserId, userId, remaining);
+    } catch {
+      upload.cleanupOnCancel = false;
+      const restoredOutbox = restorePausedDmOutboxItem(outboxRef.current, current, originalPosition);
+      const paused = restoredOutbox.find(entry => entry.clientMessageId === messageId)!;
+      outboxRef.current = restoredOutbox;
+      setMessages(previous => upsertChatMessages(
+        previous,
+        [outboxMessage(myUserId, userId, paused, 'failed')],
+      ));
+      await saveDmOutbox(myUserId, userId, outboxRef.current).catch(() => undefined);
+      showToastGlobal('Could not securely save the cancellation. This video will stay paused.', 'warning');
+      return;
+    }
+    upload.cleanupOnCancel = true;
+    discardPendingChatMedia(upload.paths);
+    showToastGlobal('Video upload cancelled.', 'info');
+  }, [myUserId, userId]);
 
   const queueOutgoingMessage = useCallback(async (item: DmOutboxItem): Promise<boolean> => {
     if (!myUserId || !userId || photoIdentity !== photoIdentityRef.current) return false;
@@ -1551,15 +1685,7 @@ function MessagesScreenContent() {
   return (
     <View style={[styles.root, { backgroundColor: th.bg }]}>
       {/* ── Static star background ─────────────────────────── */}
-      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-        {STARS.map(s => (
-          <View key={s.key} style={{
-            position: 'absolute', left: s.left, top: s.top,
-            width: s.size, height: s.size, borderRadius: s.size / 2,
-            backgroundColor: th.star, opacity: isDark ? s.opacity : s.opacity * 0.6,
-          }} />
-        ))}
-      </View>
+      <DmStarField color={th.star} isDark={isDark} />
 
       {/* ── Header ──────────────────────────────────────────── */}
       <LinearGradient
@@ -1567,7 +1693,7 @@ function MessagesScreenContent() {
         style={[styles.header, { paddingTop: topPad }]}
       >
         {/* Nebula glow orbs */}
-        <View pointerEvents="none" style={{ ...StyleSheet.absoluteFillObject, overflow: 'hidden' }}>
+        <View pointerEvents="none" style={{ ...StyleSheet.absoluteFill, overflow: 'hidden' }}>
           <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(107,78,232,0.12)', top: -60, right: -30 }} />
           <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(60,140,240,0.08)', top: 10, left: 40 }} />
         </View>
@@ -1627,8 +1753,8 @@ function MessagesScreenContent() {
             inverted
             maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 60 }}
             data={listData}
-            keyExtractor={item => item.key}
-            contentContainerStyle={[styles.listPad, { width: contentWidth, alignSelf: 'center', paddingTop: 14, paddingBottom: 12 }]}
+            keyExtractor={getDmListItemKey}
+            contentContainerStyle={listContentContainerStyle}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
@@ -1639,61 +1765,9 @@ function MessagesScreenContent() {
               <View style={styles.olderMessagesLoading}>
                 <ActivityIndicator size="small" color={PURPLE} />
               </View>
-            ) : null}
-            ListHeaderComponent={partnerTyping ? (
-              <View style={[styles.msgRow, styles.msgRowOther]}>
-                <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
-                  {partnerDisplayAvatar
-                    ? <Image source={{ uri: partnerDisplayAvatar }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                    : <Text style={[styles.bubbleAvatarSmText, { color: PURPLE }]}>{partnerInitial}</Text>
-                  }
-                </View>
-                <View style={[styles.bubble, styles.bubbleOther, { paddingVertical: 10, paddingHorizontal: 16 }]}>
-                  <Text style={{ color: MUTED, fontSize: 18, letterSpacing: 4 }}>•••</Text>
-                </View>
-              </View>
-            ) : null}
-            ListEmptyComponent={<View style={styles.invertedEmpty}>{
-              loading ? (
-                <View style={styles.openingConversation}>
-                  {!!inboxPreview && (
-                    <View style={styles.openingPreview}>
-                      <Text style={styles.openingPreviewText} numberOfLines={3}>{inboxPreview}</Text>
-                    </View>
-                  )}
-                  <View style={styles.openingBubbleRow}>
-                    <View style={styles.openingAvatarPlaceholder} />
-                    <View style={[styles.openingBubblePlaceholder, { width: '64%' }]} />
-                  </View>
-                  <View style={[styles.openingBubbleRow, styles.openingBubbleOwn]}>
-                    <View style={[styles.openingBubblePlaceholder, { width: '48%', height: 34 }]} />
-                  </View>
-                  <View style={styles.openingBubbleRow}>
-                    <View style={styles.openingAvatarPlaceholder} />
-                    <View style={[styles.openingBubblePlaceholder, { width: '54%', height: 54 }]} />
-                  </View>
-                  <View style={styles.openingStatus}>
-                    <SkyLoadingMark size={18} color={PURPLE} />
-                    <Text style={styles.openingStatusText}>{t('social.openingConversation')}</Text>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.emptyWrap}>
-                  <LinearGradient
-                    colors={[`${PURPLE}28`, `${PURPLE}10`]}
-                    style={styles.emptyIcon}
-                  >
-                    <Text style={{ fontSize: 32 }}>✦</Text>
-                  </LinearGradient>
-                  <Text style={styles.emptyTitle}>{t('social.beginStory')}</Text>
-                  <Text style={styles.emptyBody}>
-                    {isGuide === 'true'
-                      ? t('social.guideAwaits')
-                      : t('social.funWhisper')}
-                  </Text>
-                </View>
-              )
-            }</View>}
+            ) : undefined}
+            ListHeaderComponent={typingIndicator ?? undefined}
+            ListEmptyComponent={emptyListComponent}
             renderItem={renderMessageItem}
           />
 
@@ -1754,10 +1828,14 @@ function MessagesScreenContent() {
           ) : (
           <>
           {photoUri && <ChatPhotoDraft uri={photoUri} busy={sending} color={th.ink} onRemove={() => { setPhotoUri(null); uploadedPhotoRef.current = null; }} />}
-          {videoDraft && <ChatVideoDraft
-            thumbnailUri={videoDraft.thumbnailUri}
-            busy={sending}
-            onRemove={() => setVideoDraft(null)}
+          {(videoDraft || activeVideoUpload) && <ChatVideoDraft
+            thumbnailUri={activeVideoUpload?.thumbnailUri ?? videoDraft?.thumbnailUri}
+            busy={!!activeVideoUpload}
+            progress={activeVideoUpload?.progress}
+            onRemove={() => {
+              if (activeVideoUpload) void cancelVideoUpload(activeVideoUpload.messageId);
+              else setVideoDraft(null);
+            }}
           />}
            <View style={[styles.inputBar, { width: contentWidth, paddingBottom: bottomPad }]}>
             <TouchableOpacity
@@ -1837,7 +1915,7 @@ function MessagesScreenContent() {
               }
               {!sending && <Icon name="send" size={18} color="#FFFFFF" />}
             </TouchableOpacity>
-          </View>
+           </View>
           </>
           )}
           </View>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, AppState } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 
 /** Shared visibility/accessibility policy for both Home and companion avatars. */
 export function useLumiActivity() {

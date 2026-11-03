@@ -1,5 +1,6 @@
 import { Icon } from "@/components/Icon";
 import { SecureImage } from "@/components/SecureImage";
+import { ReportSheet } from "@/components/ReportSheet";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@clerk/expo";
 import {
@@ -16,7 +17,7 @@ import type { NativeThemeMode } from "@workspace/storigam-kindness/lib/native-th
 import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -89,10 +90,11 @@ function ago(value: string) {
 }
 
 export default function ContentCommentsScreen() {
-  const params = useLocalSearchParams<{ contentType?: string; contentId?: string; title?: string }>();
+  const params = useLocalSearchParams<{ contentType?: string; contentId?: string; title?: string; parentId?: string; commentId?: string }>();
   const contentType = isContentType(params.contentType) ? params.contentType : null;
   const contentId = typeof params.contentId === "string" ? params.contentId : "";
   const contentTitle = typeof params.title === "string" ? params.title : "";
+  const notifiedParentId = typeof params.parentId === "string" ? params.parentId : null;
   const { isDark } = useTheme();
   const mode: NativeThemeMode = isDark ? "dark" : "light";
   const colors = useKindnessColors(mode);
@@ -103,6 +105,7 @@ export default function ContentCommentsScreen() {
   const [selectedTag, setSelectedTag] = useState<KindnessTag | null>(null);
   const [replyTo, setReplyTo] = useState<CommentItem | null>(null);
   const [sent, setSent] = useState(false);
+  const [reportingComment, setReportingComment] = useState<CommentItem | null>(null);
 
   const queryParams = replyTo ? { parentId: replyTo.id } : undefined;
   const query = useGetContentComments(contentType ?? "story", contentId, queryParams, {
@@ -116,7 +119,20 @@ export default function ContentCommentsScreen() {
       staleTime: 12_000,
     },
   });
-  const comments = (query.data?.comments ?? []) as CommentItem[];
+  const comments = useMemo(
+    () => (query.data?.comments ?? []) as CommentItem[],
+    [query.data?.comments],
+  );
+
+  useEffect(() => {
+    if (!notifiedParentId || replyTo || query.isLoading || query.isError) return;
+    const parent = comments.find(comment => comment.id === notifiedParentId);
+    if (parent) {
+      setReplyTo(parent);
+      setDraft("");
+      setSelectedTag(null);
+    }
+  }, [comments, notifiedParentId, query.isError, query.isLoading, replyTo]);
 
   const invalidateComments = () => {
     if (!contentType || !contentId) return;
@@ -178,6 +194,27 @@ export default function ContentCommentsScreen() {
     ]);
   };
 
+  const openCommentActions = (comment: CommentItem) => {
+    const buttons = [];
+    if (!comment.isMine && comment.content !== "This comment was removed.") {
+      buttons.push({
+        text: "Report comment",
+        onPress: () => {
+          setTimeout(() => setReportingComment(comment), Platform.OS === "ios" ? 400 : 0);
+        },
+      });
+    }
+    if (comment.isMine || comment.isContentOwner) {
+      buttons.push({
+        text: "Remove comment",
+        style: "destructive" as const,
+        onPress: () => confirmDelete(comment),
+      });
+    }
+    buttons.push({ text: "Cancel", style: "cancel" as const });
+    Alert.alert("Comment options", "Choose what you’d like to do.", buttons);
+  };
+
   if (!contentType || !contentId) {
     return (
       <View style={[styles.invalid, { backgroundColor: colors.background }]}>
@@ -209,12 +246,12 @@ export default function ContentCommentsScreen() {
           </View>
           <Text style={[styles.timeLabel, { color: colors.mutedForeground }]}>{ago(item.createdAt)}</Text>
         </View>
-        {(item.isMine || item.isContentOwner) && item.content !== "This comment was removed." && (
+        {item.content !== "This comment was removed." && (
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="Remove comment"
+            accessibilityLabel="Comment options"
             hitSlop={10}
-            onPress={() => confirmDelete(item)}
+            onPress={() => openCommentActions(item)}
             style={styles.moreButton}
           >
             <Icon name="more-horizontal" size={18} color={colors.mutedForeground} />
@@ -224,9 +261,9 @@ export default function ContentCommentsScreen() {
 
       <Text style={[styles.commentBody, { color: colors.foreground }]}>{item.content}</Text>
       {item.kindnessTag && (
-        <View style={[styles.kindnessPill, { backgroundColor: `${colors.accent}28` }]}>
-          <Icon name="sparkles" size={12} color={colors.accentForeground} />
-          <Text style={[styles.kindnessText, { color: colors.accentForeground }]}>
+        <View style={[styles.kindnessPill, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+          <Icon name="sparkles" size={12} color={colors.primary} />
+          <Text style={[styles.kindnessText, { color: colors.primary }]}>
             {KINDNESS_OPTIONS.find(option => option.tag === item.kindnessTag)?.label ?? "A little kindness"}
           </Text>
         </View>
@@ -426,6 +463,13 @@ export default function ContentCommentsScreen() {
           />
         </View>
       </View>
+      <ReportSheet
+        visible={reportingComment !== null}
+        onClose={() => setReportingComment(null)}
+        targetType="comment"
+        targetId={reportingComment?.id ?? ""}
+        targetLabel={reportingComment ? `@${reportingComment.authorUsername ?? reportingComment.authorName}` : "comment"}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -461,8 +505,8 @@ const styles = StyleSheet.create({
   timeLabel: { fontFamily: "Satoshi-Regular", fontSize: 10, marginTop: 1 },
   moreButton: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   commentBody: { fontFamily: "Satoshi-Regular", fontSize: 14, lineHeight: 20, marginLeft: 47 },
-  kindnessPill: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", marginLeft: 47, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 },
-  kindnessText: { fontFamily: "Satoshi-Medium", fontSize: 10 },
+  kindnessPill: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", marginLeft: 47, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12, borderWidth: 1 },
+  kindnessText: { fontFamily: "Satoshi-Medium", fontSize: 11 },
   creatorNote: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", marginLeft: 47, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12 },
   creatorNoteText: { fontFamily: "Satoshi-Medium", fontSize: 10 },
   commentActions: { flexDirection: "row", alignItems: "center", gap: 16, marginLeft: 45, marginTop: 1 },

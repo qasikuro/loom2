@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { URL } from 'node:url';
 import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
+import { callable, evaluate } from './helpers/soundtrackHarness';
 
 // Exercise the actual hook/effect bodies with delayed native players, without
 // requiring a React Native bridge in Node.
@@ -11,7 +12,7 @@ function source(path: string) {
 }
 function run(body: string, env: Record<string, unknown>) {
   const js = ts.transpileModule(
-    body.replaceAll("const { Audio } = await import('expo-av');", ''),
+    body.replaceAll("const { Audio } = await import('@/utils/audioCompat');", ''),
     { compilerOptions: { target: ts.ScriptTarget.ES2020 } },
   ).outputText;
   return new Function(...Object.keys(env), js)(...Object.values(env));
@@ -59,11 +60,8 @@ function outfitEffect(
   return { focus, prepare };
 }
 function previewHook(createAsync: ReturnType<typeof vi.fn>) {
-  const text = source('features/story-studio/components/AudiusMusicPicker.tsx');
-  const start = text.indexOf('function useAudiusPreview()');
-  const end = text.indexOf('\ntype PreviewController', start);
   let cleanup!: () => void;
-  const controller = run(text.slice(start, end) + '\nreturn useAudiusPreview();', {
+  const createController = evaluate(callable('features/story-studio/components/AudiusMusicPicker.tsx', 'useAudiusPreview'), {
     useState: () => [null, vi.fn()],
     useRef: (value: unknown) => ({ current: value }),
     useCallback: (cb: unknown) => cb,
@@ -71,6 +69,7 @@ function previewHook(createAsync: ReturnType<typeof vi.fn>) {
     Audio: { Sound: { createAsync } },
     registerNativeSound: vi.fn(), unregisterNativeSound: vi.fn(),
   });
+  const controller = createController();
   return { controller, leave: () => cleanup() };
 }
 
@@ -154,7 +153,8 @@ describe('media playback navigation cleanup', () => {
 
   it('gates inline reels, the full video modal, and story music on route focus', () => {
     const reels = source('app/(tabs)/reels.tsx');
-    expect(reels).toContain('playing={isFocused && !selectedVideoPost');
+    expect(reels).toContain('const playbackEnabled = isFocused && appActive && !selectedVideoPost');
+    expect(reels).toContain('playing={playbackEnabled && item.id === activePostId');
     expect(reels).toContain('post={isFocused ? selectedVideoPost : null}');
     expect(source('features/story-studio/screens/StoryViewerScreen.tsx'))
       .toContain('{isFocused && <AudiusTrackPlayer');

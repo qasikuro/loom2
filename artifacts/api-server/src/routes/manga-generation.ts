@@ -6,7 +6,8 @@ import { pool } from "@workspace/db";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { requireAiAccess } from "../middleware/ai-access";
 import { objectStorageClient } from "../lib/objectStorage";
-import { mediaOwnerMetadata } from "../lib/mediaAccess";
+import { mediaOwnerMetadata, signOwnerMediaUrl } from "../lib/mediaAccess";
+import { getFeatureUsagePolicy } from "../lib/featureUsage";
 
 const CONFIG = {
   model: "gpt-image-1",
@@ -102,6 +103,14 @@ router.post("/manga/generate", requireAuth, requireAiAccess, async (req: Request
     imageUris.length * CONFIG.estimatedInputCostMicrosPerImage;
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   if (!bucketId) return res.status(503).json({ error: "Image storage is not configured." });
+  let featurePolicy;
+  try {
+    featurePolicy = await getFeatureUsagePolicy("image-generation");
+  } catch (error) {
+    req.log.error({ err: error }, "Could not load image-generation controls");
+    return res.status(503).json({ error: "Image generation controls are temporarily unavailable." });
+  }
+  const effectiveDailyLimit = featurePolicy.dailyLimit ?? CONFIG.maxPerDay;
 
   const client = await pool.connect();
   let generationId: string;
@@ -121,7 +130,7 @@ router.post("/manga/generate", requireAuth, requireAiAccess, async (req: Request
            WHERE user_id=$1 AND status IN ('pending','success') AND created_at >= date_trunc('day', NOW())`,
           [userId],
         );
-        return res.json({ generationId: row.id, imageUri: row.image_uri, remainingToday: Math.max(0, CONFIG.maxPerDay - Number(count.rows[0]?.count ?? 0)) });
+        return res.json({ generationId: row.id, imageUri: signOwnerMediaUrl(row.image_uri, userId), remainingToday: Math.max(0, CONFIG.maxPerDay - Number(count.rows[0]?.count ?? 0)) });
       }
       if (row.status === "pending") {
         const deterministicFile = objectStorageClient.bucket(bucketId).file(`images/manga_${row.id}.png`);
@@ -132,7 +141,7 @@ router.post("/manga/generate", requireAuth, requireAiAccess, async (req: Request
             "UPDATE manga_generations SET status='success', image_uri=$1, completed_at=NOW() WHERE id=$2",
             [imageUri, row.id],
           );
-          return res.json({ generationId: row.id, imageUri, remainingToday: Math.max(0, CONFIG.maxPerDay - 1) });
+          return res.json({ generationId: row.id, imageUri: signOwnerMediaUrl(imageUri, userId), remainingToday: Math.max(0, CONFIG.maxPerDay - 1) });
         }
         const ageMs = Date.now() - new Date(row.created_at).getTime();
         if (ageMs < 15 * 60_000) {
@@ -145,18 +154,44 @@ router.post("/manga/generate", requireAuth, requireAiAccess, async (req: Request
       }
       return res.status(409).json({ error: "The previous attempt did not finish. Please start a new generation." });
     }
+    // Keep the existing requestId replay behavior above this check: turning the
+    // feature off must not strand a request that already completed.
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", ["feature-usage:image-generation"]);
+    if (!featurePolicy.enabled) {
+      await client.query("ROLLBACK");
+      return res.status(503).json({ error: "Image generation is temporarily unavailable." });
+    }
     const usage = await client.query(
-      `SELECT COUNT(*)::int AS count
+      `SELECT
+          COUNT(*) FILTER (WHERE created_at >= date_trunc('day', NOW()))::int AS daily_count,
+          COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 hour')::int AS hourly_count
          FROM manga_generations
         WHERE user_id = $1
           AND status IN ('pending', 'success')
-          AND created_at >= date_trunc('day', NOW())`,
+          AND created_at >= LEAST(date_trunc('day', NOW()), NOW() - INTERVAL '1 hour')`,
       [userId],
     );
-    const used = Number(usage.rows[0]?.count ?? 0);
-    if (used >= CONFIG.maxPerDay) {
+    const usedToday = Number(usage.rows[0]?.daily_count ?? 0);
+    const usedThisHour = Number(usage.rows[0]?.hourly_count ?? 0);
+    if (featurePolicy.hourlyLimit !== null && usedThisHour >= featurePolicy.hourlyLimit) {
       await client.query("ROLLBACK");
-      return res.status(429).json({ error: `Daily manga limit reached. You can create ${CONFIG.maxPerDay} pages per day.` });
+      return res.status(429).json({ error: "Image generation's hourly limit has been reached." });
+    }
+    if (usedToday >= effectiveDailyLimit) {
+      await client.query("ROLLBACK");
+      return res.status(429).json({ error: `Daily manga limit reached. You can create ${effectiveDailyLimit} pages per day.` });
+    }
+    if (featurePolicy.dailyBudgetMicros !== null) {
+      const spend = await client.query(
+        `SELECT COALESCE(SUM(estimated_cost_micros), 0)::bigint AS cost
+           FROM manga_generations
+          WHERE created_at >= date_trunc('day', NOW())`,
+      );
+      const todayCost = Number(spend.rows[0]?.cost ?? 0);
+      if (todayCost + estimatedCostMicros > featurePolicy.dailyBudgetMicros) {
+        await client.query("ROLLBACK");
+        return res.status(429).json({ error: "Image generation's daily estimated-cost budget has been reached." });
+      }
     }
     const reservation = await client.query(
       `INSERT INTO manga_generations
@@ -221,7 +256,7 @@ router.post("/manga/generate", requireAuth, requireAiAccess, async (req: Request
     const creditSvg = Buffer.from(
       `<svg width="1024" height="1536"><rect x="775" y="1480" width="225" height="44" rx="10" fill="rgba(8,5,22,.78)"/><text x="887" y="1508" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="white">Made by Storigam</text></svg>`,
     );
-    const finalImage = await sharp(generated)
+    const finalImage = await sharp(generated.buffer)
       .resize(1024, 1536, { fit: "cover" })
       .composite([{ input: creditSvg }])
       .png()
@@ -232,17 +267,31 @@ router.post("/manga/generate", requireAuth, requireAiAccess, async (req: Request
       metadata: { contentType: "image/png", metadata: mediaOwnerMetadata(userId) },
     });
     const imageUri = `/api/images/${filename}`;
+    const providerCostMicros = generated.usage
+      ? generated.usage.inputTextTokens * 5 +
+        generated.usage.inputImageTokens * 10 +
+        generated.usage.outputTokens * 40
+      : null;
     await pool.query(
       `UPDATE manga_generations SET status='success', image_uri=$1, original_sizes=$2,
-       compressed_sizes=$3, completed_at=NOW() WHERE request_id=$4 AND user_id=$5`,
-      [imageUri, JSON.stringify(originalSizes), JSON.stringify(compressedSizes), requestId, userId],
+       compressed_sizes=$3, provider_usage=$4, provider_cost_micros=$5, completed_at=NOW()
+       WHERE request_id=$6 AND user_id=$7`,
+      [
+        imageUri,
+        JSON.stringify(originalSizes),
+        JSON.stringify(compressedSizes),
+        generated.usage ? JSON.stringify(generated.usage) : null,
+        providerCostMicros,
+        requestId,
+        userId,
+      ],
     );
     const count = await pool.query(
       `SELECT COUNT(*)::int AS count FROM manga_generations
        WHERE user_id=$1 AND status IN ('pending','success') AND created_at >= date_trunc('day', NOW())`,
       [userId],
     );
-    return res.json({ generationId, imageUri, remainingToday: Math.max(0, CONFIG.maxPerDay - Number(count.rows[0]?.count ?? 0)) });
+    return res.json({ generationId, imageUri: signOwnerMediaUrl(imageUri, userId), remainingToday: Math.max(0, effectiveDailyLimit - Number(count.rows[0]?.count ?? 0)) });
   } catch (error) {
     const errorCode = error instanceof Error ? error.message.slice(0, 100) : "GENERATION_FAILED";
     await pool.query(

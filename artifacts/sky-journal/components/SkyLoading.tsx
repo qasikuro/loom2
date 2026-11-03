@@ -63,7 +63,7 @@ function CompactWaiting({ message, transparent = false }: { message?: string; tr
       style={[
         styles.screenOverlay,
         { backgroundColor: colors.background },
-        transparent && [StyleSheet.absoluteFillObject, { backgroundColor: transparentOverlay, zIndex: 9999 }],
+        transparent && [StyleSheet.absoluteFill, { backgroundColor: transparentOverlay, zIndex: 9999 }],
       ]}
       pointerEvents={transparent ? 'none' : 'auto'}
       accessible

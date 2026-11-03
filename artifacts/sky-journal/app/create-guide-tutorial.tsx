@@ -4,7 +4,7 @@ import { apiFetch } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { persistImageUri, persistVideoUri } from '@/utils/persistImage';
 import { Image } from 'expo-image';
-import { ResizeMode, Video } from 'expo-av';
+import { ResizeMode, VideoSurface as Video } from '@/components/VideoSurface';
 import * as ImagePicker from 'expo-image-picker';
 import { type Href, router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';

@@ -8,7 +8,8 @@ import { useApp, type DiscoverPost } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { UI } from '@/constants/uiTokens';
 import { getReelPlaybackWindow } from '@/utils/reelPlayback';
-import { useIsFocused } from '@react-navigation/native';
+import { activateReelDiagnostic, openReelDiagnosticMenu } from '@/utils/reelDiagnostics';
+import { useIsFocused } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
@@ -78,6 +79,9 @@ export default function ReelsScreen() {
   const { activePostId, preparedIndices } = getReelPlaybackWindow(reels, visiblePostId, readyPostId, playbackEnabled);
   const activePostIdRef = useRef(activePostId);
   activePostIdRef.current = activePostId;
+  useEffect(() => {
+    activateReelDiagnostic(playbackEnabled ? activePostId ?? null : null);
+  }, [activePostId, playbackEnabled]);
   const onVideoBufferHealth = useCallback((id: string, allowed: boolean) => {
     // Late status callbacks from a reel we just swiped past cannot change
     // the visible player's bandwidth budget.
@@ -103,7 +107,10 @@ export default function ReelsScreen() {
   }) => {
     // Keep the current reel during the brief gap between two 55%-visible pages.
     const visible = viewableItems[0];
-    if (visible) setVisiblePostId(visible.item.id);
+    if (visible) {
+      activateReelDiagnostic(visible.item.id);
+      setVisiblePostId(visible.item.id);
+    }
   });
 
   useFocusEffect(useCallback(() => {
@@ -250,7 +257,7 @@ export default function ReelsScreen() {
       >
         <View style={styles.headerInner}>
           <View style={styles.titleRow}>
-            <Text style={styles.title}>{t('reels.title')} <Text style={styles.titleStar}>✦</Text></Text>
+            <Text style={styles.title} onLongPress={() => { void openReelDiagnosticMenu(); }}>{t('reels.title')} <Text style={styles.titleStar}>✦</Text></Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <TouchableOpacity
                 style={styles.createButton}

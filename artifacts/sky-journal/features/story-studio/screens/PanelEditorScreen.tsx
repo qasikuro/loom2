@@ -1240,8 +1240,8 @@ const styles = StyleSheet.create({
 
   emptyHint:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 },
   emptyHintText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.35)' },
-  dimOverlay:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,6,22,0.22)' },
-  uploadOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center', zIndex: 30, gap: 8 },
+  dimOverlay:    { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(8,6,22,0.22)' },
+  uploadOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center', zIndex: 30, gap: 8 },
   uploadOverlayText: { color: 'rgba(200,184,232,0.8)', fontSize: 11, fontFamily: 'Satoshi-Medium' },
   changeBtn: {
     position: 'absolute', top: 7, right: 7,

@@ -1,0 +1,128 @@
+diff --git a/v3/types.js b/v3/types.js
+--- a/v3/types.js
++++ b/v3/types.js
+@@ -1756,4 +1756,21 @@ export class ZodArray extends ZodType {
+             });
+             return INVALID;
+         }
++        const maximum =
++            def.exactLength === null
++                ? def.maxLength
++                : def.maxLength === null || def.exactLength.value <= def.maxLength.value
++                    ? def.exactLength
++                    : def.maxLength;
++        if (maximum !== null && ctx.data.length > maximum.value) {
++            addIssueToContext(ctx, {
++                code: ZodIssueCode.too_big,
++                maximum: maximum.value,
++                type: "array",
++                inclusive: true,
++                exact: maximum === def.exactLength,
++                message: maximum.message,
++            });
++            return INVALID;
++        }
+         if (def.exactLength !== null) {
+diff --git a/v3/types.cjs b/v3/types.cjs
+--- a/v3/types.cjs
++++ b/v3/types.cjs
+@@ -1777,4 +1777,21 @@ class ZodArray extends ZodType {
+             });
+             return parseUtil_js_1.INVALID;
+         }
++        const maximum =
++            def.exactLength === null
++                ? def.maxLength
++                : def.maxLength === null || def.exactLength.value <= def.maxLength.value
++                    ? def.exactLength
++                    : def.maxLength;
++        if (maximum !== null && ctx.data.length > maximum.value) {
++            (0, parseUtil_js_1.addIssueToContext)(ctx, {
++                code: ZodError_js_1.ZodIssueCode.too_big,
++                maximum: maximum.value,
++                type: "array",
++                inclusive: true,
++                exact: maximum === def.exactLength,
++                message: maximum.message,
++            });
++            return parseUtil_js_1.INVALID;
++        }
+         if (def.exactLength !== null) {
+diff --git a/v4/core/schemas.js b/v4/core/schemas.js
+--- a/v4/core/schemas.js
++++ b/v4/core/schemas.js
+@@ -616,4 +616,30 @@ function handleArrayResult(result, final, index) {
+     }
+     final.value[index] = result.value;
+ }
++function capArraySize(inst) {
++    const caps = [];
++    for (const check of inst._zod.def.checks ?? []) {
++        const def = check._zod.def;
++        if (!/_(length|size)$|_equals$/.test(def.check))
++            break;
++        const max = def.maximum ?? def.length ?? def.size;
++        if (max >= 0)
++            caps.push([max, check]);
++    }
++    if (!caps.length)
++        return;
++    const cap = Math.min(...caps.map((entry) => entry[0]));
++    const parse = inst._zod.parse;
++    inst._zod.parse = (payload, ctx) => {
++        const size = Array.isArray(payload.value) ? payload.value.length : -1;
++        if (size > cap && !ctx?.skipChecks && ctx?.direction !== "backward") {
++            for (const [max, check] of caps) {
++                if (size > max && check._zod.def.when(payload)) {
++                    return payload;
++                }
++            }
++        }
++        return parse(payload, ctx);
++    };
++}
+ export const $ZodArray = /*@__PURE__*/ core.$constructor("$ZodArray", (inst, def) => {
+@@ -653,3 +679,4 @@ export const $ZodArray = /*@__PURE__*/ core.$constructor("$ZodArray", (inst, def
+         return payload; //handleArrayResultsAsync(parseResults, final);
+     };
++    capArraySize(inst);
+ });
+diff --git a/v4/core/schemas.cjs b/v4/core/schemas.cjs
+--- a/v4/core/schemas.cjs
++++ b/v4/core/schemas.cjs
+@@ -647,4 +647,30 @@ function handleArrayResult(result, final, index) {
+     }
+     final.value[index] = result.value;
+ }
++function capArraySize(inst) {
++    const caps = [];
++    for (const check of inst._zod.def.checks ?? []) {
++        const def = check._zod.def;
++        if (!/_(length|size)$|_equals$/.test(def.check))
++            break;
++        const max = def.maximum ?? def.length ?? def.size;
++        if (max >= 0)
++            caps.push([max, check]);
++    }
++    if (!caps.length)
++        return;
++    const cap = Math.min(...caps.map((entry) => entry[0]));
++    const parse = inst._zod.parse;
++    inst._zod.parse = (payload, ctx) => {
++        const size = Array.isArray(payload.value) ? payload.value.length : -1;
++        if (size > cap && !ctx?.skipChecks && ctx?.direction !== "backward") {
++            for (const [max, check] of caps) {
++                if (size > max && check._zod.def.when(payload)) {
++                    return payload;
++                }
++            }
++        }
++        return parse(payload, ctx);
++    };
++}
+ exports.$ZodArray = core.$constructor("$ZodArray", (inst, def) => {
+@@ -684,3 +710,4 @@ exports.$ZodArray = core.$constructor("$ZodArray", (inst, def) => {
+         return payload; //handleArrayResultsAsync(parseResults, final);
+     };
++    capArraySize(inst);
+ });

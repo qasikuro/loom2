@@ -2087,7 +2087,7 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
   const { width } = useWindowDimensions();
   const topPad  = Platform.OS === 'web' ? 48 : insets.top;
   const btmPad  = Platform.OS === 'web' ? 80 : insets.bottom;
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
   const [messages, setMessages] = useState<ChatMsg[]>([
     { role: 'assistant', content: cfg.lumiIntro || "I'm here. What's on your mind?" },

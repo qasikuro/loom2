@@ -1,7 +1,7 @@
 import { Icon } from '@/components/Icon';
 import { useSecureMediaUri } from '@/hooks/useSecureMediaUri';
 import type { DiscoverPost } from '@/context/AppContext';
-import { Video, ResizeMode } from 'expo-av';
+import { ResizeMode, VideoSurface as Video } from '@/components/VideoSurface';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Modal,
@@ -63,6 +63,8 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
       webAudio.onended = null;
       webAudio.pause();
       webAudio.currentTime = 0;
+      webAudio.removeAttribute('src');
+      webAudio.load();
     }
   }, []);
 
@@ -98,7 +100,8 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
       } catch {
         audio.pause();
         audio.currentTime = 0;
-        if (webAudioRef.current === audio) webAudioRef.current = null;
+        // Keep the blocked element for a synchronous retry within the tap gesture.
+        // Recreating it after awaiting cleanup can lose browser user activation.
         if (isCurrent()) setSoundtrackStarted(false);
         // Browser autoplay policies may require the user to tap Music.
       }
@@ -106,22 +109,21 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
     }
 
     try {
-      const { Audio } = await import('expo-av');
+      const { Audio } = await import('@/utils/audioCompat');
       const result = await Audio.Sound.createAsync(
         { uri: streamUrl },
         { shouldPlay: false, isLooping: true, volume: 0.55, isMuted: soundtrackMutedRef.current },
       );
       const sound = result.sound as unknown as NativeSound;
-      nativeSoundRef.current = sound;
-      registerNativeSound(sound);
 
       if (!isCurrent()) {
-        unregisterNativeSound(sound);
         await sound.stopAsync().catch(() => null);
         await sound.unloadAsync().catch(() => null);
         return;
       }
 
+      nativeSoundRef.current = sound;
+      registerNativeSound(sound);
       await sound.playAsync();
       if (!isCurrent()) {
         unregisterNativeSound(sound);
@@ -155,19 +157,24 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
 
     const webAudio = webAudioRef.current;
     if (webAudio) {
+      const generation = playbackGenerationRef.current;
       try {
         webAudio.muted = soundtrackMutedRef.current;
         await webAudio.play();
+        if (generation !== playbackGenerationRef.current || webAudioRef.current !== webAudio) return;
         setSoundtrackStarted(true);
         return;
       } catch {
-        // Fall through to a fresh native/web setup attempt.
+        // Keep Play available rather than creating another player outside the tap.
+        if (generation === playbackGenerationRef.current) setSoundtrackStarted(false);
+        return;
       }
     }
     await startSoundtrack();
   }, [soundtrackMuted, soundtrackStarted, startSoundtrack]);
 
   const handleClose = useCallback(() => {
+    lifecycleRef.current += 1;
     void stopSoundtrack();
     onClose();
   }, [onClose, stopSoundtrack]);

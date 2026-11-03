@@ -1,0 +1,7 @@
+name: cosmic-profile-arrival
+logs:
+  file: build/rive.log
+  problems: build/problems.log
+push:
+  projectId: 1942941
+  fileId: 2694674

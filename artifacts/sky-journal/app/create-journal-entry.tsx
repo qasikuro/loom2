@@ -100,7 +100,7 @@ export default function CreateJournalEntryScreen() {
     typeParam === 'friend' ? 'friend' : typeParam === 'moment' ? 'moment' : 'diary';
 
   const cfg       = TYPE_CFG[entryType];
-  const inputRef  = useRef<TextInput>(null);
+  const inputRef  = useRef<React.ComponentRef<typeof TextInput>>(null);
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
   const contentWidth = Math.min(windowWidth, 720);

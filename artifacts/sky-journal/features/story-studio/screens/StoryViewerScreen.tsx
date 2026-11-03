@@ -4,7 +4,7 @@ import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,6 +42,7 @@ import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { AudiusTrackPlayer } from '../components/AudiusMusicPicker';
 import { PanelSticker } from '@/components/PanelSticker';
 import { PanelOverlayText } from '@/components/PanelOverlayText';
+import { RichStoryBlock } from '../components/RichStoryBlock';
 
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
 
@@ -111,6 +112,9 @@ interface CellPanel {
   imageUri?:        string;
   bgPreset?:        string;
   text:             string;
+  textFormat?:      'rich';
+  articleBlock?:    'paragraph' | 'heading' | 'quote' | 'bullet' | 'image';
+  articleEmphasis?: 'bold' | 'italic';
   bubbleText?:      string;
   overlays?:        PanelOverlay[];
   imageAspectRatio?: number;   // width/height — stored at crop time
@@ -359,7 +363,7 @@ export default function StoryScreen() {
   const [focusedPanelIdx,  setFocusedPanelIdx]  = useState<number | null>(null);
   const [continuePost,     setContinuePost]     = useState<typeof discoverPosts[number] | null>(null);
   const [continueDismissed, setContinueDismissed] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
   // Continue Reading card slide-in animation
   const continueSlideY   = useRef(new Animated.Value(180)).current;
@@ -439,6 +443,9 @@ export default function StoryScreen() {
       imageUri:         p.imageUri,
       bgPreset:         p.bgPreset,
       text:             p.text ?? '',
+      textFormat:       p.textFormat,
+      articleBlock:     p.articleBlock,
+      articleEmphasis:  p.articleEmphasis,
       bubbleText:       p.bubbleText,
       overlays:         p.overlays,
       imageAspectRatio: p.imageAspectRatio,
@@ -595,12 +602,17 @@ export default function StoryScreen() {
 
   // Flat panel array for the fullscreen reader
   const allPanels: ReaderPanel[] = renderPages.flatMap(pg => pg.panels);
+  const isRichTextStory = allPanels.length > 0 && allPanels.every(panel => panel.textFormat === 'rich');
+  const articleCoverPanel = allPanels.find(panel => panel.imageUri);
   // Pre-computed start offset per page (so MangaPage can assign flat indices)
   const pageOffsets = renderPages.reduce<number[]>((acc, pg, i) => {
     acc.push(i === 0 ? 0 : acc[i - 1] + renderPages[i - 1].panels.length);
     return acc;
   }, []);
-  const heroImgSrc = getPanelImageSource(firstPanel?.imageUri, firstPanel?.bgPreset);
+  const heroImgSrc = getPanelImageSource(
+    (isRichTextStory ? articleCoverPanel : firstPanel)?.imageUri,
+    (isRichTextStory ? articleCoverPanel : firstPanel)?.bgPreset,
+  );
   const totalPanelCount = renderPages.reduce((acc, pg) => acc + pg.panels.length, 0);
   const heroDescription = story?.description ?? post?.description ?? '';
   // The hero overlay is bottom-anchored. On a narrow portrait viewport,
@@ -735,7 +747,10 @@ export default function StoryScreen() {
             <TouchableOpacity
               style={[styles.editBtn, { top: topPad + 12 }]}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={() => router.push({ pathname: '/chapter-editor', params: { editId: id } } as any)}
+              onPress={() => router.push({
+                pathname: isRichTextStory ? '/text-story' : '/chapter-editor',
+                params: { editId: id },
+              } as any)}
               activeOpacity={0.78}
             >
               <Icon name="edit-2" size={18} color="rgba(200,184,232,0.9)" />
@@ -821,24 +836,36 @@ export default function StoryScreen() {
         </View>
 
         {/* ── Manga pages ────────────────────────────────── */}
-        <View style={styles.pagesWrap}>
-          {renderPages.map((page, pi) => {
-            const pageLayout = getLayout(page.layoutKey);
-            return (
-              <MangaPage
-                key={pi}
-                panels={page.panels}
-                layout={pageLayout}
-                gradient={gradient}
-                pageNum={pi + 1}
-                totalPages={renderPages.length}
-                screenW={screenW}
-                panelOffset={pageOffsets[pi] ?? 0}
-                onPanelTap={setFocusedPanelIdx}
+        {isRichTextStory ? (
+          <View style={styles.richArticle}>
+            {allPanels.map((panel, index) => (
+              <RichStoryBlock
+                key={`${id}-article-${index}`}
+                panel={panel}
+                onImagePress={panel.imageUri ? () => setFocusedPanelIdx(index) : undefined}
               />
-            );
-          })}
-        </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.pagesWrap}>
+            {renderPages.map((page, pi) => {
+              const pageLayout = getLayout(page.layoutKey);
+              return (
+                <MangaPage
+                  key={pi}
+                  panels={page.panels}
+                  layout={pageLayout}
+                  gradient={gradient}
+                  pageNum={pi + 1}
+                  totalPages={renderPages.length}
+                  screenW={screenW}
+                  panelOffset={pageOffsets[pi] ?? 0}
+                  onPanelTap={setFocusedPanelIdx}
+                />
+              );
+            })}
+          </View>
+        )}
 
         {/* ── End card ───────────────────────────────────── */}
         <View style={[styles.endCard, { backgroundColor: 'rgba(139,122,181,0.12)', borderColor: 'rgba(139,122,181,0.25)' }]}>
@@ -1116,6 +1143,7 @@ const styles = StyleSheet.create({
   deleteConfirmText: { color: '#fff', fontSize: 13, fontFamily: 'Satoshi-Bold' },
 
   pagesWrap: { backgroundColor: '#0D0B1A', gap: 16, paddingTop: 8, paddingBottom: 8 },
+  richArticle: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, gap: 20 },
 
   page:    { width: '100%', overflow: 'hidden', backgroundColor: '#0D0B1A' },
   pageRow: { flexDirection: 'row', gap: GUTTER },

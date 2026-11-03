@@ -282,7 +282,10 @@ router.post(
       });
     } catch (error) {
       if (error instanceof VideoCompositionError) {
-        const status = error.code === "output" ? 422 : 400;
+        if (error.code === "unavailable" || error.code === "tool") {
+          req.log.error({ err: error }, "Video composition media tool failed");
+        }
+        const status = error.code === "unavailable" ? 503 : error.code === "output" ? 422 : 400;
         return res.status(status).json({ error: error.message });
       }
       req.log.error({ err: error }, "Video composition failed");

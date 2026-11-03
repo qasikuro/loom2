@@ -1,8 +1,9 @@
 import { db, outfitsTable, followsTable, characterTable, notificationsTable } from "@workspace/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { MAX_AUDIUS_TRACK_DURATION_SECONDS } from "../services/audius";
 import { syncConstellation } from "../services/constellationService";
 import { assertOwnedMediaReferences, MediaOwnershipError, normalizeManagedMediaPath, normalizeMediaReference, withOwnerMediaUrls } from "../lib/mediaAccess";
 
@@ -31,7 +32,7 @@ const MusicSchema = z.object({
   title:      z.string().min(1).max(300),
   artist:     z.string().min(1).max(300),
   artworkUrl: z.string().url().max(2000).nullable(),
-  duration:   z.number().int().min(1).max(75),
+  duration:   z.number().int().min(1).max(MAX_AUDIUS_TRACK_DURATION_SECONDS),
   genre:      z.string().max(100).nullable(),
   mood:       z.string().max(100).nullable(),
   streamUrl:  z.string().url().max(2000).refine(isExternalMusicStream, {
@@ -179,7 +180,11 @@ router.patch("/outfits/:id", requireAuth, async (req, res) => {
       await assertOwnedMediaReferences(userId, [music?.artworkUrl]);
       updateSet.music = music;
     }
-    if (parsed.data.isPublic    !== undefined) updateSet.isPublic    = parsed.data.isPublic;
+    if (parsed.data.isPublic !== undefined) {
+      updateSet.isPublic = parsed.data.isPublic;
+      updateSet.visibility = parsed.data.isPublic ? "public"
+        : sql`CASE WHEN ${outfitsTable.isPublic}=false AND ${outfitsTable.visibility}='friends' THEN 'friends' ELSE 'private' END`;
+    }
 
     const [updated] = await db
       .update(outfitsTable)

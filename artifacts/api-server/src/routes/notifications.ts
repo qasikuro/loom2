@@ -1,7 +1,8 @@
 import { db, notificationsTable, characterTable, followsTable } from "@workspace/db";
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { sendPushToTokens } from "../services/pushService";
 
 const router: IRouter = Router();
 
@@ -48,11 +49,15 @@ router.put("/notifications/read-all", requireAuth, async (req, res) => {
 });
 
 router.delete("/notifications/:id", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
   const { id } = req.params;
   try {
     await db
       .delete(notificationsTable)
-      .where(eq(notificationsTable.id, id as string));
+      .where(and(
+        eq(notificationsTable.id, id as string),
+        eq(notificationsTable.userId, userId),
+      ));
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete notification");
@@ -117,32 +122,18 @@ router.post("/notify/ping-friends", requireAuth, async (req, res) => {
 
     const validTokens = tokenRows
       .map(r => r.pushToken)
-      .filter((t): t is string => !!t && t.startsWith('ExponentPushToken'));
+      .filter((t): t is string => !!t && /^(?:Exponent|Expo)PushToken\[/.test(t));
 
     if (validTokens.length === 0) return res.json({ sent: 0 });
 
-    const chunks: string[][] = [];
-    for (let i = 0; i < validTokens.length; i += 100) {
-      chunks.push(validTokens.slice(i, i + 100));
-    }
-
-    for (const chunk of chunks) {
-      await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type':    'application/json',
-          'Accept':          'application/json',
-          'Accept-Encoding': 'gzip, deflate',
-        },
-        body: JSON.stringify(chunk.map(token => ({
-          to:    token,
-          title: '✨ Storigam',
-          body:  `${senderName} wants you online right now`,
-          data:  { type: 'ping', userId },
-          sound: 'default',
-        }))),
-      });
-    }
+    await sendPushToTokens(
+      validTokens.map(token => ({
+        token,
+        title: "✨ Storigam",
+        body: `${senderName} wants you online right now`,
+        data: { type: "ping", userId },
+      })),
+    );
 
     return res.json({ sent: validTokens.length });
   } catch (err) {

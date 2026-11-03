@@ -16,6 +16,10 @@ export interface ChatMessage {
   expression: string | null;
   /** @nullable */
   imageUri?: string | null;
+  /** @nullable */
+  videoUri?: string | null;
+  /** @nullable */
+  thumbnailUri?: string | null;
   isRead: boolean;
   createdAt: string;
   isOwn: boolean;

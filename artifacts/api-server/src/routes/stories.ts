@@ -3,14 +3,27 @@ import { and, count, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { MAX_AUDIUS_TRACK_DURATION_SECONDS } from "../services/audius";
 import { grantReward } from "../services/rewardService";
 import { syncConstellation } from "../services/constellationService";
 import { sendPushNotification, sendPushToTokens } from "../services/pushService";
 import * as cache from "../lib/cache";
 import { claimUpload } from "../lib/uploadTracking";
 import { assertOwnedMediaReferences, MediaOwnershipError, normalizeManagedMediaPath, normalizeMediaReference, withOwnerMediaUrls } from "../lib/mediaAccess";
+import { normalizePublicMediaFields, publicMediaUri } from "../lib/publicMediaUri";
+import { readableContentSql } from "../lib/contentVisibility";
 
 const router: IRouter = Router();
+
+const REPLY_STICKER_TYPES = [
+  "Hopeful", "Peaceful", "Lonely", "Romantic",
+  "Chaotic", "Adventurous", "Dreamy", "Soft",
+] as const;
+
+const ReplyStoryReactionSchema = z.object({
+  notificationId: z.string().uuid(),
+  stickerType: z.enum(REPLY_STICKER_TYPES),
+});
 
 function isExternalMusicStream(uri: string): boolean {
   if (normalizeManagedMediaPath(uri)) return false;
@@ -40,6 +53,9 @@ const OverlaySchema = z.object({
 const PanelSchema = z.object({
   id:               z.string(),
   text:             z.string(),
+  textFormat:       z.enum(['rich']).optional().nullable(),
+  articleBlock:     z.enum(['paragraph', 'heading', 'quote', 'bullet', 'image']).optional().nullable(),
+  articleEmphasis:  z.enum(['bold', 'italic']).optional().nullable(),
   imageUri:         z.string().optional().nullable(),
   bgPreset:         z.string().optional().nullable(),
   bubbleText:       z.string().optional().nullable(),
@@ -53,7 +69,7 @@ const MusicSchema = z.object({
   title:      z.string().min(1).max(300),
   artist:     z.string().min(1).max(300),
   artworkUrl: z.string().url().max(2000).nullable(),
-  duration:   z.number().int().min(1).max(3600),
+  duration:   z.number().int().min(1).max(MAX_AUDIUS_TRACK_DURATION_SECONDS),
   genre:      z.string().max(100).nullable(),
   mood:       z.string().max(100).nullable(),
   streamUrl:  z.string().url().max(2000).refine(isExternalMusicStream, {
@@ -71,6 +87,9 @@ function sanitizePanel(p: z.infer<typeof PanelSchema>) {
   return {
     id:               p.id,
     text:             p.text,
+    textFormat:       p.textFormat ?? undefined,
+    articleBlock:     p.articleBlock ?? undefined,
+    articleEmphasis:  p.articleEmphasis ?? undefined,
     imageUri:         safeImageUri(p.imageUri ?? null) ?? undefined,
     bgPreset:         p.bgPreset         ?? undefined,
     bubbleText:       p.bubbleText       ?? undefined,
@@ -285,8 +304,14 @@ router.post("/stories", requireAuth, async (req, res) => {
     // Fan-out notifications to followers (fire & forget, non-blocking)
     if (rest.isPublic) {
       fanOutStoryNotification(userId, created.id, rest.chapterTitle, req).catch(() => null);
-      // Invalidate discover cache for all followers — they may now see this new story
-      invalidateFollowerDiscoverCaches(userId).catch(() => null);
+      if (created.contentType === "video") {
+        // Discover normally excludes the viewer's own stories. Public videos
+        // are included in their Reels feed, so invalidate that personalized
+        // response as soon as a video is published.
+        cache.invalidate(`discover:${userId}`);
+      }
+      // Public stories can appear for any viewer, not just followers.
+      invalidateDiscoverCaches();
     }
 
     // Grant story creation reward (once per story ID) — await for client feedback
@@ -315,10 +340,11 @@ async function notifyAuthor(
 ) {
   try {
     const actorRows = await db
-      .select({ name: characterTable.name })
+      .select({ name: characterTable.name, isHidden: characterTable.isHidden })
       .from(characterTable)
       .where(eq(characterTable.userId, actorId))
       .limit(1);
+    if (actorRows[0]?.isHidden) return;
     const actorName = actorRows[0]?.name ?? "A sky child";
     await db.insert(notificationsTable).values({
       userId:    authorId,
@@ -333,14 +359,10 @@ async function notifyAuthor(
   }
 }
 
-async function invalidateFollowerDiscoverCaches(authorId: string): Promise<void> {
-  const followers = await db
-    .select({ followerId: followsTable.followerId })
-    .from(followsTable)
-    .where(eq(followsTable.followingId, authorId));
-  for (const { followerId } of followers) {
-    cache.invalidate(`discover:${followerId}`);
-  }
+function invalidateDiscoverCaches(): void {
+  // Discover is global public content personalized by viewer; any viewer may
+  // have cached this story, including people who do not follow its author.
+  cache.invalidate("discover:");
 }
 
 async function fanOutStoryNotification(
@@ -354,13 +376,13 @@ async function fanOutStoryNotification(
       db.select({ followerId: followsTable.followerId })
         .from(followsTable)
         .where(eq(followsTable.followingId, userId)),
-      db.select({ name: characterTable.name })
+      db.select({ name: characterTable.name, isHidden: characterTable.isHidden })
         .from(characterTable)
         .where(eq(characterTable.userId, userId))
         .limit(1),
     ]);
 
-    if (followers.length === 0) return;
+    if (followers.length === 0 || actorRows[0]?.isHidden) return;
 
     const actorName = actorRows[0]?.name ?? "A sky child";
 
@@ -397,9 +419,10 @@ async function fanOutStoryNotification(
   }
 }
 
-router.get("/stories/:id", requireAuth, async (req, res) => {
+router.get("/stories/:id", requireAuth, async (req, res, next) => {
   const userId = getUserId(req);
   const storyId = String(req.params.id);
+  if (storyId === "saved") return next();
   try {
     // Allow own stories OR public stories from public profiles (never hidden)
     const rows = await db
@@ -417,15 +440,19 @@ router.get("/stories/:id", requireAuth, async (req, res) => {
         .where(
           and(
             eq(storiesTable.id, storyId),
-            eq(storiesTable.isPublic, true),
+            readableContentSql(storiesTable.userId, userId, storiesTable.visibility, storiesTable.isPublic),
             eq(storiesTable.isHidden, false),
-            eq(characterTable.isPublic, true),
+            eq(characterTable.isBanned, false),
+            eq(characterTable.isHidden, false),
           ),
         )
         .limit(1);
 
       if (publicRows.length === 0) return res.status(404).json({ error: "Not found" });
       const counts = await fetchStickerCounts([storyId]);
+      // Public stories return canonical references. The media route rechecks
+      // current public visibility on every read; never mint an owner ticket
+      // for a different user's media.
       return res.json(serializeStory(publicRows[0].story, counts[storyId] ?? 0));
     }
     const counts = await fetchStickerCounts([storyId]);
@@ -472,7 +499,11 @@ router.patch("/stories/:id", requireAuth, async (req, res) => {
     if (parsed.data.description   !== undefined) updateSet.description   = parsed.data.description;
     if (parsed.data.mood          !== undefined) updateSet.mood          = parsed.data.mood;
     if (parsed.data.location      !== undefined) updateSet.location      = parsed.data.location;
-    if (parsed.data.isPublic      !== undefined) updateSet.isPublic      = parsed.data.isPublic;
+    if (parsed.data.isPublic !== undefined) {
+      updateSet.isPublic = parsed.data.isPublic;
+      updateSet.visibility = parsed.data.isPublic ? "public"
+        : sql`CASE WHEN ${storiesTable.isPublic}=false AND ${storiesTable.visibility}='friends' THEN 'friends' ELSE 'private' END`;
+    }
     if ('pageLayoutKey' in parsed.data)          updateSet.pageLayoutKey = parsed.data.pageLayoutKey ?? null;
     if (parsed.data.contentType  !== undefined) updateSet.contentType  = parsed.data.contentType;
     if ('music' in parsed.data) {
@@ -501,7 +532,7 @@ router.patch("/stories/:id", requireAuth, async (req, res) => {
       .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)))
       .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
-    invalidateFollowerDiscoverCaches(userId).catch(() => null);
+    invalidateDiscoverCaches();
     return res.json(withOwnerMediaUrls(serializeStory(updated), userId));
   } catch (err) {
     if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
@@ -517,7 +548,7 @@ router.delete("/stories/:id", requireAuth, async (req, res) => {
     await db
       .delete(storiesTable)
       .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)));
-    invalidateFollowerDiscoverCaches(userId).catch(() => null);
+    invalidateDiscoverCaches();
     return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Failed to delete story");
@@ -704,12 +735,16 @@ router.get("/stories/saved", requireAuth, async (req, res) => {
     const rows = await db
       .select({
         story:   storiesTable,
-        author:  { name: characterTable.name, username: characterTable.username, avatarUri: characterTable.name },
+        author:  { name: characterTable.name, username: characterTable.username, avatarUri: characterTable.avatarUri },
       })
       .from(storySavesTable)
       .innerJoin(storiesTable, eq(storiesTable.id, storySavesTable.storyId))
       .leftJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
-      .where(eq(storySavesTable.userId, userId))
+      .where(and(
+        eq(storySavesTable.userId, userId),
+        eq(storiesTable.isHidden, false),
+        readableContentSql(storiesTable.userId, userId, storiesTable.visibility, storiesTable.isPublic),
+      ))
       .orderBy(desc(storySavesTable.savedAt));
 
     if (rows.length === 0) return res.json([]);
@@ -752,11 +787,16 @@ router.get("/stories/saved", requireAuth, async (req, res) => {
         isFollowing:    false,
         panels:         panels,
         pageLayoutKey:  s.pageLayoutKey ?? undefined,
-        pages:          s.pages ?? undefined,
+        pages:          normalizePublicMediaFields(s.pages) ?? undefined,
+        contentType:    s.contentType ?? "story",
+        videoUri:       s.videoUri ? normalizeMediaReference(s.videoUri) : null,
+        thumbnailUri:   s.thumbnailUri ? normalizeMediaReference(s.thumbnailUri) : null,
+        music:          s.music ?? undefined,
       };
     });
 
-    return res.json(result);
+    res.set("Cache-Control", "private, no-store");
+    return res.json(withOwnerMediaUrls(result, userId));
   } catch (err) {
     req.log.error({ err }, "Failed to fetch saved stories");
     return res.status(500).json({ error: "Internal server error" });
@@ -790,6 +830,120 @@ router.post("/stories/:id/resonate", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to resonate story");
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/stories/:id/reaction-back", requireAuth, async (req, res) => {
+  const viewerId = getUserId(req);
+  const storyId = z.string().uuid().safeParse(req.params.id);
+  const body = ReplyStoryReactionSchema.safeParse(req.body);
+  if (!storyId.success || !body.success) {
+    return res.status(400).json({ error: "Invalid story reaction" });
+  }
+
+  try {
+    const result = await db.transaction(async tx => {
+      const [sourceNotification] = await tx
+        .select({
+          actorId: notificationsTable.actorId,
+          actorName: notificationsTable.actorName,
+        })
+        .from(notificationsTable)
+        .where(and(
+          eq(notificationsTable.id, body.data.notificationId),
+          eq(notificationsTable.userId, viewerId),
+          eq(notificationsTable.refId, storyId.data),
+          inArray(notificationsTable.type, ["witness", "resonate"]),
+        ))
+        .limit(1);
+
+      if (!sourceNotification || sourceNotification.actorId === viewerId) {
+        return { status: 404 as const, body: { error: "Reaction context not found" } };
+      }
+
+      const [story] = await tx
+        .select({
+          userId: storiesTable.userId,
+          chapterTitle: storiesTable.chapterTitle,
+        })
+        .from(storiesTable)
+        .where(eq(storiesTable.id, storyId.data))
+        .limit(1);
+
+      if (!story || story.userId !== viewerId) {
+        return { status: 404 as const, body: { error: "Reaction context not found" } };
+      }
+
+      const [reaction] = await tx
+        .insert(stickerReactionsTable)
+        .values({
+          fromUserId: viewerId,
+          toUserId: sourceNotification.actorId,
+          storyId: storyId.data,
+          stickerType: body.data.stickerType,
+        })
+        .onConflictDoNothing()
+        .returning({ id: stickerReactionsTable.id });
+
+      if (!reaction) {
+        const [existing] = await tx
+          .select({ toUserId: stickerReactionsTable.toUserId })
+          .from(stickerReactionsTable)
+          .where(and(
+            eq(stickerReactionsTable.fromUserId, viewerId),
+            eq(stickerReactionsTable.storyId, storyId.data),
+            eq(stickerReactionsTable.stickerType, body.data.stickerType),
+          ))
+          .limit(1);
+
+        if (existing?.toUserId !== sourceNotification.actorId) {
+          return { status: 409 as const, body: { error: "This sticker was already sent to someone else" } };
+        }
+
+        return {
+          status: 200 as const,
+          body: {
+            ok: true as const,
+            alreadySent: true,
+            recipientId: sourceNotification.actorId,
+            stickerType: body.data.stickerType,
+          },
+        };
+      }
+
+      const [sender] = await tx
+        .select({ name: characterTable.name, username: characterTable.username })
+        .from(characterTable)
+        .where(eq(characterTable.userId, viewerId))
+        .limit(1);
+      const actorName = sender?.username
+        ? `@${sender.username}`
+        : sender?.name ?? "Someone";
+
+      await tx.insert(notificationsTable).values({
+        userId: sourceNotification.actorId,
+        actorId: viewerId,
+        actorName,
+        type: "sticker",
+        refId: storyId.data,
+        title: `sent you a ${body.data.stickerType} sticker in response to "${story.chapterTitle}"`,
+      });
+
+      return {
+        status: 200 as const,
+        body: {
+          ok: true as const,
+          alreadySent: false,
+          recipientId: sourceNotification.actorId,
+          stickerType: body.data.stickerType,
+        },
+      };
+    });
+
+    return res.status(result.status).json(result.body);
+  } catch (err) {
+    req.log.error({ err }, "Failed to send notification reply reaction");
+    return res.status(500).json({ error: "Unable to send reaction" });
   }
 });
 
@@ -885,9 +1039,7 @@ async function sendPushForWitness(
 }
 
 function safeImageUri(uri: string | null | undefined): string | null {
-  if (!uri) return null;
-  if (uri.startsWith('file://') || uri.startsWith('data:') || uri.startsWith('blob:')) return null;
-  return uri;
+  return publicMediaUri(uri);
 }
 
 function normalizePanelMedia<T extends { imageUri?: string | null }>(panel: T): T {
@@ -946,11 +1098,11 @@ function serializeStory(row: typeof storiesTable.$inferSelect, stickerCount = 0)
     stickerCount,
     witnessMilestones: (row.witnessMilestones ?? []) as number[],
     pageLayoutKey:     row.pageLayoutKey ?? undefined,
-    pages:             row.pages ?? undefined,
+    pages:             normalizePublicMediaFields(row.pages) ?? undefined,
     createdAt:         row.createdAt.toISOString(),
     contentType:       (row.contentType ?? 'story') as 'story' | 'video',
-    videoUri:          row.videoUri ?? null,
-    thumbnailUri:      row.thumbnailUri ?? null,
+    videoUri:          publicMediaUri(row.videoUri),
+    thumbnailUri:      publicMediaUri(row.thumbnailUri),
     music:             row.music ?? null,
   };
 }

@@ -1,0 +1,125 @@
+<Rive version="1" kind="fragment">
+    <Artboard x="0" y="0" defaultStateMachineId="0:7" width="480" height="320" styleId="0:5" name="BoxClosed" id="0:2">
+        <LayoutComponentStyle name="Closed Box Style" id="0:5"/>
+        <StateMachine name="MemoryIdle" id="0:7">
+            <StateMachineLayer name="Layer 1" id="0:8">
+                <EntryState>
+                    <StateTransition stateToId="0:12"/>
+                </EntryState>
+                <AnimationState x="180" y="0" animationId="0:6" id="0:12"/>
+            </StateMachineLayer>
+        </StateMachine>
+        <Image x="240" y="174" scaleX="0.68" scaleY="0.68" assetId="0:60" name="Closed Memory Box" id="0:14"/>
+        <Image x="88" y="120" scaleX="0.55" scaleY="0.55" rotation="-0.28" assetId="0:62" name="Floating Petal Left" id="0:15"/>
+        <Image x="380" y="192" scaleX="0.42" scaleY="0.42" rotation="0.5" assetId="0:62" name="Floating Petal Right" id="0:16"/>
+        <LinearAnimation fps="30" duration="60" loopValue="loop" name="Closed Box Idle" id="0:6">
+            <KeyedObject objectId="0:14">
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="174" interpolationType="1"/>
+                    <KeyFrameDouble value="168" interpolationType="1" frame="30"/>
+                    <KeyFrameDouble value="174" interpolationType="1" frame="60"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:15">
+                <KeyedProperty propertyKey="13">
+                    <KeyFrameDouble value="88" interpolationType="1"/>
+                    <KeyFrameDouble value="108" interpolationType="1" frame="30"/>
+                    <KeyFrameDouble value="88" interpolationType="1" frame="60"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="120" interpolationType="1"/>
+                    <KeyFrameDouble value="104" interpolationType="1" frame="30"/>
+                    <KeyFrameDouble value="120" interpolationType="1" frame="60"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="-0.28" interpolationType="1"/>
+                    <KeyFrameDouble value="0.2" interpolationType="1" frame="30"/>
+                    <KeyFrameDouble value="-0.28" interpolationType="1" frame="60"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:16">
+                <KeyedProperty propertyKey="13">
+                    <KeyFrameDouble value="380" interpolationType="1"/>
+                    <KeyFrameDouble value="360" interpolationType="1" frame="30"/>
+                    <KeyFrameDouble value="380" interpolationType="1" frame="60"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="192" interpolationType="1"/>
+                    <KeyFrameDouble value="174" interpolationType="1" frame="30"/>
+                    <KeyFrameDouble value="192" interpolationType="1" frame="60"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+    </Artboard>
+
+    <Artboard x="520" y="0" defaultStateMachineId="0:107" width="480" height="320" styleId="0:105" name="BoxOpen" id="0:102">
+        <LayoutComponentStyle name="Open Box Style" id="0:105"/>
+        <StateMachine name="MemoryReveal" id="0:107">
+            <StateMachineLayer name="Layer 1" id="0:108">
+                <EntryState>
+                    <StateTransition stateToId="0:112"/>
+                </EntryState>
+                <AnimationState x="180" y="0" animationId="0:106" id="0:112"/>
+            </StateMachineLayer>
+        </StateMachine>
+        <Image x="240" y="174" scaleX="0.78" scaleY="0.78" assetId="0:61" name="Open Memory Box" id="0:114"/>
+        <Image x="104" y="115" scaleX="0.48" scaleY="0.48" rotation="-0.2" assetId="0:62" name="Petal Left" id="0:115"/>
+        <Image x="372" y="186" scaleX="0.42" scaleY="0.42" rotation="0.45" assetId="0:62" name="Petal Right" id="0:116"/>
+        <Image x="328" y="78" scaleX="0.22" scaleY="0.22" rotation="0.14" assetId="0:63" name="Memory Card Glimmer" id="0:117"/>
+        <LinearAnimation fps="30" duration="72" loopValue="loop" name="Open Box Drift" id="0:106">
+            <KeyedObject objectId="0:114">
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="174" interpolationType="1"/>
+                    <KeyFrameDouble value="168" interpolationType="1" frame="36"/>
+                    <KeyFrameDouble value="174" interpolationType="1" frame="72"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="0" interpolationType="1"/>
+                    <KeyFrameDouble value="-0.025" interpolationType="1" frame="36"/>
+                    <KeyFrameDouble value="0" interpolationType="1" frame="72"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:115">
+                <KeyedProperty propertyKey="13">
+                    <KeyFrameDouble value="104" interpolationType="1"/>
+                    <KeyFrameDouble value="126" interpolationType="1" frame="36"/>
+                    <KeyFrameDouble value="104" interpolationType="1" frame="72"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="115" interpolationType="1"/>
+                    <KeyFrameDouble value="96" interpolationType="1" frame="36"/>
+                    <KeyFrameDouble value="115" interpolationType="1" frame="72"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="-0.2" interpolationType="1"/>
+                    <KeyFrameDouble value="0.26" interpolationType="1" frame="36"/>
+                    <KeyFrameDouble value="-0.2" interpolationType="1" frame="72"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:116">
+                <KeyedProperty propertyKey="13">
+                    <KeyFrameDouble value="372" interpolationType="1"/>
+                    <KeyFrameDouble value="354" interpolationType="1" frame="36"/>
+                    <KeyFrameDouble value="372" interpolationType="1" frame="72"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="186" interpolationType="1"/>
+                    <KeyFrameDouble value="168" interpolationType="1" frame="36"/>
+                    <KeyFrameDouble value="186" interpolationType="1" frame="72"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:117">
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="0.14" interpolationType="1"/>
+                    <KeyFrameDouble value="-0.12" interpolationType="1" frame="36"/>
+                    <KeyFrameDouble value="0.14" interpolationType="1" frame="72"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+    </Artboard>
+
+    <ImageAsset file="../../assets/teyvat/memory_box_closed.png" name="Memory Box Closed" id="0:60"/>
+    <ImageAsset file="../../assets/teyvat/memory_box_open.png" name="Memory Box Open" id="0:61"/>
+    <ImageAsset file="../../assets/teyvat/sakura_petal.png" name="Sakura Petal" id="0:62"/>
+    <ImageAsset file="../../assets/teyvat/memory_card_back.png" name="Memory Card Back" id="0:63"/>
+</Rive>

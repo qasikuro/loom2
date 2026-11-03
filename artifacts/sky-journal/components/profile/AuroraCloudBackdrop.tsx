@@ -159,7 +159,7 @@ export default function AuroraCloudBackdrop() {
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
   artwork: {
@@ -170,6 +170,6 @@ const styles = StyleSheet.create({
     right: -8,
   },
   image: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
 });
