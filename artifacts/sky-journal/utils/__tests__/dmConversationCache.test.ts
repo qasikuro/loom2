@@ -61,6 +61,41 @@ describe('DM conversation cache', () => {
     expect(getDmConversationCache('prefetch-account', 'prefetch-partner')).toHaveLength(1);
   });
 
+  it('drops malformed render fields without rejecting healthy messages', async () => {
+    const result = await fetchDmConversation(
+      'safe-account',
+      'safe-partner',
+      async () => [
+        {
+          ...message('valid', 'safe-account', 'safe-partner'),
+          content: { unexpected: 'object' } as unknown as string,
+          imageUri: 12 as unknown as string,
+          videoUri: 'media://safe-video',
+        },
+        {
+          ...message('invalid-date', 'safe-account', 'safe-partner'),
+          createdAt: 'not-a-date',
+        },
+        {
+          ...message('empty-payload', 'safe-account', 'safe-partner'),
+          content: { unsupported: true } as unknown as string,
+        },
+        {
+          ...message('wrong-conversation', 'other-account', 'safe-partner'),
+        },
+      ],
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      id: 'valid',
+      content: null,
+      imageUri: null,
+      videoUri: 'media://safe-video',
+      isOwn: true,
+    });
+  });
+
   it('tracks first open and excludes unsent optimistic messages from the cache', () => {
     rememberDmConversation('open-account', 'open-partner', [
       message('saved', 'open-account', 'open-partner'),

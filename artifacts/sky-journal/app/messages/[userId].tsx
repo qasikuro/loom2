@@ -23,6 +23,7 @@ import {
   saveDmOutbox,
   wasDmConversationOpened,
   type DmOutboxItem,
+  normalizeDmConversationMessage,
   type DmCachedMessage,
 } from '@/utils/dmConversationCache';
 import { mergeChatMessages, upsertChatMessages } from '@/utils/chatMessageHistory';
@@ -165,6 +166,11 @@ function fmtDate(iso: string, t: (key: string) => string) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+function routeString(value: string | string[] | undefined): string | undefined {
+  if (typeof value === 'string') return value;
+  return Array.isArray(value) ? value.find(item => typeof item === 'string') : undefined;
+}
+
 function outboxMessage(
   accountId: string,
   partnerId: string,
@@ -300,11 +306,18 @@ const DmMessageCell = React.memo(function DmMessageCell({
   }
 
   const msg = item.msg;
-  const hasPhoto = !!msg.imageUri;
-  const hasVideo = !!msg.videoUri;
+  const content = typeof msg.content === 'string' ? msg.content : '';
+  const imageUri = typeof msg.imageUri === 'string' ? msg.imageUri : null;
+  const videoUri = typeof msg.videoUri === 'string' ? msg.videoUri : null;
+  const thumbnailUri = typeof msg.thumbnailUri === 'string' ? msg.thumbnailUri : null;
+  const createdAt = typeof msg.createdAt === 'string' ? msg.createdAt : '';
+  const isOwn = msg.isOwn === true;
+  const expression = typeof msg.expression === 'string' ? msg.expression : null;
+  const hasPhoto = !!imageUri;
+  const hasVideo = !!videoUri;
   const hasMedia = hasPhoto || hasVideo;
   const deleteMessage = () => onDelete(msg);
-  if (msg.expression) {
+  if (expression) {
     return (
       <StickerBubble
         msg={msg}
@@ -318,8 +331,8 @@ const DmMessageCell = React.memo(function DmMessageCell({
     );
   }
   return (
-    <View testID={`chat-message-${msg.id}`} style={[styles.msgRow, msg.isOwn ? styles.msgRowOwn : styles.msgRowOther]}>
-      {!msg.isOwn && (
+    <View testID={`chat-message-${msg.id}`} style={[styles.msgRow, isOwn ? styles.msgRowOwn : styles.msgRowOther]}>
+      {!isOwn && (
         <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
           {avatarUri
             ? <Image source={{ uri: avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -329,50 +342,50 @@ const DmMessageCell = React.memo(function DmMessageCell({
       <TouchableOpacity
         style={[
           styles.bubble,
-          msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
-          msg.isOwn ? { backgroundColor: colors.own } : { backgroundColor: colors.other, borderColor: colors.otherBorder },
+          isOwn ? styles.bubbleOwn : styles.bubbleOther,
+          isOwn ? { backgroundColor: colors.own } : { backgroundColor: colors.other, borderColor: colors.otherBorder },
           hasMedia && styles.bubblePhoto,
         ]}
         onLongPress={deleteMessage}
         onPress={msg.deliveryState === 'failed'
           ? () => onRetry(msg.id)
-          : hasPhoto ? () => onOpenPhoto(msg.imageUri!)
-            : hasVideo ? () => onOpenVideo(msg.videoUri!) : undefined}
+          : hasPhoto ? () => onOpenPhoto(imageUri!)
+            : hasVideo ? () => onOpenVideo(videoUri!) : undefined}
         accessibilityRole={hasPhoto ? 'imagebutton' : hasVideo ? 'button' : undefined}
         accessible
         accessibilityLabel={hasPhoto
-          ? `${msg.isOwn ? 'You' : (name ?? 'Partner')} sent a photo${msg.content ? `: ${msg.content}` : ''}, ${fmtTime(msg.createdAt)}`
+          ? `${isOwn ? 'You' : (name ?? 'Partner')} sent a photo${content ? `: ${content}` : ''}, ${fmtTime(createdAt)}`
           : hasVideo
-            ? `${msg.isOwn ? 'You' : (name ?? 'Partner')} sent a video${msg.content ? `: ${msg.content}` : ''}, ${fmtTime(msg.createdAt)}`
-          : `${msg.isOwn ? 'You' : (name ?? 'Partner')}: ${msg.content ?? ''}, ${fmtTime(msg.createdAt)}`}
+            ? `${isOwn ? 'You' : (name ?? 'Partner')} sent a video${content ? `: ${content}` : ''}, ${fmtTime(createdAt)}`
+          : `${isOwn ? 'You' : (name ?? 'Partner')}: ${content}, ${fmtTime(createdAt)}`}
         accessibilityHint={hasPhoto ? 'Opens the photo. Hold for message options.'
           : hasVideo ? 'Opens the video. Hold for message options.'
-            : msg.isOwn ? 'Hold for message options.' : undefined}
+            : isOwn ? 'Hold for message options.' : undefined}
         activeOpacity={0.85}
         delayLongPress={350}
       >
-        {msg.imageUri && (
+        {imageUri && (
           <ChatMessagePhoto
-            uri={msg.imageUri}
+            uri={imageUri}
             width={Math.min(contentWidth * 0.62, 280)}
-            onOpen={() => onOpenPhoto(msg.imageUri!)}
+            onOpen={() => onOpenPhoto(imageUri)}
             onLongPress={deleteMessage}
           />
         )}
-        {msg.videoUri && (
+        {videoUri && (
           <ChatMessageVideo
-            thumbnailUri={msg.thumbnailUri}
+            thumbnailUri={thumbnailUri}
             width={Math.min(contentWidth * 0.62, 280)}
             height={Math.min(contentWidth * 0.36, 170)}
           />
         )}
-        {!!msg.content && (
-          <Text maxFontSizeMultiplier={1.35} style={[styles.bubbleText, hasMedia && styles.photoCaption, { color: msg.isOwn ? '#FBF9FF' : colors.otherText }]}>
-            {msg.content}
+        {!!content && (
+          <Text maxFontSizeMultiplier={1.35} style={[styles.bubbleText, hasMedia && styles.photoCaption, { color: isOwn ? '#FBF9FF' : colors.otherText }]}>
+            {content}
           </Text>
         )}
-        <Text maxFontSizeMultiplier={1.2} style={[styles.bubbleTime, hasMedia && styles.photoCaption, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : colors.sub }]}>
-          {fmtTime(msg.createdAt)}
+        <Text maxFontSizeMultiplier={1.2} style={[styles.bubbleTime, hasMedia && styles.photoCaption, { color: isOwn ? 'rgba(255,255,255,0.68)' : colors.sub }]}>
+          {fmtTime(createdAt)}
         </Text>
         {msg.deliveryState && (
           <Text style={[styles.deliveryStatus, { color: msg.deliveryState === 'failed' ? '#FFB0B0' : msg.isOwn ? 'rgba(255,255,255,0.72)' : colors.sub }]}>
@@ -403,7 +416,8 @@ const DmMessageCell = React.memo(function DmMessageCell({
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function MessagesScreen() {
   const { userId: accountId } = useAuth();
-  const { userId: partnerId } = useLocalSearchParams<{ userId: string }>();
+  const { userId: rawPartnerId } = useLocalSearchParams<{ userId?: string | string[] }>();
+  const partnerId = routeString(rawPartnerId) ?? '';
   const screenKey = JSON.stringify([accountId, partnerId]);
   // Keyboard-controller provider scoped to this screen's content only.
   return (
@@ -416,14 +430,27 @@ export default function MessagesScreen() {
 
 function MessagesScreenContent() {
   const { t } = useTranslation();
-  const { userId, name, handle, avatarUri, isGuide, deleted } = useLocalSearchParams<{
-    userId:     string;
-    name?:      string;
-    handle?:    string;
-    avatarUri?: string;
-    isGuide?:   string;
-    deleted?:   string;
+  const {
+    userId: rawUserId,
+    name: rawName,
+    handle: rawHandle,
+    avatarUri: rawAvatarUri,
+    isGuide: rawIsGuide,
+    deleted: rawDeleted,
+  } = useLocalSearchParams<{
+    userId?:     string | string[];
+    name?:       string | string[];
+    handle?:     string | string[];
+    avatarUri?:  string | string[];
+    isGuide?:    string | string[];
+    deleted?:    string | string[];
   }>();
+  const userId = routeString(rawUserId) ?? '';
+  const name = routeString(rawName);
+  const handle = routeString(rawHandle);
+  const avatarUri = routeString(rawAvatarUri);
+  const isGuide = routeString(rawIsGuide);
+  const deleted = routeString(rawDeleted);
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const c = useColors();
@@ -1427,7 +1454,10 @@ function MessagesScreenContent() {
   const listData = useMemo(() => {
     const items: ListItem[] = [];
     let lastDate = '';
-    for (const msg of messages) {
+    const safeMessages = messages
+      .map(message => normalizeDmConversationMessage(message, myUserId ?? '', userId ?? ''))
+      .filter((message): message is Message => message !== null);
+    for (const msg of safeMessages) {
       const date = fmtDate(msg.createdAt, t);
       if (date !== lastDate) {
         items.push({ type: 'date', date, key: `date-${date}-${msg.id}` });
@@ -1438,7 +1468,7 @@ function MessagesScreenContent() {
     // Newest-first for the inverted list; each date row follows its group so it
     // renders visually above that day's messages.
     return items.reverse();
-  }, [messages, t]);
+  }, [messages, myUserId, userId, t]);
   const partnerInitial = partnerDisplayName.charAt(0).toUpperCase();
   const handleOpenPhoto = useCallback((uri: string) => setViewingPhoto(uri), []);
   const handleOpenVideo = useCallback((uri: string) => setViewingVideo(uri), []);

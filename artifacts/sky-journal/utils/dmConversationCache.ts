@@ -237,19 +237,73 @@ function saveMemory(key: string, messages: DmCachedMessage[]): void {
   }
 }
 
-function isMessageForConversation(
+export function normalizeDmConversationMessage(
   value: unknown,
   accountId: string,
   partnerId: string,
-): value is DmCachedMessage {
-  if (!value || typeof value !== 'object') return false;
+): DmCachedMessage | null {
+  if (!value || typeof value !== 'object') return null;
   const message = value as Partial<DmCachedMessage>;
-  return typeof message.id === 'string'
-    && typeof message.fromUserId === 'string'
-    && typeof message.toUserId === 'string'
-    && ((message.fromUserId === accountId && message.toUserId === partnerId)
+  if (
+    typeof message.id !== 'string'
+    || !message.id
+    || typeof message.fromUserId !== 'string'
+    || typeof message.toUserId !== 'string'
+    || !((message.fromUserId === accountId && message.toUserId === partnerId)
       || (message.fromUserId === partnerId && message.toUserId === accountId))
-    && typeof message.createdAt === 'string';
+    || typeof message.createdAt !== 'string'
+    || !Number.isFinite(Date.parse(message.createdAt))
+  ) return null;
+
+  const isOptionalString = (candidate: unknown): boolean =>
+    candidate === null || typeof candidate === 'string';
+  const hasValidDeliveryState = message.deliveryState === undefined
+    || message.deliveryState === 'sending'
+    || message.deliveryState === 'queued'
+    || message.deliveryState === 'failed';
+  if (
+    isOptionalString(message.content)
+    && isOptionalString(message.imageUri)
+    && isOptionalString(message.videoUri)
+    && isOptionalString(message.thumbnailUri)
+    && isOptionalString(message.expression)
+    && typeof message.isRead === 'boolean'
+    && message.isOwn === (message.fromUserId === accountId)
+    && hasValidDeliveryState
+  ) return value as DmCachedMessage;
+
+  // SecureStore data and network JSON are runtime boundaries, not trusted TS
+  // values. Normalize optional renderable fields so one malformed row cannot
+  // throw from a React Native Text or media component and replace the whole app.
+  const safeString = (candidate: unknown): string | null =>
+    typeof candidate === 'string' ? candidate : null;
+  const content = safeString(message.content);
+  const imageUri = safeString(message.imageUri);
+  const videoUri = safeString(message.videoUri);
+  const thumbnailUri = safeString(message.thumbnailUri);
+  const expression = safeString(message.expression);
+  if (!content && !imageUri && !videoUri && !expression) return null;
+
+  const deliveryState = message.deliveryState === 'sending'
+    || message.deliveryState === 'queued'
+    || message.deliveryState === 'failed'
+    ? message.deliveryState
+    : undefined;
+
+  return {
+    id: message.id,
+    fromUserId: message.fromUserId,
+    toUserId: message.toUserId,
+    content,
+    imageUri,
+    videoUri,
+    thumbnailUri,
+    expression: expression as DmCachedMessage['expression'],
+    isRead: message.isRead === true,
+    createdAt: message.createdAt,
+    isOwn: message.fromUserId === accountId,
+    ...(deliveryState ? { deliveryState } : {}),
+  };
 }
 
 function isOutboxItem(value: unknown): value is DmOutboxItem {
@@ -293,8 +347,9 @@ export async function hydrateDmConversationCache(
     const freshMemory = getDmConversationCache(accountId, partnerId);
     if (conversations.has(key)) return freshMemory;
     const messages = Array.isArray(stored)
-      ? stored.filter(item => isMessageForConversation(item, accountId, partnerId))
-        .map(item => ({ ...item, isOwn: item.fromUserId === accountId }))
+      ? stored
+        .map(item => normalizeDmConversationMessage(item, accountId, partnerId))
+        .filter((item): item is DmCachedMessage => item !== null)
       : [];
     if (messages.length) saveMemory(key, messages);
     return messages;
@@ -336,7 +391,10 @@ export function fetchDmConversation(
     .then(messages => {
       if (inFlight.get(key) !== entry) return [];
       const result = Array.isArray(messages)
-        ? messages.filter(message => isMessageForConversation(message, accountId!, partnerId!)) : [];
+        ? messages
+          .map(message => normalizeDmConversationMessage(message, accountId!, partnerId!))
+          .filter((message): message is DmCachedMessage => message !== null)
+        : [];
       saveMemory(key, result);
       return result;
     })
@@ -357,8 +415,9 @@ export function rememberDmConversation(
   const key = cacheKey(accountId, partnerId);
   if (!key || !accountId || !partnerId) return;
   const confirmed = messages
-    .filter(message => !message.id.startsWith('temp-') && !message.deliveryState
-      && isMessageForConversation(message, accountId, partnerId))
+    .map(message => normalizeDmConversationMessage(message, accountId, partnerId))
+    .filter((message): message is DmCachedMessage =>
+      message !== null && !message.id.startsWith('temp-') && !message.deliveryState)
     .slice(-MAX_CACHED_MESSAGES);
   saveMemory(key, confirmed);
   const signature = JSON.stringify(confirmed);
