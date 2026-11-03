@@ -37,7 +37,7 @@ interface Props {
   onReport: (id: string) => void;
 }
 
-function ReelAction({ name, label, active, count, onPress, colors, reduceMotion, compact = false, haptics = true, top }: {
+function ReelAction({ name, label, active, count, onPress, colors, reduceMotion, compact = false, haptics = true }: {
   name: string;
   label: string;
   active?: boolean;
@@ -47,7 +47,6 @@ function ReelAction({ name, label, active, count, onPress, colors, reduceMotion,
   reduceMotion: boolean;
   compact?: boolean;
   haptics?: boolean;
-  top?: number;
 }) {
   const pressScale = useSharedValue(1);
   const haloOpacity = useSharedValue(active ? 0.24 : 0);
@@ -97,7 +96,7 @@ function ReelAction({ name, label, active, count, onPress, colors, reduceMotion,
 
   return (
     <TouchableOpacity
-      style={compact ? [styles.muteButton, top !== undefined && { top }] : styles.action}
+      style={compact ? styles.muteButton : styles.action}
       onPress={() => { if (haptics) void Haptics.selectionAsync(); onPress(); }}
       onPressIn={pressIn}
       onPressOut={pressOut}
@@ -232,21 +231,19 @@ export const ReelCard = React.memo(function ReelCard({
         </TouchableOpacity>
       </View>
 
-      {isVideo && (
-        <ReelAction
-          name={muted ? 'volume-x' : 'volume-2'}
-          label={t(muted ? 'reels.unmute' : 'reels.mute')}
-          active={muted}
-          onPress={onMuteToggle}
-          colors={colors}
-          reduceMotion={reduceMotion}
-          compact
-          haptics={false}
-          top={topInset + 40}
-        />
-      )}
-
       <View style={styles.actions}>
+        {isVideo && (
+          <ReelAction
+            name={muted ? 'volume-x' : 'volume-2'}
+            label={t(muted ? 'reels.unmute' : 'reels.mute')}
+            active={muted}
+            onPress={onMuteToggle}
+            colors={colors}
+            reduceMotion={reduceMotion}
+            compact
+            haptics={false}
+          />
+        )}
         <ReelAction name="heart" label={t(post.liked ? 'reels.liked' : 'reels.like')} count={post.likeCount} active={post.liked} onPress={() => onLike(post.id)} colors={colors} reduceMotion={reduceMotion} />
         <ReelAction name="message-circle" label={t('reels.comments', { defaultValue: 'Comment' })} onPress={() => onComment(post)} colors={colors} reduceMotion={reduceMotion} />
         <ReelAction name="share-2" label={t('reels.share')} onPress={() => onShare(post)} colors={colors} reduceMotion={reduceMotion} />
@@ -290,7 +287,7 @@ const styles = StyleSheet.create({
   authorName: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Satoshi-Bold', textShadowColor: '#000', textShadowRadius: 4 },
   chapterPill: { backgroundColor: 'rgba(8,6,24,0.66)', paddingHorizontal: 10, height: 31, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 4 },
   chapterText: { color: '#FFFFFF', fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5 },
-  muteButton: { position: 'absolute', right: 16, alignItems: 'center', justifyContent: 'center' },
+  muteButton: { width: 76, alignItems: 'center', justifyContent: 'center' },
   actions: { position: 'absolute', right: 14, bottom: 106, alignItems: 'center', gap: 12 },
   action: { alignItems: 'center', width: 76 },
   iconStage: { alignItems: 'center', justifyContent: 'center' },

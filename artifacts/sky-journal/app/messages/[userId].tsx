@@ -44,7 +44,6 @@ import {
   Alert,
   Animated,
   FlatList,
-  Keyboard,
   Platform,
   type ImageSourcePropType,
   ScrollView,
@@ -1034,13 +1033,6 @@ function MessagesScreenContent() {
   // Inverted list: offset 0 is the newest message, so the keyboard resizing the
   // list never needs a scrollToEnd — the bottom anchor holds by construction.
   const inputRef = useRef<TextInput>(null);
-  const [kbOpen, setKbOpen] = useState(false);
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKbOpen(true));
-    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKbOpen(false));
-    return () => { show.remove(); hide.remove(); };
-  }, []);
   const jumpToNewest = useCallback(() => {
     flatRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
@@ -1767,7 +1759,7 @@ function MessagesScreenContent() {
             busy={sending}
             onRemove={() => setVideoDraft(null)}
           />}
-           <View style={[styles.inputBar, { width: contentWidth, paddingBottom: kbOpen && Platform.OS !== 'web' ? 6 : bottomPad }]}>
+           <View style={[styles.inputBar, { width: contentWidth, paddingBottom: bottomPad }]}>
             <TouchableOpacity
               style={[styles.stickerToggleBtn, { backgroundColor: isDark ? 'rgba(155,120,255,0.17)' : 'rgba(107,78,232,0.10)', borderColor: th.border }]} onPress={pickPhoto}
               hitSlop={4}

@@ -79,7 +79,10 @@ function notificationIcon(type: ServerNotification['type']): IconName {
     case 'resonate':
       return 'heart';
     case 'follow':
+    case 'friend_request':
       return 'user-plus';
+    case 'friend_accepted':
+      return 'user-check';
     case 'message':
       return 'message-circle';
     case 'new_outfit':
@@ -493,7 +496,7 @@ export function NotificationsExperience({
                     style={styles.detailHeroShade}
                   >
                     <View style={[styles.detailHeart, { backgroundColor: `${accent}E8` }]}>
-                      <Icon name={activeNotification.type === 'follow' ? 'user-plus' : 'heart'} size={27} color="#fff" />
+                      <Icon name={notificationIcon(activeNotification.type)} size={27} color="#fff" />
                     </View>
                     <View style={styles.detailCopy}>
                       <Text style={styles.detailEyebrow}>

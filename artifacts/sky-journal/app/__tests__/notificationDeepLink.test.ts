@@ -174,6 +174,16 @@ describe('resolveNotificationRoute — type-based routing (no data.url)', () => 
     expect(push).toHaveBeenCalledWith('/messages/thread-5');
   });
 
+  it('routes friend requests to the friends inbox', () => {
+    resolveNotificationRoute(push, { type: 'friend_request', refId: 'request-5' });
+    expect(push).toHaveBeenCalledWith('/friends');
+  });
+
+  it('routes accepted friend requests to the accepting friend profile', () => {
+    resolveNotificationRoute(push, { type: 'friend_accepted', actorId: 'friend-5' });
+    expect(push).toHaveBeenCalledWith('/user/friend-5');
+  });
+
   it('does NOT push for "follow" when refId is absent', () => {
     resolveNotificationRoute(push, { type: 'follow' });
     expect(push).not.toHaveBeenCalled();

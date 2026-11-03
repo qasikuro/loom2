@@ -1,10 +1,14 @@
 import { Icon } from '@/components/Icon';
 import { SecureImage as Image } from '@/components/SecureImage';
-import { useColors } from '@/hooks/useColors';
+import { useSecureMediaUri } from '@/hooks/useSecureMediaUri';
+import { Button as KindnessButton } from '@workspace/storigam-kindness/components/native/button';
+import { nativeTheme } from '@workspace/storigam-kindness/lib/native-theme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Audio, ResizeMode, Video } from 'expo-av';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createTeyvatViewerSession } from './teyvatViewerSession';
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   FlatList,
@@ -27,8 +31,17 @@ export interface TeyvatMemoryGalleryItem {
   title: string;
   subtitle?: string;
   imageUri?: string | null;
+  mediaType?: 'image' | 'video';
+  videoUri?: string | null;
   fallbackIcon?: string;
   onSelect?: () => void;
+  onDelete?: () => void;
+  onEdit?: () => void;
+  editLabel?: string;
+  onViewAsOthers?: () => void;
+  viewAsOthersLabel?: string;
+  deleteLabel?: string;
+  confirmDeleteLabel?: string;
 }
 
 export interface TeyvatMemoryGalleryOverlayProps {
@@ -78,13 +91,28 @@ export function TeyvatMemoryGalleryOverlay({
   onClose,
   renderBox,
 }: TeyvatMemoryGalleryOverlayProps) {
-  const colors = useColors();
+  const colors = nativeTheme.dark;
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [filter, setFilter] = useState<FilterId>(initialFilter);
   const wasVisible = useRef(false);
   const [selection, setSelection] = useState<{ item: TeyvatMemoryGalleryItem; session: number } | null>(null);
   const selected = selection?.item;
+  const selectedVideoUri = selected?.mediaType === 'video' ? selected.videoUri : null;
+  const selectedVideoPosterUri = selected?.mediaType === 'video' ? selected.imageUri : null;
+  const { uri: playableVideoUri, renew: renewVideoUri, error: videoUriError } = useSecureMediaUri(
+    selectedVideoUri,
+    { waitForAuthorization: true },
+  );
+  const { uri: playablePosterUri } = useSecureMediaUri(
+    selectedVideoPosterUri,
+    { waitForAuthorization: true },
+  );
+  const [videoReady, setVideoReady] = useState(false);
+  const [videoPlaybackError, setVideoPlaybackError] = useState(false);
+  const [videoMuted, setVideoMuted] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [contentWidth, setContentWidth] = useState(width);
   const viewerSession = useRef(createTeyvatViewerSession()).current;
   const entranceAnimation = useRef<Animated.CompositeAnimation | null>(null);
@@ -106,6 +134,23 @@ export function TeyvatMemoryGalleryOverlay({
     [items, activeFilter],
   );
   const selectedSession = selection?.session;
+  useEffect(() => {
+    setVideoReady(false);
+    setVideoPlaybackError(false);
+    setVideoMuted(false);
+    setConfirmDeleteId(null);
+    if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    return () => {
+      if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    };
+  }, [selected?.id, visible]);
+  useEffect(() => {
+    if (!visible || !selectedVideoUri) return;
+    void Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: true,
+    }).catch(() => null);
+  }, [selectedVideoUri, visible]);
   useLayoutEffect(() => {
     // Do not accept another grid press until the previous native layer is gone.
     if (!selection) viewerSession.commitClosed();
@@ -192,6 +237,19 @@ export function TeyvatMemoryGalleryOverlay({
       if (viewerSession.finishClose(selectedSession)) setSelection(null);
     });
   }, [backdropOpacity, dragY, height, memoryReveal, selectedSession, viewerSession]);
+  const handleDeleteSelected = useCallback(() => {
+    if (!selected?.onDelete) return;
+    if (confirmDeleteId !== selected.id) {
+      setConfirmDeleteId(selected.id);
+      if (deleteTimer.current) clearTimeout(deleteTimer.current);
+      deleteTimer.current = setTimeout(() => setConfirmDeleteId(null), 3000);
+      return;
+    }
+    if (deleteTimer.current) clearTimeout(deleteTimer.current);
+    setConfirmDeleteId(null);
+    selected.onDelete();
+    closeSelected();
+  }, [closeSelected, confirmDeleteId, selected]);
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -255,7 +313,7 @@ export function TeyvatMemoryGalleryOverlay({
       activeOpacity={0.88}
       onPress={() => selectItem(item)}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${categoryLabel(item.category)}: ${item.title}`}
+      accessibilityLabel={`Open ${categoryLabel(item.category)}${item.mediaType === 'video' ? ' video' : ''}: ${item.title}`}
       testID={`teyvat-memory-item-${item.id}`}
     >
       {item.imageUri ? (
@@ -279,6 +337,11 @@ export function TeyvatMemoryGalleryOverlay({
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
+      {item.mediaType === 'video' && (
+        <View style={styles.videoBadge} pointerEvents="none">
+          <Icon name="play" size={12} color="#FFF" />
+        </View>
+      )}
     </TouchableOpacity>
   ), [colors.muted, selectItem, tileWidth]);
 
@@ -340,9 +403,9 @@ export function TeyvatMemoryGalleryOverlay({
             data={filteredItems}
             numColumns={columns}
             initialNumToRender={columns * 3}
-            maxToRenderPerBatch={columns * 5}
-            updateCellsBatchingPeriod={32}
-            windowSize={7}
+            maxToRenderPerBatch={columns * 2}
+            updateCellsBatchingPeriod={50}
+            windowSize={5}
             renderItem={renderItem}
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
@@ -462,7 +525,76 @@ export function TeyvatMemoryGalleryOverlay({
                 },
               ]}
             >
-              {selected.imageUri ? (
+              {selected.mediaType === 'video' ? (
+                selected.videoUri ? (
+                  playableVideoUri && !videoUriError && !videoPlaybackError ? (
+                    <View style={[styles.videoFrame, { maxHeight: height * 0.68 }]}>
+                      <Video
+                        key={`teyvat-video-${selected.id}-${playableVideoUri}`}
+                        source={{ uri: playableVideoUri }}
+                        posterSource={playablePosterUri ? { uri: playablePosterUri } : undefined}
+                        usePoster={!!playablePosterUri}
+                        style={styles.videoSurface}
+                        resizeMode={ResizeMode.CONTAIN}
+                        shouldPlay
+                        isLooping
+                        isMuted={videoMuted}
+                        volume={1}
+                        useNativeControls
+                        onLoadStart={() => setVideoReady(false)}
+                        onReadyForDisplay={() => setVideoReady(true)}
+                        onError={() => {
+                          setVideoReady(false);
+                          setVideoPlaybackError(true);
+                        }}
+                        accessibilityLabel={`${selected.title} video`}
+                      />
+                      <TouchableOpacity
+                        style={styles.videoSoundButton}
+                        onPress={() => setVideoMuted(value => !value)}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel={videoMuted ? 'Turn video sound on' : 'Mute video'}
+                        accessibilityState={{ selected: videoMuted }}
+                        testID="teyvat-video-sound-toggle"
+                      >
+                        <Icon name={videoMuted ? 'volume-x' : 'volume-2'} size={17} color="#FFFFFF" />
+                      </TouchableOpacity>
+                      {!videoReady && (
+                        <View style={styles.videoLoading} pointerEvents="none">
+                          <ActivityIndicator color={colors.primary} />
+                          <Text style={[styles.videoUnavailableText, { color: colors.foreground }]}>Preparing video…</Text>
+                        </View>
+                      )}
+                    </View>
+                  ) : videoUriError || videoPlaybackError ? (
+                    <TouchableOpacity
+                      style={styles.videoRetry}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setVideoPlaybackError(false);
+                        void renewVideoUri();
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Retry loading video"
+                      testID="teyvat-video-retry"
+                    >
+                      <Icon name="refresh-cw" size={25} color={colors.primary} />
+                      <Text style={[styles.videoUnavailableText, { color: colors.foreground }]}>Video didn’t load. Tap to retry.</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.videoRetry} accessibilityLabel="Preparing video">
+                      <ActivityIndicator color={colors.primary} />
+                      <Text style={[styles.videoUnavailableText, { color: colors.foreground }]}>Preparing video…</Text>
+                    </View>
+                  )
+                ) : (
+                  <View style={styles.lightboxFallback} accessibilityLabel="Video unavailable">
+                    <Icon name="film" size={42} color={colors.primary} />
+                    <Text style={[styles.videoUnavailableText, { color: colors.foreground }]}>Video unavailable</Text>
+                  </View>
+                )
+              ) : selected.imageUri ? (
                 <Image
                   source={{ uri: selected.imageUri }}
                   style={[styles.lightboxImage, { maxHeight: height * 0.68 }]}
@@ -475,10 +607,93 @@ export function TeyvatMemoryGalleryOverlay({
                 />
               ) : (
                 <View style={styles.lightboxFallback}>
-                  <Icon name={selected.fallbackIcon || categoryIcon(selected.category)} size={42} color="#E4C7FF" />
+                  <Icon name={selected.fallbackIcon || categoryIcon(selected.category)} size={42} color={colors.primary} />
                 </View>
               )}
             </Animated.View>
+            {(selected.onViewAsOthers || selected.onEdit || selected.onDelete) && (
+                    <View style={[styles.memoryActions, { bottom: insets.bottom + colors.spacing * 13.5, gap: colors.spacing * 2 }]}>
+                {selected.onViewAsOthers && (
+                  <View style={styles.memoryActionWrap} testID="teyvat-view-as-others">
+                    <KindnessButton
+                      mode="dark"
+                      variant="secondary"
+                      label={selected.viewAsOthersLabel || 'See how others view it'}
+                      labelStyle={[styles.memoryActionText, { color: colors.secondaryForeground, paddingLeft: 18 }]}
+                      style={[
+                        styles.memoryAction,
+                        {
+                          minHeight: colors.spacing * 11,
+                          paddingHorizontal: colors.spacing * 3,
+                          borderRadius: colors.spacing * 4,
+                          backgroundColor: colors.secondary,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                      onPress={selected.onViewAsOthers}
+                      accessibilityLabel={selected.viewAsOthersLabel || 'See how others view this outfit'}
+                    />
+                    <View style={[styles.memoryActionIcon, { left: colors.spacing * 3 }]} pointerEvents="none">
+                      <Icon name="eye" size={15} color={colors.primary} />
+                    </View>
+                  </View>
+                )}
+                {selected.onEdit && (
+                  <View style={styles.memoryActionWrap} testID="teyvat-memory-edit">
+                    <KindnessButton
+                      mode="dark"
+                      variant="secondary"
+                      label={selected.editLabel || 'Edit'}
+                      labelStyle={[styles.memoryActionText, { color: colors.primary, paddingLeft: 18 }]}
+                      style={[
+                        styles.memoryAction,
+                        {
+                          minHeight: colors.spacing * 11,
+                          paddingHorizontal: colors.spacing * 3,
+                          borderRadius: colors.spacing * 4,
+                          backgroundColor: colors.secondary,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                      onPress={selected.onEdit}
+                      accessibilityLabel={selected.editLabel || `Edit ${categoryLabel(selected.category)}`}
+                    />
+                    <View style={[styles.memoryActionIcon, { left: colors.spacing * 3 }]} pointerEvents="none">
+                      <Icon name="edit-2" size={15} color={colors.primary} />
+                    </View>
+                  </View>
+                )}
+                {selected.onDelete && (
+                  <View style={styles.memoryActionWrap} testID="teyvat-memory-delete">
+                    <KindnessButton
+                      mode="dark"
+                      variant="outline"
+                      label={confirmDeleteId === selected.id
+                        ? selected.confirmDeleteLabel || 'Confirm delete'
+                        : selected.deleteLabel || 'Delete'}
+                      labelStyle={[styles.memoryActionText, { color: colors.destructiveForeground, paddingLeft: 18 }]}
+                      style={[
+                        styles.memoryAction,
+                        {
+                          minHeight: colors.spacing * 11,
+                          paddingHorizontal: colors.spacing * 3,
+                          borderRadius: colors.spacing * 4,
+                          backgroundColor: colors.destructive,
+                          borderColor: confirmDeleteId === selected.id ? colors.foreground : colors.destructive,
+                        },
+                      ]}
+                      onPress={handleDeleteSelected}
+                      accessibilityLabel={confirmDeleteId === selected.id
+                        ? selected.confirmDeleteLabel || 'Confirm delete'
+                        : selected.deleteLabel || `Delete ${categoryLabel(selected.category)}`}
+                    />
+                    <View style={[styles.memoryActionIcon, { left: colors.spacing * 3 }]} pointerEvents="none">
+                      <Icon name="trash-2" size={15} color={colors.destructiveForeground} />
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
             <View style={[styles.swipeHint, { bottom: insets.bottom + 20 }]} pointerEvents="none">
               <View style={styles.swipeLine} />
               <Text style={styles.swipeText}>SWIPE DOWN TO RETURN</Text>
@@ -595,6 +810,19 @@ const styles = StyleSheet.create({
   gridNote: { color: 'rgba(218,197,236,0.38)', fontSize: 8, letterSpacing: 1.5, fontFamily: 'Satoshi-Bold', marginBottom: 11 },
   gridRow: { gap: 10, justifyContent: 'flex-start' },
   tile: { borderRadius: 14, overflow: 'hidden', borderWidth: 1 },
+  videoBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 25,
+    height: 25,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(9,6,22,0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(238,219,255,0.3)',
+  },
   fallback: { alignItems: 'center', justifyContent: 'center' },
   emptyList: { flexGrow: 1 },
   emptyState: {
@@ -674,6 +902,76 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(173,114,224,0.19)',
     marginTop: 44,
+  },
+  videoUnavailableText: {
+    fontSize: 11,
+    fontFamily: nativeTheme.dark.fontFamily.bold,
+    marginTop: 10,
+  },
+  videoFrame: {
+    width: '100%',
+    height: '68%',
+    marginTop: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: nativeTheme.dark.spacing * 4,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: nativeTheme.dark.border,
+    backgroundColor: nativeTheme.dark.card,
+  },
+  videoSurface: { width: '100%', height: '100%' },
+  videoSoundButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 3,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(12,8,28,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.32)',
+  },
+  videoLoading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: `${nativeTheme.dark.background}CC`,
+  },
+  videoRetry: {
+    width: 160,
+    minHeight: 126,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: nativeTheme.dark.spacing * 6,
+    backgroundColor: nativeTheme.dark.secondary,
+    marginTop: 44,
+  },
+  memoryActions: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    zIndex: 4,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  memoryActionWrap: { flex: 1, position: 'relative' },
+  memoryAction: {
+    flex: 1,
+    minHeight: nativeTheme.dark.spacing * 11,
+    paddingHorizontal: nativeTheme.dark.spacing * 3,
+    borderRadius: nativeTheme.dark.spacing * 4,
+  },
+  memoryActionIcon: { position: 'absolute', top: 0, bottom: 0, justifyContent: 'center' },
+  memoryActionText: {
+    fontSize: 10.5,
+    lineHeight: 13,
+    textAlign: 'center',
+    fontFamily: nativeTheme.dark.fontFamily.bold,
   },
   swipeHint: { position: 'absolute', alignItems: 'center', gap: 8 },
   swipeLine: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(235,213,250,0.58)' },

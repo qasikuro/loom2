@@ -36,6 +36,12 @@ export function resolveNotificationRoute(push: Push, data: Record<string, unknow
     case "message":
       if (refId) push(`/messages/${refId}`);
       break;
+    case "friend_request":
+      push("/friends");
+      break;
+    case "friend_accepted":
+      if (actorId) push(`/user/${actorId}`);
+      break;
     case "new_outfit":
     case "badge_granted":
     case "badge_removed":

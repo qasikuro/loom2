@@ -20,6 +20,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -461,7 +462,7 @@ export function ProfileStyleSection({
 }: Props) {
   const { t } = useTranslation();
   const colors = useColors();
-  const { updateStory } = useApp();
+  const { character, updateStory, deleteOutfit, deleteGalleryPhoto } = useApp();
   const { width: screenWidth } = useWindowDimensions();
   const [activeStory,  setActiveStory]  = useState<Story | null>(null);
   const [playingVideo, setPlayingVideo] = useState<Story | null>(null);
@@ -476,6 +477,32 @@ export function ProfileStyleSection({
     },
   });
   const refetchTutorials = myTutorialsQuery.refetch;
+  const openOutfitAsOthers = useCallback((outfit: Outfit) => {
+    setTeyvatGalleryVisible(false);
+    setTimeout(() => {
+      router.push({
+        pathname: '/user-outfit',
+        params: {
+          outfitName: outfit.name,
+          outfitId: outfit.id,
+          outfitDesc: outfit.description ?? '',
+          outfitStory: outfit.story ?? '',
+          outfitImage: outfit.imageUri ?? '',
+          outfitTags: JSON.stringify(outfit.tags ?? []),
+          outfitDate: outfit.date ?? '',
+          outfitMusic: outfit.music ? JSON.stringify(outfit.music) : '',
+          authorUserId: userId ?? '',
+          authorName: character.name ?? '',
+          authorHandle: character.username ?? '',
+          authorBio: character.bio ?? '',
+          authorAvatarUri: character.avatarUri ?? '',
+          authorIsSelf: 'true',
+          authorMood: character.mood ?? '',
+          authorTraits: JSON.stringify(character.traits ?? []),
+        },
+      } as never);
+    }, Platform.OS === 'ios' ? 400 : 50);
+  }, [character, userId]);
   useFocusEffect(useCallback(() => {
     if (userId) void refetchTutorials();
   }, [userId, refetchTutorials]));
@@ -501,6 +528,9 @@ export function ProfileStyleSection({
             subtitle: new Date(entry.photo.createdAt).toLocaleDateString(),
             imageUri: entry.photo.imageUri,
             fallbackIcon: 'image',
+            onDelete: () => deleteGalleryPhoto(entry.photo.id),
+            deleteLabel: t('discoverLog.delete'),
+            confirmDeleteLabel: t('discoverLog.confirmDelete'),
           }];
         }
         if (entry.kind === 'story') {
@@ -510,10 +540,22 @@ export function ProfileStyleSection({
             category: 'story',
             title: entry.story.chapterTitle,
             subtitle: entry.story.mood,
+            mediaType: entry.story.contentType === 'video' ? 'video' : 'image',
             imageUri: entry.story.contentType === 'video'
               ? entry.story.thumbnailUri || null
               : firstPanel?.imageUri || null,
+            videoUri: entry.story.contentType === 'video' ? entry.story.videoUri || null : null,
             fallbackIcon: 'book-open',
+            onDelete: () => deleteStory(entry.story.id),
+            ...(entry.story.contentType !== 'video' ? {
+              onEdit: () => {
+                setTeyvatGalleryVisible(false);
+                setTimeout(() => router.push(`/chapter-editor?editId=${entry.story.id}` as never), 280);
+              },
+              editLabel: t('components.profileSection.editStory'),
+            } : {}),
+            deleteLabel: t('discoverLog.delete'),
+            confirmDeleteLabel: t('discoverLog.confirmDelete'),
           }];
         }
         if (entry.kind === 'outfit') {
@@ -524,11 +566,35 @@ export function ProfileStyleSection({
             subtitle: entry.outfit.id === activeOutfitId ? t('components.profileSection.worn') : undefined,
             imageUri: entry.outfit.imageUri || null,
             fallbackIcon: 'grid',
+            onDelete: () => deleteOutfit(entry.outfit.id),
+            onEdit: () => {
+              setTeyvatGalleryVisible(false);
+              setTimeout(() => router.push({
+                pathname: '/create-outfit',
+                params: {
+                  editId: entry.outfit.id,
+                  editName: entry.outfit.name,
+                  editDescription: entry.outfit.description ?? '',
+                  editStory: 'story' in entry.outfit && typeof entry.outfit.story === 'string'
+                    ? entry.outfit.story
+                    : '',
+                  editImageUri: entry.outfit.imageUri ?? '',
+                  editTags: JSON.stringify(entry.outfit.tags ?? []),
+                  editIsPublic: entry.outfit.isPublic ? 'true' : 'false',
+                  editMusic: entry.outfit.music ? JSON.stringify(entry.outfit.music) : '',
+                },
+              } as never), 280);
+            },
+            editLabel: t('outfitJournal.editOutfit'),
+            onViewAsOthers: () => openOutfitAsOthers(entry.outfit),
+            viewAsOthersLabel: t('outfitJournal.seeOthersView'),
+            deleteLabel: t('discoverLog.delete'),
+            confirmDeleteLabel: t('discoverLog.confirmDelete'),
           }];
         }
         return [];
     }),
-    [activeOutfitId, allEntries, t],
+    [activeOutfitId, allEntries, deleteGalleryPhoto, deleteOutfit, deleteStory, openOutfitAsOthers, t],
   );
   const selectedKind = galleryFilter === 'stories' ? 'story' : galleryFilter === 'outfits' ? 'outfit' : galleryFilter === 'tutorials' ? 'tutorial' : null;
   const filteredEntries = useMemo(
