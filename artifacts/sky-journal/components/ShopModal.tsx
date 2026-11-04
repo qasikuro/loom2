@@ -133,9 +133,18 @@ function getSeasonColor(season: string, colors: NativeThemeColors) {
 }
 
 function categoryLabel(t: (k: string, o?: Record<string, unknown>) => string, category: string) {
+  const defaultLabels: Record<string, string> = {
+    ears: 'Animal ears',
+    frame: 'Profile frame',
+    effect: 'Profile effect',
+    accent: 'Profile accent',
+    theme: 'Profile theme',
+  };
   return category === 'card_frame'
     ? t('components.shop.categories.card_frame', { defaultValue: 'Profile border' })
-    : t(`components.shop.categories.${category}`);
+    : t(`components.shop.categories.${category}`, {
+      defaultValue: defaultLabels[category] ?? category.replaceAll('_', ' '),
+    });
 }
 
 // ── Purchase history entry type ───────────────────────────────────────────────
@@ -237,7 +246,7 @@ function ItemPreview({ category, icon, color, itemId, large = false, avatarSourc
   const animalEarFrameId = isAnimalEarFrameId(itemId) ? itemId : null;
   const isAnimalEarFrame = animalEarFrameId !== null;
   const isFrame = category === 'frame' || isAnimalEarFrame;
-  const frameSize = large ? (isAnimalEarFrame ? 88 : itemId === 'frame_celestial_wings' ? 68 : 72) : (isAnimalEarFrame ? 40 : itemId === 'frame_celestial_wings' ? 30 : 58);
+  const frameSize = large ? (isAnimalEarFrame ? 76 : itemId === 'frame_celestial_wings' ? 68 : 72) : (isAnimalEarFrame ? 40 : itemId === 'frame_celestial_wings' ? 30 : 58);
   return (
     <View style={[pv.wrap, large && pv.largeWrap, { backgroundColor: `${color}0C`, borderColor: `${color}28` }]}>
       {isFrame && (
@@ -422,7 +431,7 @@ function ItemCard({ item, previewAvatarSource, owned, isActive, canAfford, onBuy
         ]}>
           {onPreview ? (
             <TouchableOpacity
-              style={[styles.cardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}
+              style={[styles.cardPreview, isAnimalEarFrameId(item.id) && styles.earFrameCardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}
               onPress={() => onPreview(item)}
               activeOpacity={0.82}
               accessibilityRole="button"
@@ -454,7 +463,7 @@ function ItemCard({ item, previewAvatarSource, owned, isActive, canAfford, onBuy
               </View>
             </TouchableOpacity>
           ) : (
-            <View style={[styles.cardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <View style={[styles.cardPreview, isAnimalEarFrameId(item.id) && styles.earFrameCardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}>
               <ItemPreview category={itemCategory} icon={item.icon} color={catColor} itemId={item.id} large avatarSource={previewAvatarSource} />
               {(owned || isUnavailable) && (
                 <View style={[
@@ -1736,6 +1745,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
+  earFrameCardPreview: { height: 156 },
   previewTapLabel: {
     position: 'absolute',
     left: 6,

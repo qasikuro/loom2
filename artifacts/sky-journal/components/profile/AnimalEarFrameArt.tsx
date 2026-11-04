@@ -16,8 +16,8 @@ export type AnimalEarFrameId =
   | 'frame_moonhare_ears'
   | 'frame_frost_lynx_ears';
 
-/** Largest visible ear-frame bounds at the profile's 112px frame artwork size. */
-export const ANIMAL_EAR_FRAME_RENDER_BOUNDS = 164;
+/** Includes the full 112px frame artwork plus the longest animated ear tips. */
+export const ANIMAL_EAR_FRAME_RENDER_BOUNDS = 204;
 
 type FrameLayer = 'wings' | 'ornament' | 'all';
 
@@ -31,21 +31,25 @@ const ANIMAL_FRAME_ART: Record<AnimalEarFrameId, {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     earSource: require('../../assets/images/animal-ears/ember-fox-ear.png'),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    ringSource: require('../../assets/images/animal-ears/ember-fur-ring.png'),
+    ringSource: require('../../assets/images/animal-ears/fox-hug-frame.png'),
     earLength: 0.48,
-    rootY: -0.5,
+    rootY: 0.16,
   },
   frame_moonhare_ears: {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     earSource: require('../../assets/images/animal-ears/rabbit-ear.png'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    ringSource: require('../../assets/images/animal-ears/hare-hug-frame.png'),
     earLength: 0.68,
-    rootY: -0.48,
+    rootY: 0.16,
   },
   frame_frost_lynx_ears: {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     earSource: require('../../assets/images/animal-ears/lynx-ear.png'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    ringSource: require('../../assets/images/animal-ears/lynx-hug-frame.png'),
     earLength: 0.5,
-    rootY: -0.49,
+    rootY: 0.16,
   },
 };
 
@@ -72,7 +76,7 @@ export function AnimalEarFrameArt({
 }: AnimalEarFrameArtProps) {
   const art = ANIMAL_FRAME_ART[frameId];
   const compact = size <= 64;
-  const rootY = size * (compact ? -0.04 : art.rootY);
+  const rootY = size * (compact ? 0.24 : art.rootY);
   const earLength = size * (compact ? 0.48 : art.earLength);
   const earWidth = size * 0.5;
   const pivotHeight = size * 0.82;
@@ -214,7 +218,7 @@ function AnimatedEar({
     return {
       transform: [
         { translateY: -Math.sin(amount * Math.PI) * size * 0.018 },
-        { rotate: `${baseAngle + direction * amount * 8}deg` },
+          { rotate: `${baseAngle + direction * amount * 10}deg` },
       ],
     };
   });
