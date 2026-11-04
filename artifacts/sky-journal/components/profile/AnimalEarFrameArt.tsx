@@ -75,12 +75,40 @@ export function AnimalEarFrameArt({
   ringGlow,
 }: AnimalEarFrameArtProps) {
   const art = ANIMAL_FRAME_ART[frameId];
+  const bodyBreath = useSharedValue(0);
   const compact = size <= 64;
   const rootY = size * (compact ? 0.24 : art.rootY);
   const earLength = size * (compact ? 0.48 : art.earLength);
   const earWidth = size * 0.5;
   const pivotHeight = size * 0.82;
   const ringDiameter = size * (compact ? 1.34 : 1.46);
+  const bodyMotionEnabled = motionEnabled && !compact && (layer === 'ornament' || layer === 'all');
+
+  useEffect(() => {
+    cancelAnimation(bodyBreath);
+    if (!bodyMotionEnabled) {
+      bodyBreath.value = 0;
+      return;
+    }
+
+    bodyBreath.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 1700, easing: Easing.inOut(Easing.sin) }),
+        withDelay(700, withTiming(0, { duration: 1 })),
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(bodyBreath);
+  }, [bodyBreath, bodyMotionEnabled]);
+
+  const bodyMotionStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: -bodyBreath.value * size * 0.008 },
+      { scale: 1 - bodyBreath.value * 0.008 },
+    ],
+  }));
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -123,10 +151,7 @@ export function AnimalEarFrameArt({
         )}
 
         {(layer === 'ornament' || layer === 'all') && art.ringSource && (
-          <Image
-            accessible={false}
-            source={art.ringSource}
-            resizeMode="contain"
+          <Animated.View
             style={{
               position: 'absolute',
               width: ringDiameter,
@@ -134,7 +159,16 @@ export function AnimalEarFrameArt({
               left: (size - ringDiameter) / 2,
               top: (size - ringDiameter) / 2,
             }}
-          />
+          >
+            <Animated.View style={[StyleSheet.absoluteFill, bodyMotionStyle]}>
+              <Image
+                accessible={false}
+                source={art.ringSource}
+                resizeMode="contain"
+                style={StyleSheet.absoluteFill}
+              />
+            </Animated.View>
+          </Animated.View>
         )}
 
         {(layer === 'ornament' || layer === 'all') && !art.ringSource && (

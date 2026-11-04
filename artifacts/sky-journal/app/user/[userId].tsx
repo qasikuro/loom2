@@ -142,44 +142,47 @@ function AnimatedAvatarRing({
   decorationOpacity?: Animated.AnimatedInterpolation<number>;
 }) {
   const aura    = MOOD_AURA[mood] ?? DEFAULT_AURA;
+  const hasAnimalFrame = isAnimalEarFrameId(activeFrame ?? '');
   const breathe = useRef(new Animated.Value(0)).current;
   const rotate  = useRef(new Animated.Value(0)).current;
   const pulse   = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (hasAnimalFrame) return;
     const breatheLoop = Animated.loop(Animated.sequence([
       Animated.timing(breathe, { toValue: 1, duration: isFounder ? 2000 : isBeta ? 1600 : 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       Animated.timing(breathe, { toValue: 0, duration: isFounder ? 2000 : isBeta ? 1600 : 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ]));
     breatheLoop.start();
     return () => breatheLoop.stop();
-  }, [breathe, isFounder, isBeta]);
+  }, [breathe, hasAnimalFrame, isFounder, isBeta]);
 
   useEffect(() => {
+    if (hasAnimalFrame) return;
     const rotateLoop = Animated.loop(
       Animated.timing(rotate, { toValue: 1, duration: isFounder ? 18000 : isBeta ? 5000 : 12000, easing: Easing.linear, useNativeDriver: true })
     );
     rotateLoop.start();
     return () => rotateLoop.stop();
-  }, [rotate, isFounder, isBeta]);
+  }, [hasAnimalFrame, isFounder, isBeta, rotate]);
 
   useEffect(() => {
-    if (!isFounder && !isBeta) return;
+    if ((!isFounder && !isBeta) || hasAnimalFrame) return;
     const pulseLoop = Animated.loop(Animated.sequence([
       Animated.timing(pulse, { toValue: 1, duration: 1200, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(pulse, { toValue: 0, duration: 1200, easing: Easing.in(Easing.quad),  useNativeDriver: true }),
     ]));
     pulseLoop.start();
     return () => pulseLoop.stop();
-  }, [pulse, isFounder, isBeta]);
+  }, [hasAnimalFrame, pulse, isFounder, isBeta]);
 
   const ringScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, isFounder ? 1.04 : 1.06] });
-  const ringOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [isFounder ? 0.55 : 0.30, 1, isFounder ? 0.55 : 0.30] });
-  const haloOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, isFounder ? 0.55 : isBeta ? 0.50 : 0.38, 0.12] });
+  const ringOpacity = hasAnimalFrame ? 0 : breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [isFounder ? 0.55 : 0.30, 1, isFounder ? 0.55 : 0.30] });
+  const haloOpacity = hasAnimalFrame ? 0 : breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, isFounder ? 0.55 : isBeta ? 0.50 : 0.38, 0.12] });
   const haloScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, isFounder ? 1.08 : 1.06] });
   const spin        = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const pulseScale  = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
-  const pulseOp     = pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.55, 0] });
+  const pulseOp     = hasAnimalFrame ? 0 : pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.55, 0] });
   const avatarSource = profile.avatarUri ? { uri: profile.avatarUri } : null;
   const initial = (profile.name ?? '?').charAt(0).toUpperCase();
 
@@ -210,6 +213,7 @@ function AnimatedAvatarRing({
             height: PUBLIC_PROFILE_HALO_SIZE - 6,
             left: (PUBLIC_PROFILE_AVATAR_SIZE - (PUBLIC_PROFILE_HALO_SIZE - 6)) / 2,
             top: (PUBLIC_PROFILE_AVATAR_SIZE - (PUBLIC_PROFILE_HALO_SIZE - 6)) / 2,
+            opacity: hasAnimalFrame ? 0 : 1,
           }}
         >
           <FounderSparks radius={(PUBLIC_PROFILE_HALO_SIZE - 6) / 2} color={founderGold} />
@@ -221,7 +225,7 @@ function AnimatedAvatarRing({
           borderWidth: 2.5,
           borderColor: founderGold,
           transform: [{ rotate: spin }],
-          opacity: 0.75,
+          opacity: hasAnimalFrame ? 0 : 0.75,
         }} />
         {/* Breathing solid ring — inner */}
         <Animated.View pointerEvents="none" style={{
@@ -243,7 +247,11 @@ function AnimatedAvatarRing({
         }} />
         {activeFrame && <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}><FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" /></Animated.View>}
         {/* Avatar circle */}
-        <View style={[styles.avatarCircle, { borderColor: founderGold, borderWidth: 3, backgroundColor: '#1A1408' }]}>
+        <View style={[styles.avatarCircle, {
+          borderColor: hasAnimalFrame ? 'transparent' : founderGold,
+          borderWidth: hasAnimalFrame ? 0 : 3,
+          backgroundColor: '#1A1408',
+        }]}>
           {avatarSource ? (
             <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
           ) : (
@@ -274,6 +282,7 @@ function AnimatedAvatarRing({
           borderColor: betaPurple + 'CC',
           borderStyle: 'dashed',
           transform: [{ rotate: spin }],
+          opacity: hasAnimalFrame ? 0 : 1,
         }} />
         {/* Steady solid middle ring */}
         <View pointerEvents="none" style={{
@@ -281,6 +290,7 @@ function AnimatedAvatarRing({
           width: PUBLIC_PROFILE_MID_RING_SIZE, height: PUBLIC_PROFILE_MID_RING_SIZE, borderRadius: PUBLIC_PROFILE_MID_RING_SIZE / 2,
           borderWidth: 1.5,
           borderColor: betaDark + '99',
+          opacity: hasAnimalFrame ? 0 : 1,
         }} />
         {/* Breathing solid inner ring */}
         <Animated.View pointerEvents="none" style={{
@@ -302,7 +312,11 @@ function AnimatedAvatarRing({
         }} />
         {activeFrame && <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}><FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" /></Animated.View>}
         {/* Avatar circle */}
-        <View style={[styles.avatarCircle, { borderColor: betaPurple, borderWidth: 3, backgroundColor: '#120A20' }]}>
+        <View style={[styles.avatarCircle, {
+          borderColor: hasAnimalFrame ? 'transparent' : betaPurple,
+          borderWidth: hasAnimalFrame ? 0 : 3,
+          backgroundColor: '#120A20',
+        }]}>
           {avatarSource ? (
             <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
           ) : (
@@ -338,6 +352,7 @@ function AnimatedAvatarRing({
           borderColor: aura.accent + 'AA',
           borderStyle: 'dashed',
           transform: [{ rotate: spin }],
+          opacity: hasAnimalFrame ? 0 : 1,
         }}
       />
       {/* Breathing solid ring */}
@@ -354,7 +369,10 @@ function AnimatedAvatarRing({
       />
       {activeFrame && <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}><FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" /></Animated.View>}
       {/* Avatar circle */}
-      <View style={[styles.avatarCircle, { borderColor: aura.accent + '80' }]}>
+      <View style={[styles.avatarCircle, {
+        borderColor: hasAnimalFrame ? 'transparent' : aura.accent + '80',
+        borderWidth: hasAnimalFrame ? 0 : 2.5,
+      }]}>
         {avatarSource ? (
           <Image
             source={avatarSource}

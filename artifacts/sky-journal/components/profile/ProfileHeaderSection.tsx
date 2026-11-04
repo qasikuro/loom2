@@ -21,6 +21,7 @@ import {
   BreathingAvatarRing, FrameRing,
   FRAME_CONFIGS,
 } from './CharacterAuraHeader';
+import { isAnimalEarFrameId } from './AnimalEarFrameArt';
 import { USERNAME_REGEX, MOOD_ORBS } from './profileConstants';
 
 interface Props {
@@ -59,28 +60,34 @@ export function OwnProfileAvatar({ avatarSource, contain, activeFrame, mood, dec
 }) {
   const colors = useColors();
   const moodData = MOOD_ORBS.find(m => m.key === mood) || MOOD_ORBS[2];
+  const hasAnimalFrame = isAnimalEarFrameId(activeFrame ?? '');
   const frameMotionEnabled = activeFrame !== 'frame_celestial_wings';
   return (
     <View pointerEvents="none" style={s.avatarVisual}>
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <View style={[s.avatarStageGlow, { backgroundColor: colors.primary }]} />
-        <View style={[s.avatarStageOrbit, { borderColor: colors.primary }]} />
-        <View style={[s.avatarStageInnerOrbit, { borderColor: colors.primary }]} />
-        <View style={[s.avatarStageSpark, s.avatarStageSparkTopLeft, { backgroundColor: colors.primary }]} />
-        <View style={[s.avatarStageSpark, s.avatarStageSparkTopRight, { backgroundColor: colors.primary }]} />
-        <View style={[s.avatarStageSpark, s.avatarStageSparkBottomLeft, { backgroundColor: colors.primary }]} />
-      </View>
+      {!hasAnimalFrame && (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <View style={[s.avatarStageGlow, { backgroundColor: colors.primary }]} />
+          <View style={[s.avatarStageOrbit, { borderColor: colors.primary }]} />
+          <View style={[s.avatarStageInnerOrbit, { borderColor: colors.primary }]} />
+          <View style={[s.avatarStageSpark, s.avatarStageSparkTopLeft, { backgroundColor: colors.primary }]} />
+          <View style={[s.avatarStageSpark, s.avatarStageSparkTopRight, { backgroundColor: colors.primary }]} />
+          <View style={[s.avatarStageSpark, s.avatarStageSparkBottomLeft, { backgroundColor: colors.primary }]} />
+        </View>
+      )}
       {activeFrame && (
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}>
           <FrameRing frameId={activeFrame} size={112} layer="wings" motionEnabled={frameMotionEnabled} />
         </Animated.View>
       )}
       <View style={[s.avatarCircle, {
-        borderColor: (activeFrame && FRAME_CONFIGS[activeFrame]) ? FRAME_CONFIGS[activeFrame].color : `${moodData.accent}70`,
+        borderColor: hasAnimalFrame
+          ? 'transparent'
+          : (activeFrame && FRAME_CONFIGS[activeFrame]) ? FRAME_CONFIGS[activeFrame].color : `${moodData.accent}70`,
+        borderWidth: hasAnimalFrame ? 0 : 2,
       }]}>
         <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit={contain ? 'contain' : 'cover'} />
       </View>
-      <BreathingAvatarRing mood={mood} />
+      {!hasAnimalFrame && <BreathingAvatarRing mood={mood} />}
       {activeFrame && (
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}>
           <FrameRing frameId={activeFrame} size={112} layer="ornament" motionEnabled={frameMotionEnabled} />
