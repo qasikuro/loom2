@@ -23,6 +23,8 @@ import type { NativeThemeColors, NativeThemeMode } from '@workspace/storigam-kin
 import { Icon } from '@/components/Icon';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { CharacterAuraHeader, FrameRing } from '@/components/profile/CharacterAuraHeader';
+import { AnimalEarFrameArt, isAnimalEarFrameId } from '@/components/profile/AnimalEarFrameArt';
+import { SecureImage } from '@/components/SecureImage';
 import { OwnProfileAvatar } from '@/components/profile/ProfileHeaderSection';
 import { Images } from '@/assets/images';
 import AuroraCloudBackdrop from '@/components/profile/AuroraCloudBackdrop';
@@ -224,21 +226,40 @@ function SeasonalBadge({ label }: { label: string }) {
 // Shows a miniature visual of what each category looks like when equipped.
 // Frames → concentric border rings. Accents → glow band. Themes → page lines.
 
-function ItemPreview({ category, icon, color, itemId, large = false }: { category: string; color: string; icon: string; itemId: string; large?: boolean }) {
-  const isAnimalEarFrame = ANIMAL_EAR_FRAME_IDS.has(itemId);
-  const frameSize = large ? (isAnimalEarFrame ? 76 : itemId === 'frame_celestial_wings' ? 68 : 72) : (isAnimalEarFrame ? 40 : itemId === 'frame_celestial_wings' ? 30 : 58);
+function ItemPreview({ category, icon, color, itemId, large = false, avatarSource }: {
+  category: string;
+  color: string;
+  icon: string;
+  itemId: string;
+  large?: boolean;
+  avatarSource?: React.ComponentProps<typeof SecureImage>['source'];
+}) {
+  const animalEarFrameId = isAnimalEarFrameId(itemId) ? itemId : null;
+  const isAnimalEarFrame = animalEarFrameId !== null;
+  const isFrame = category === 'frame' || isAnimalEarFrame;
+  const frameSize = large ? (isAnimalEarFrame ? 88 : itemId === 'frame_celestial_wings' ? 68 : 72) : (isAnimalEarFrame ? 40 : itemId === 'frame_celestial_wings' ? 30 : 58);
   return (
     <View style={[pv.wrap, large && pv.largeWrap, { backgroundColor: `${color}0C`, borderColor: `${color}28` }]}>
-      {category === 'frame' && (
+      {isFrame && (
         itemId === 'frame_moonlight' || itemId === 'frame_fire' || itemId === 'frame_celestial_wings' || isAnimalEarFrame ? (
           <View style={pv.premiumFramePreview}>
-            <FrameRing frameId={itemId} size={frameSize} layer="wings" />
+            {animalEarFrameId ? (
+              <AnimalEarFrameArt frameId={animalEarFrameId} size={frameSize} layer="wings" motionEnabled={false} ringColor={color} ringGlow={color} />
+            ) : (
+              <FrameRing frameId={itemId} size={frameSize} layer="wings" />
+            )}
             <View style={[pv.previewAvatar, large && pv.largePreviewAvatar, { backgroundColor: `${color}20`, borderColor: `${color}65` }]}>
-              {isAnimalEarFrame
-                ? <Icon name="user" size={large ? 19 : 14} color={color} strokeWidth={1.7} />
-                : <Text style={[pv.icon, { color }]}>{itemId === 'frame_moonlight' ? '✧' : itemId === 'frame_celestial_wings' ? '✦' : '◉'}</Text>}
+              {isAnimalEarFrame && avatarSource
+                ? <SecureImage source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" />
+                : isAnimalEarFrame
+                  ? <Icon name="user" size={large ? 19 : 14} color={color} strokeWidth={1.7} />
+                  : <Text style={[pv.icon, { color }]}>{itemId === 'frame_moonlight' ? '✧' : itemId === 'frame_celestial_wings' ? '✦' : '◉'}</Text>}
             </View>
-            <FrameRing frameId={itemId} size={frameSize} layer="ornament" />
+            {animalEarFrameId ? (
+              <AnimalEarFrameArt frameId={animalEarFrameId} size={frameSize} layer="ornament" motionEnabled={false} ringColor={color} ringGlow={color} />
+            ) : (
+              <FrameRing frameId={itemId} size={frameSize} layer="ornament" />
+            )}
           </View>
         ) : (
           <View style={[pv.frameOuter, { borderColor: `${color}60` }]}>
@@ -360,6 +381,7 @@ function ItemPreview({ category, icon, color, itemId, large = false }: { categor
 
 interface ItemCardProps {
   item:       ShopItem;
+  previewAvatarSource?: React.ComponentProps<typeof SecureImage>['source'];
   owned:      boolean;
   isActive:   boolean;
   canAfford:  boolean;
@@ -370,12 +392,13 @@ interface ItemCardProps {
   founderLocked?: boolean;
 }
 
-function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, onPreview, purchasing, founderLocked = false }: ItemCardProps) {
+function ItemCard({ item, previewAvatarSource, owned, isActive, canAfford, onBuy, onActivate, onPreview, purchasing, founderLocked = false }: ItemCardProps) {
   const { t } = useTranslation();
   const colors   = useShopColors();
   const { isDark } = useTheme();
   const mode: NativeThemeMode = isDark ? 'dark' : 'light';
-  const catColor = categoryColor(item.category, colors);
+  const itemCategory = isAnimalEarFrameId(item.id) ? 'ears' : item.category;
+  const catColor = categoryColor(itemCategory, colors);
 
   // availableNow is only set to false for out-of-season seasonal items
   const availableNow = item.availableNow !== false;
@@ -407,7 +430,7 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, onPrevi
               accessibilityHint={t('components.shop.previewItemHint', { defaultValue: 'Opens a try-on preview without purchasing or equipping this item.' })}
               testID={`shop-preview-${item.id}`}
             >
-              <ItemPreview category={item.category} icon={item.icon} color={catColor} itemId={item.id} large />
+              <ItemPreview category={itemCategory} icon={item.icon} color={catColor} itemId={item.id} large avatarSource={previewAvatarSource} />
               {(owned || isUnavailable) && (
                 <View style={[
                   styles.cardStatus,
@@ -432,7 +455,7 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, onPrevi
             </TouchableOpacity>
           ) : (
             <View style={[styles.cardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-              <ItemPreview category={item.category} icon={item.icon} color={catColor} itemId={item.id} large />
+              <ItemPreview category={itemCategory} icon={item.icon} color={catColor} itemId={item.id} large avatarSource={previewAvatarSource} />
               {(owned || isUnavailable) && (
                 <View style={[
                   styles.cardStatus,
@@ -456,7 +479,7 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, onPrevi
             <View style={styles.cardTitleArea}>
               <Text style={[styles.cardName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
               <Text style={[styles.cardCategory, { color: catColor }]} numberOfLines={1}>
-                {categoryLabel(t, item.category)}
+                {categoryLabel(t, itemCategory)}
               </Text>
               {item.seasonal && item.seasonalLabel && (
                 <SeasonalBadge label={item.seasonalLabel} />
@@ -536,7 +559,7 @@ function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
   const colors   = useShopColors();
   const { isDark } = useTheme();
   const mode: NativeThemeMode = isDark ? 'dark' : 'light';
-  const category = COSMETIC_CATEGORY_MAP[entry.itemId] ?? 'frame';
+  const category = isAnimalEarFrameId(entry.itemId) ? 'ears' : COSMETIC_CATEGORY_MAP[entry.itemId] ?? 'frame';
   const catColor = categoryColor(category, colors);
   const icon     = ITEM_ICON_MAP[entry.itemId] ?? '✦';
 
@@ -584,6 +607,7 @@ function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
         size="small"
         style={[
           styles.actionButton,
+          styles.collectionActionButton,
           { backgroundColor: isActive ? catColor : colors.muted, borderColor: isActive ? catColor : colors.border },
         ]}
         labelStyle={[styles.actionButtonLabel, { color: isActive ? colors.primaryForeground : colors.foreground }]}
@@ -807,7 +831,8 @@ function ProfileTryOnPreview({
   const { t } = useTranslation();
   const colors = useShopColors();
   const { isDark } = useTheme();
-  const selectedFrame = item.category === 'frame' ? item.id : activeCosmetics.frame;
+  const selectedFrame = item.category === 'frame' || isAnimalEarFrameId(item.id) ? item.id : activeCosmetics.frame;
+  const tryOnFrame = isAnimalEarFrameId(item.id) ? item.id : selectedFrame;
   const selectedEffect = item.category === 'effect'
     ? item.id === 'effect_cosmic_arrival' ? undefined : item.id
     : activeCosmetics.effect;
@@ -817,7 +842,7 @@ function ProfileTryOnPreview({
       ? { uri: activeOutfit.imageUri }
       : Images.character_default;
   const showCatalogVisual =
-    (item.category !== 'frame' && item.category !== 'effect' && item.category !== 'card_frame') ||
+    ((item.category !== 'frame' && !isAnimalEarFrameId(item.id)) && item.category !== 'effect' && item.category !== 'card_frame') ||
     item.id === 'effect_cosmic_arrival';
 
   return (
@@ -855,7 +880,7 @@ function ProfileTryOnPreview({
             <OwnProfileAvatar
               avatarSource={avatarSource}
               contain={Boolean(character.avatarUri)}
-              activeFrame={selectedFrame}
+              activeFrame={tryOnFrame}
               mood={character.mood || 'Dreamy'}
             />
             <Text style={[styles.tryOnName, { color: colors.foreground }]} numberOfLines={1}>{character.name}</Text>
@@ -919,6 +944,11 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
   const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased, character, outfits, activeOutfitId } = useApp();
   const activeOutfit = activeOutfitId ? outfits.find(outfit => outfit.id === activeOutfitId) ?? null : null;
   const isFounder = !!character?.isFounder;
+  const shopAvatarSource = character?.avatarUri
+    ? { uri: character.avatarUri }
+    : activeOutfit?.imageUri
+      ? { uri: activeOutfit.imageUri }
+      : Images.character_default;
 
   // Refresh balance in background every time the modal opens so the chip
   // shows the cached value instantly and updates silently when the API responds.
@@ -1182,15 +1212,19 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
             {/* Items — split into This Season + Always Available */}
             {(() => {
               const visible_catalog = filterCat === 'ears'
-                ? catalogItems.filter(i => ANIMAL_EAR_FRAME_IDS.has(i.id))
-                : filterCat
-                  ? catalogItems.filter(i => i.category === filterCat)
-                : catalogItems;
+                ? catalogItems.filter(i => isAnimalEarFrameId(i.id))
+                : filterCat === 'frame'
+                  ? catalogItems.filter(i => i.category === 'frame' && !isAnimalEarFrameId(i.id))
+                  : filterCat
+                    ? catalogItems.filter(i => i.category === filterCat)
+                    : catalogItems;
               const visible_preview_items = filterCat === 'ears'
-                ? previewItems.filter(i => ANIMAL_EAR_FRAME_IDS.has(i.id))
-                : filterCat
-                  ? previewItems.filter(i => i.category === filterCat)
-                  : previewItems;
+                ? previewItems.filter(i => isAnimalEarFrameId(i.id))
+                : filterCat === 'frame'
+                  ? previewItems.filter(i => i.category === 'frame' && !isAnimalEarFrameId(i.id))
+                  : filterCat
+                    ? previewItems.filter(i => i.category === filterCat)
+                    : previewItems;
               const seasonalItems  = visible_catalog.filter(i => i.seasonal);
               const permanentItems = visible_catalog.filter(i => !i.seasonal);
 
@@ -1208,6 +1242,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                   <ItemCard
                     key={item.id}
                     item={overrides ? { ...item, ...overrides } : item}
+                    previewAvatarSource={shopAvatarSource}
                     owned={owned}
                     isActive={isActive}
                     canAfford={canAfford(item)}
@@ -1341,6 +1376,7 @@ const pv = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   largePreviewAvatar: {
     width: 40,
@@ -1833,6 +1869,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Satoshi-Bold',
     letterSpacing: 0.2,
   },
+  collectionActionButton: { width: 112, flexShrink: 0 },
   actionButton: {
     width: '100%',
     minHeight: 36,

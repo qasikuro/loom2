@@ -43,6 +43,18 @@ describe('avatar flight geometry', () => {
     expect(flight.decor.outputRange[1]).toBe(0);
   });
 
+  it('uses artwork bounds for compact scaling, not the oversized Android render layer', () => {
+    const flight = getAvatarFlight({
+      centerX: 180,
+      centerY: 160,
+      avatarSize: 96,
+      avatarBoxSize: 124,
+      range: 180,
+      topInset: 24,
+    });
+    expect(flight.endScale).toBeCloseTo(COMPACT_AVATAR_SIZE / 124);
+  });
+
   it('offsets the compact slot after a back button', () => {
     expect(compactAvatarCenterX(true) - compactAvatarCenterX(false)).toBe(52);
   });
@@ -79,6 +91,11 @@ describe('avatar flight geometry', () => {
     expect(tab).toContain('coverImageUri={null}');
     const flight = read('components/profile/ProfileAvatarFlight.tsx');
     expect(flight).not.toMatch(/setState|useState\([^)]*\)[^;]*scroll/);
+    expect(flight).toContain('requestAnimationFrame(() =>');
+    expect(flight).toContain('measurementVersion.current');
+    expect(flight).toContain('fitBoxSize ?? boxSize');
+    expect(tab).toContain('fitBoxSize={activeFrame');
+    expect(pub).toContain('fitBoxSize={isAnimalEarFrameId');
     // Founder regalia wraps the entire info card (incl. Founder panel), gated as before.
     const card = pub.slice(pub.indexOf('testID="public-profile-info-card"'), pub.indexOf('{/* Gallery filter */}'));
     expect(card).toContain('{hasRegalia && <FounderAuroraCardFrame />}');

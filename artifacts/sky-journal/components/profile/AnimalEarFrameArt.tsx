@@ -16,6 +16,9 @@ export type AnimalEarFrameId =
   | 'frame_moonhare_ears'
   | 'frame_frost_lynx_ears';
 
+/** Largest visible ear-frame bounds at the profile's 112px frame artwork size. */
+export const ANIMAL_EAR_FRAME_RENDER_BOUNDS = 164;
+
 type FrameLayer = 'wings' | 'ornament' | 'all';
 
 const ANIMAL_FRAME_ART: Record<AnimalEarFrameId, {

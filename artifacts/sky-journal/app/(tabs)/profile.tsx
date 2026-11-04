@@ -24,6 +24,7 @@ import { ProfileAboutSection } from '@/components/profile/ProfileAboutSection';
 import { ProfileVibeSection } from '@/components/profile/ProfileVibeSection';
 import { OWN_AVATAR_SIZE, OwnProfileAvatar, ProfileHeaderSection } from '@/components/profile/ProfileHeaderSection';
 import { AvatarFlightOverlay, PROFILE_AVATAR_RENDER_BOUNDS, useAvatarAnchor } from '@/components/profile/ProfileAvatarFlight';
+import { ANIMAL_EAR_FRAME_RENDER_BOUNDS, isAnimalEarFrameId } from '@/components/profile/AnimalEarFrameArt';
 import { ProfileStyleSection } from '@/components/profile/ProfileStyleSection';
 import { ProfileSettingsDrawer } from '@/components/profile/ProfileSettingsDrawer';
 import { TitlePickerModal } from '@/components/profile/TitlePickerModal';
@@ -338,6 +339,7 @@ export default function CharacterScreen() {
         topInset={topPad}
         boxSize={PROFILE_AVATAR_RENDER_BOUNDS}
         avatarSize={OWN_AVATAR_SIZE}
+        fitBoxSize={activeFrame && isAnimalEarFrameId(activeFrame) ? ANIMAL_EAR_FRAME_RENDER_BOUNDS : 124}
         hidden={drawerOpen || moonlitMuseIntroVisible}
       >
         {decorationOpacity => <OwnProfileAvatar
