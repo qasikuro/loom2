@@ -20,18 +20,39 @@ test('Create sheet destinations exist in the OTA release source', () => {
   const appRoot = path.resolve(__dirname, '../app');
   const create = fs.readFileSync(path.join(appRoot, '(tabs)/create.tsx'), 'utf8');
   const destinations = [
-    { label: 'story editor', route: '/chapter-editor', source: "selectMode('/chapter-editor')", file: 'chapter-editor.tsx' },
-    { label: 'video creator', route: '/post-video', source: "route: '/post-video'", file: 'post-video.tsx' },
-    { label: 'journal', route: '/(tabs)/log', source: "route: '/(tabs)/log'", file: '(tabs)/log.tsx' },
+    { label: 'rich text story', route: '/text-story', source: "route: '/text-story'", file: 'text-story.tsx' },
+    { label: 'manga story', route: '/chapter-editor', source: "route: '/chapter-editor'", file: 'chapter-editor.tsx' },
+    { label: 'video story', route: '/post-video', source: "route: '/post-video'", file: 'post-video.tsx' },
+    { label: 'outfit post', route: '/create-outfit', source: "route: '/create-outfit'", file: 'create-outfit.tsx' },
+    { label: 'outfit journal', route: '/create-journal-entry', source: "route: '/create-journal-entry'", file: 'create-journal-entry.tsx' },
+    { label: 'tutorial', route: '/create-guide-tutorial', source: "route: '/create-guide-tutorial'", file: 'create-guide-tutorial.tsx' },
+    { label: 'guide session', route: '/create-guide-session', source: "route: '/create-guide-session'", file: 'create-guide-session.tsx' },
     { label: 'books', route: '/my-books', source: "route: '/my-books'", file: 'my-books.tsx' },
-    { label: 'creator dashboard', route: '/creator-dashboard', source: "route: '/creator-dashboard'", file: 'creator-dashboard.tsx' },
     { label: 'quick moment editor', route: '/quick-moment', source: "route: '/quick-moment'", file: 'quick-moment.tsx' },
+    { label: 'creator dashboard', route: '/creator-dashboard', source: "route: '/creator-dashboard'", file: 'creator-dashboard.tsx' },
   ];
 
   for (const destination of destinations) {
     assert.ok(create.includes(destination.source), `Create sheet must route to ${destination.label}`);
     assert.ok(fs.existsSync(path.join(appRoot, destination.file)), `OTA release must include ${destination.file}`);
     assert.ok(destination.route.startsWith('/'), `${destination.label} route must be absolute`);
+  }
+});
+
+test('Create categories and choices use icons available in the shared Icon component', () => {
+  const root = path.resolve(__dirname, '..');
+  const create = fs.readFileSync(path.join(root, 'app/(tabs)/create.tsx'), 'utf8');
+  const iconSource = fs.readFileSync(path.join(root, 'components/Icon.tsx'), 'utf8');
+  const createDefinitions = [
+    create.slice(create.indexOf('const CREATION_CATEGORIES'), create.indexOf('const CREATION_CHOICES')),
+    create.slice(create.indexOf('const CREATION_CHOICES'), create.indexOf('const MORE_MODES')),
+  ].join('\n');
+  const usedIcons = [...createDefinitions.matchAll(/icon:\s*'([^']+)'/g)].map(match => match[1]);
+  const iconNames = new Set([...iconSource.matchAll(/'([^']+)'\s*:\s*[A-Z][A-Za-z0-9_]*/g)].map(match => match[1]));
+
+  assert.ok(usedIcons.length > 0, 'Create categories and choices must declare icons');
+  for (const icon of usedIcons) {
+    assert.ok(iconNames.has(icon), `Create icon "${icon}" must exist in the shared Icon component`);
   }
 });
 
