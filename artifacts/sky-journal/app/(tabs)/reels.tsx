@@ -7,7 +7,7 @@ import { useFriendsDrawer } from '@/context/FriendsDrawerContext';
 import { useApp, type DiscoverPost } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { UI } from '@/constants/uiTokens';
-import { getReelPlaybackWindow } from '@/utils/reelPlayback';
+import { getReelPlaybackWindow, isReelPlaybackAppActive } from '@/utils/reelPlayback';
 import { activateReelDiagnostic, openReelDiagnosticMenu } from '@/utils/reelDiagnostics';
 import { useIsFocused } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -59,7 +59,7 @@ export default function ReelsScreen() {
   const [selectedVideoPost, setSelectedVideoPost] = useState<DiscoverPost | null>(null);
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
   const [feedHeight, setFeedHeight] = useState(0);
-  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  const [appActive, setAppActive] = useState(isReelPlaybackAppActive(AppState.currentState));
   const listRef = useRef<FlatList<DiscoverPost>>(null);
   const lastFetchRef = useRef(0);
 
@@ -92,7 +92,7 @@ export default function ReelsScreen() {
     if (!playbackEnabled) setReadyPostId(null);
   }, [playbackEnabled]);
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', state => setAppActive(state === 'active'));
+    const subscription = AppState.addEventListener('change', state => setAppActive(isReelPlaybackAppActive(state)));
     return () => subscription.remove();
   }, []);
 

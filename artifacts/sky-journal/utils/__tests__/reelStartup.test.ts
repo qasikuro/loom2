@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { publishReelStartup } from '../reelStartup';
+import { isReelPlaybackAppActive } from '../reelPlayback';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -8,6 +9,14 @@ function deferred<T>() {
 }
 
 describe('early reel startup', () => {
+  it('allows autoplay while React Native is still resolving its initial app state', () => {
+    expect(isReelPlaybackAppActive(null)).toBe(true);
+    expect(isReelPlaybackAppActive('unknown')).toBe(true);
+    expect(isReelPlaybackAppActive('active')).toBe(true);
+    expect(isReelPlaybackAppActive('background')).toBe(false);
+    expect(isReelPlaybackAppActive('inactive')).toBe(false);
+  });
+
   it('publishes without waiting for unrelated startup work', async () => {
     const unrelated = deferred<void>();
     const feed = Promise.resolve(['video']);

@@ -1,4 +1,11 @@
 /** At most two players: visible plus one video within the next two feed cards. */
+export function isReelPlaybackAppActive(state: string | null): boolean {
+  // React Native can expose a null/unknown state before its native bridge
+  // finishes initializing. Treat that one startup state as foreground; only
+  // explicit background/inactive states should pause Reels.
+  return state === null || state === 'unknown' || state === 'active';
+}
+
 export function getReelPlaybackWindow(
   posts: readonly { id: string; contentType?: string }[],
   visibleId: string | null,

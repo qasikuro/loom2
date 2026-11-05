@@ -58,8 +58,10 @@ test('Create categories and choices use icons available in the shared Icon compo
 
 test('draft resume helper is included and connected to the Create sheet', () => {
   const create = fs.readFileSync(path.resolve(__dirname, '../app/(tabs)/create.tsx'), 'utf8');
+  const workspacePath = path.resolve(__dirname, '../features/create/CreateWorkspace.tsx');
+  const workspace = fs.existsSync(workspacePath) ? fs.readFileSync(workspacePath, 'utf8') : '';
   const drafts = fs.readFileSync(path.resolve(__dirname, '../utils/entryDraftStore.ts'), 'utf8');
-  assert.match(create, /getDraftResumeDestination\(\s*draft,/);
+  assert.match(`${create}\n${workspace}`, /getDraftResumeDestination\(\s*draft/);
   assert.match(create, /getCreateDestination\(/);
   assert.match(drafts, /export function getDraftResumeDestination\(/);
   assert.match(drafts, /export function getCreateDestination\(/);
