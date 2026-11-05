@@ -605,6 +605,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [purchasedIds, setPurchasedIds]         = useState<string[]>([]);
   const [shopCatalog, setShopCatalog]           = useState<ShopItem[]>([]);
   const [activeCosmetics, setActiveCosmeticsState] = useState<Record<string, string>>({});
+  const activeCosmeticsRef = useRef<Record<string, string>>({});
+  const activeCosmeticsRevisionRef = useRef(0);
+  const activeCosmeticsWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   const [gallery, setGallery]           = useState<GalleryPhoto[]>([]);
   const [galleryUsage, setGalleryUsage] = useState<GalleryUsage>({ count: 0, limit: 200 });
@@ -728,6 +731,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function loadFromCache(ownerId: string) {
+    const activeCosmeticsRevisionAtStart = activeCosmeticsRevisionRef.current;
     try {
       const [c, j, s, o, d, f, sv, ac, rb, cfSeen, dmSeen, galleryRaw, galleryUsageRaw, friendsRaw, notificationsRaw, guidesRaw, shopRaw, activeOutfitId, blockedRaw] = await Promise.all([
         getCacheItem('character_v2', ownerId),
@@ -760,7 +764,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try { if (d) setDiscoverFeedRaw(JSON.parse(d)); } catch { /* use default */ }
       try { if (f) setFollowingIds(JSON.parse(f)); } catch { /* use default */ }
       if (sv) { try { setSavedStoryIds(new Set(JSON.parse(sv))); } catch { /* ignore */ } }
-      if (ac) { try { setActiveCosmeticsState(JSON.parse(ac)); } catch { /* ignore */ } }
+      if (ac && activeCosmeticsRevisionAtStart === activeCosmeticsRevisionRef.current) {
+        try {
+          const cachedCosmetics = JSON.parse(ac) as Record<string, string>;
+          activeCosmeticsRef.current = cachedCosmetics;
+          setActiveCosmeticsState(cachedCosmetics);
+        } catch { /* ignore */ }
+      }
       if (rb) { try { setRewardBalance(JSON.parse(rb)); } catch { /* ignore */ } }
       if (cfSeen) setCampfireBadgeSeenAt(cfSeen);
       if (dmSeen) setDmBadgeSeenAt(dmSeen);
@@ -861,6 +871,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPurchasedIds([]);
     setShopCatalog([]);
     setMyGuides([]);
+    activeCosmeticsRevisionRef.current += 1;
+    activeCosmeticsRef.current = {};
     setActiveCosmeticsState({});
     setCampfireUnread(0);
     setUnreadCampfireRooms([]);
@@ -900,6 +912,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       return;
     }
+    const activeCosmeticsRevisionAtStart = activeCosmeticsRevisionRef.current;
     const requestEpoch = loadEpochRef.current;
     isLoadingRef.current = true;
     const creationRequestAccount = requestAccountId;
@@ -1133,12 +1146,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const ids = shopRaw.purchasedIds as string[];
         setPurchasedIds(ids);
         // Hydrate active cosmetics from server, sanitising against owned items
-        if (shopRaw.activeCosmetics && typeof shopRaw.activeCosmetics === 'object') {
+        if (
+          shopRaw.activeCosmetics
+          && typeof shopRaw.activeCosmetics === 'object'
+          && activeCosmeticsRevisionAtStart === activeCosmeticsRevisionRef.current
+        ) {
           const rawActive = shopRaw.activeCosmetics as Record<string, string>;
           const sanitised: Record<string, string> = {};
           for (const [cat, itemId] of Object.entries(rawActive)) {
             if (ids.includes(itemId)) sanitised[cat] = itemId;
           }
+          activeCosmeticsRef.current = sanitised;
           setActiveCosmeticsState(sanitised);
           void setCacheItem('active_cosmetics_v1', JSON.stringify(sanitised), requestAccountId).catch(() => null);
         }
@@ -2198,59 +2216,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   }, [activeOutfitId]);
 
+  const persistActiveCosmetics = useCallback((snapshot: Record<string, string>, revision: number) => {
+    const path = '/rewards/active-cosmetics';
+    const method = 'PUT';
+    const body = JSON.stringify({ activeCosmetics: snapshot });
+    const ownerId = cacheUserIdRef.current;
+    const write = activeCosmeticsWriteQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        // Do not let a queued write from a signed-out account run as the next user.
+        if (ownerId !== cacheUserIdRef.current) return;
+        await apiFetch(path, { method, body });
+        void clearMutation(path, method).catch(() => null);
+      })
+      .catch(() => {
+        // A newer selection is already queued; its ordered write will win.
+        if (ownerId !== cacheUserIdRef.current || revision !== activeCosmeticsRevisionRef.current) return;
+        void enqueueMutation(path, method, body).catch(() => null);
+        showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
+          // Retry the latest selection, not the stale snapshot that originally failed.
+          persistActiveCosmetics(activeCosmeticsRef.current, activeCosmeticsRevisionRef.current);
+        });
+      });
+    activeCosmeticsWriteQueueRef.current = write;
+  }, [showToastGlobal]);
+
   const markPurchased = useCallback((itemId: string) => {
     setPurchasedIds(prev => prev.includes(itemId) ? prev : [...prev, itemId]);
     // Auto-activate first purchase in a category
     const category = COSMETIC_CATEGORY_MAP[itemId];
     if (!category) return;
-    setActiveCosmeticsState(prev => {
-      if (prev[category]) return prev; // already have an active item in this category
-      const next = { ...prev, [category]: itemId };
-      setCacheItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
-      // Persist to server (fire-and-forget)
-      const cosmeticsBody = JSON.stringify({ activeCosmetics: next });
-      apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody })
-        .then(() => { clearMutation('/rewards/active-cosmetics', 'PUT').catch(() => null); })
-        .catch(() => {
-          showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
-            // H-1: Queue if retry fails (markPurchased gap — mirrors setActiveCosmetic)
-            apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody })
-              .then(() => { clearMutation('/rewards/active-cosmetics', 'PUT').catch(() => null); })
-              .catch(() => enqueueMutation('/rewards/active-cosmetics', 'PUT', cosmeticsBody).catch(() => null));
-          });
-        });
-      return next;
-    });
-  }, []);
+    const current = activeCosmeticsRef.current;
+    if (current[category]) return; // already have an active item in this category
+    const next = { ...current, [category]: itemId };
+    const revision = ++activeCosmeticsRevisionRef.current;
+    activeCosmeticsRef.current = next;
+    setActiveCosmeticsState(next);
+    setCacheItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
+    persistActiveCosmetics(next, revision);
+  }, [persistActiveCosmetics]);
 
   const setActiveCosmetic = useCallback((itemId: string) => {
     const category = COSMETIC_CATEGORY_MAP[itemId];
     if (!category) return;
-    setActiveCosmeticsState(prev => {
-      const next = { ...prev };
-      if (next[category] === itemId) {
-        // Persist an explicit off value for this slot: the API uses a JSON merge.
-        if (category === 'card_frame') next[category] = '';
-        else delete next[category];
-      } else {
-        next[category] = itemId;
-      }
-      setCacheItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
-      // Persist to server (fire-and-forget)
-      const cosmeticsToggleBody = JSON.stringify({ activeCosmetics: next });
-      apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody })
-        .then(() => { clearMutation('/rewards/active-cosmetics', 'PUT').catch(() => null); })
-        .catch(() => {
-          showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
-            // H-1: Queue if retry fails
-            apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody })
-              .then(() => { clearMutation('/rewards/active-cosmetics', 'PUT').catch(() => null); })
-              .catch(() => enqueueMutation('/rewards/active-cosmetics', 'PUT', cosmeticsToggleBody).catch(() => null));
-          });
-        });
-      return next;
-    });
-  }, []);
+    const next = { ...activeCosmeticsRef.current };
+    // Empty values are local "off" markers; the API removes those keys from
+    // its JSONB record, so a turned-off frame stays off after reload.
+    next[category] = next[category] === itemId ? '' : itemId;
+    const revision = ++activeCosmeticsRevisionRef.current;
+    activeCosmeticsRef.current = next;
+    setActiveCosmeticsState(next);
+    setCacheItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
+    persistActiveCosmetics(next, revision);
+  }, [persistActiveCosmetics]);
 
   const setActiveOutfitId = useCallback((id: string | null) => {
     setActiveOutfitIdState(id);
