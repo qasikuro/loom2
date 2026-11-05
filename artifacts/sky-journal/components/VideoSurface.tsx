@@ -90,6 +90,8 @@ export const VideoSurface = forwardRef<VideoSurfaceHandle, Props>(function Video
   },
   forwardedRef,
 ) {
+  // Expo Video can replace the source without creating a new player object.
+  const sourceIdentity = JSON.stringify(source);
   const player = useVideoPlayer(source, nativePlayer => {
     nativePlayer.loop = isLooping;
     nativePlayer.muted = isMuted;
@@ -138,6 +140,9 @@ export const VideoSurface = forwardRef<VideoSurfaceHandle, Props>(function Video
 
   useEffect(() => {
     setHasRenderedFrame(false);
+  }, [player, sourceIdentity]);
+
+  useEffect(() => {
     player.loop = isLooping;
     player.muted = isMuted;
     player.volume = Math.max(0, Math.min(1, volume));
@@ -148,7 +153,7 @@ export const VideoSurface = forwardRef<VideoSurfaceHandle, Props>(function Video
     } else {
       player.pause();
     }
-  }, [player, isLooping, isMuted, volume, progressUpdateIntervalMillis, shouldPlay]);
+  }, [player, sourceIdentity, isLooping, isMuted, volume, progressUpdateIntervalMillis, shouldPlay]);
 
   useEffect(() => {
     let loadNotified = false;
@@ -181,11 +186,13 @@ export const VideoSurface = forwardRef<VideoSurfaceHandle, Props>(function Video
     if (player.status === 'loading') propsRef.current.onLoadStart?.();
     if (player.status === 'readyToPlay') notifyLoaded();
     return () => subscriptions.forEach(subscription => subscription.remove());
-  }, [player]);
+  }, [player, sourceIdentity]);
 
   return (
     <View
-      style={[style, { position: 'relative', overflow: 'hidden' }]}
+      // Keep absolute-fill positioning supplied by Reels. Overriding it with
+      // relative positioning collapses wrappers with only absolute children.
+      style={[{ position: 'relative' }, style, { overflow: 'hidden' }]}
       pointerEvents={pointerEvents}
       accessibilityLabel={accessibilityLabel}
     >

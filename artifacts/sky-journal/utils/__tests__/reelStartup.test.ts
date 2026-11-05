@@ -10,6 +10,7 @@ function deferred<T>() {
 
 describe('early reel startup', () => {
   it('allows autoplay while React Native is still resolving its initial app state', () => {
+    expect(isReelPlaybackAppActive(undefined)).toBe(true);
     expect(isReelPlaybackAppActive(null)).toBe(true);
     expect(isReelPlaybackAppActive('unknown')).toBe(true);
     expect(isReelPlaybackAppActive('active')).toBe(true);
