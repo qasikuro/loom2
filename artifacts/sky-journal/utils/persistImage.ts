@@ -33,6 +33,30 @@ export class ImageUploadError extends Error {
   }
 }
 
+/** Check whether a picker URI still points to a readable local media file. */
+export async function isLocalMediaUriAvailable(uri: string): Promise<boolean> {
+  if (!uri) return false;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return true;
+
+  if (Platform.OS === 'web') {
+    if (!uri.startsWith('blob:') && !uri.startsWith('data:')) return false;
+    try {
+      const response = await fetch(uri);
+      if (!response.ok) return false;
+      return (await response.blob()).size > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  try {
+    const info = await FileSystem.getInfoAsync(uri);
+    return info.exists && (info.size == null || info.size > 0);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Returns true for errors that should NOT be retried (auth, quota, format, timeout).
  * Timeout errors are non-retryable so the user sees the failure immediately and

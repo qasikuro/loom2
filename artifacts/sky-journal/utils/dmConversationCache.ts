@@ -35,6 +35,16 @@ export type DmOutboxItem = {
   retryAt: number;
 };
 
+export type DmOutboxAttachmentReplacement =
+  | { kind: 'photo'; uri: string }
+  | {
+      kind: 'video';
+      uri: string;
+      thumbnailUri: string | null;
+      mimeType?: string | null;
+      fileName?: string | null;
+    };
+
 interface CacheEntry {
   messages: DmCachedMessage[];
   opened: boolean;
@@ -50,11 +60,14 @@ const MAX_CACHED_CONVERSATIONS = 8;
 const MAX_CACHED_MESSAGES = 50;
 const MAX_OUTBOX_MESSAGES = 50;
 const SECURE_CHUNK_LENGTH = 1600;
+const DM_OUTBOX_RETRY_PAUSED = Number.MAX_SAFE_INTEGER;
+
 const SECURE_OPTIONS = {
   keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
 } as const;
 const conversations = new Map<string, CacheEntry>();
 const outboxes = new Map<string, DmOutboxItem[]>();
+const discardedOutboxIds = new Map<string, Set<string>>();
 const inFlight = new Map<string, { promise: Promise<DmCachedMessage[]> }>();
 const generations = new Map<string, number>();
 const writeQueues = new Map<string, Promise<unknown>>();
@@ -446,6 +459,33 @@ export function getDmOutbox(
   return key ? [...(outboxes.get(key) ?? [])] : [];
 }
 
+/** Remove one queued send without changing the order of any other sends. */
+export function removeDmOutboxItem(
+  items: DmOutboxItem[],
+  clientMessageId: string,
+): DmOutboxItem[] {
+  return items.filter(item => item.clientMessageId !== clientMessageId);
+}
+
+/**
+ * Permanently discard one queued send for this process so a stale async retry
+ * snapshot cannot write it back after the user's deletion.
+ */
+export async function discardDmOutboxItem(
+  accountId: string | null | undefined,
+  partnerId: string | null | undefined,
+  clientMessageId: string,
+): Promise<void> {
+  const key = cacheKey(accountId, partnerId);
+  if (!key || !accountId || !partnerId) return;
+  const discarded = discardedOutboxIds.get(key) ?? new Set<string>();
+  discarded.add(clientMessageId);
+  discardedOutboxIds.set(key, discarded);
+  const remaining = removeDmOutboxItem(outboxes.get(key) ?? [], clientMessageId);
+  outboxes.set(key, remaining);
+  await saveDmOutbox(accountId, partnerId, remaining);
+}
+
 /** Restore a cancelled send as paused when its removal cannot be saved. */
 export function restorePausedDmOutboxItem(
   items: DmOutboxItem[],
@@ -459,6 +499,53 @@ export function restorePausedDmOutboxItem(
     { ...item, retryAt: Number.MAX_SAFE_INTEGER },
   );
   return restored;
+}
+
+/** Persist a manual retry as paused until its request is confirmed. */
+export function pauseDmOutboxItemForRetry(
+  items: DmOutboxItem[],
+  clientMessageId: string,
+): DmOutboxItem[] {
+  return items.map(item => item.clientMessageId === clientMessageId
+    ? { ...item, retryAt: DM_OUTBOX_RETRY_PAUSED }
+    : item);
+}
+
+/** Replace media only on an unconfirmed outbox row, retaining its caption and ID. */
+export function replaceDmOutboxAttachment(
+  items: DmOutboxItem[],
+  clientMessageId: string,
+  replacement: DmOutboxAttachmentReplacement,
+  confirmedMessageIds: ReadonlySet<string> = new Set(),
+): DmOutboxItem[] {
+  if (confirmedMessageIds.has(clientMessageId)) return items;
+  return items.map(item => {
+    if (item.clientMessageId !== clientMessageId) return item;
+    return {
+      ...item,
+      imageUri: null,
+      videoUri: null,
+      thumbnailUri: null,
+      localPhotoUri: replacement.kind === 'photo' ? replacement.uri : null,
+      localVideoUri: replacement.kind === 'video' ? replacement.uri : null,
+      localThumbnailUri: replacement.kind === 'video' ? replacement.thumbnailUri : null,
+      localVideoMimeType: replacement.kind === 'video' ? replacement.mimeType ?? null : null,
+      localVideoFileName: replacement.kind === 'video' ? replacement.fileName ?? null : null,
+      retryAt: DM_OUTBOX_RETRY_PAUSED,
+    };
+  });
+}
+
+export function getDmOutboxDeliveryState(item: DmOutboxItem): 'queued' | 'failed' {
+  return item.retryAt >= DM_OUTBOX_RETRY_PAUSED ? 'failed' : 'queued';
+}
+
+/** Drop queued records already returned by the server, preventing stale retries. */
+export function removeConfirmedDmOutboxItems(
+  items: DmOutboxItem[],
+  confirmedMessageIds: ReadonlySet<string>,
+): DmOutboxItem[] {
+  return items.filter(item => !confirmedMessageIds.has(item.clientMessageId));
 }
 
 export async function hydrateDmOutbox(
@@ -475,7 +562,10 @@ export async function hydrateDmOutbox(
   const stored = await readBlob<unknown>(root, 'outbox');
   if (generation !== generationFor(key)) return [];
   if (outboxes.has(key)) return getDmOutbox(accountId, partnerId);
-  const items = Array.isArray(stored) ? stored.filter(isOutboxItem).slice(-MAX_OUTBOX_MESSAGES) : [];
+  const discarded = discardedOutboxIds.get(key) ?? new Set<string>();
+  const items = Array.isArray(stored)
+    ? stored.filter(isOutboxItem).filter(item => !discarded.has(item.clientMessageId)).slice(-MAX_OUTBOX_MESSAGES)
+    : [];
   outboxes.set(key, items);
   return [...items];
 }
@@ -488,7 +578,11 @@ export async function saveDmOutbox(
   const key = cacheKey(accountId, partnerId);
   if (!key || !accountId || !partnerId) return;
   if (items.length > MAX_OUTBOX_MESSAGES) throw new Error('Too many pending messages to queue safely');
-  const unique = [...new Map(items.map(item => [item.clientMessageId, item])).values()];
+  const discarded = discardedOutboxIds.get(key) ?? new Set<string>();
+  const unique = [...new Map(
+    items.filter(item => !discarded.has(item.clientMessageId))
+      .map(item => [item.clientMessageId, item]),
+  ).values()];
   const previous = outboxes.get(key);
   outboxes.set(key, unique);
   const generation = generationFor(key);
@@ -521,6 +615,7 @@ export function forgetDmConversation(
   historySignatures.delete(key);
   conversations.delete(key);
   outboxes.delete(key);
+  discardedOutboxIds.delete(key);
   inFlight.delete(key);
   const rootPromise = storageRoot(accountId, partnerId);
   const task = rootPromise.then(root => Promise.all([
@@ -547,6 +642,7 @@ export function clearDmAccountCache(accountId: string): void {
   const prefix = `${accountId}\u001f`;
   const accountKeys = new Set([
     ...generations.keys(), ...conversations.keys(), ...outboxes.keys(), ...inFlight.keys(),
+    ...discardedOutboxIds.keys(),
   ]);
   const outstanding = [...backgroundTasks, ...writeQueues.values()];
   for (const key of accountKeys) {
@@ -560,6 +656,9 @@ export function clearDmAccountCache(accountId: string): void {
   }
   for (const key of [...outboxes.keys()]) {
     if (key.startsWith(prefix)) outboxes.delete(key);
+  }
+  for (const key of [...discardedOutboxIds.keys()]) {
+    if (key.startsWith(prefix)) discardedOutboxIds.delete(key);
   }
   for (const key of [...inFlight.keys()]) {
     if (key.startsWith(prefix)) inFlight.delete(key);

@@ -6,7 +6,7 @@ import { ChatMessagePhoto, ChatPhotoDraft, ChatPhotoViewer } from '@/components/
 import { ChatMessageVideo, ChatVideoDraft, ChatVideoViewer } from '@/components/ChatVideo';
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
-import { ImageUploadError, persistImageUri, persistVideoUri } from '@/utils/persistImage';
+import { ImageUploadError, isLocalMediaUriAvailable, persistImageUri, persistVideoUri } from '@/utils/persistImage';
 import { useClearConversation, useRemoveFriend, type ChatMessageInput } from '@workspace/api-client-react';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
 import { showToastGlobal } from '@/components/Toast';
@@ -20,14 +20,26 @@ import {
   hydrateDmOutbox,
   markDmConversationOpened,
   rememberDmConversation,
+  removeConfirmedDmOutboxItems,
+  removeDmOutboxItem,
+  discardDmOutboxItem,
+  pauseDmOutboxItemForRetry,
+  replaceDmOutboxAttachment,
   restorePausedDmOutboxItem,
   saveDmOutbox,
   wasDmConversationOpened,
   type DmOutboxItem,
+  type DmOutboxAttachmentReplacement,
   normalizeDmConversationMessage,
   type DmCachedMessage,
 } from '@/utils/dmConversationCache';
-import { mergeChatMessages, upsertChatMessages } from '@/utils/chatMessageHistory';
+import {
+  isChatIdentityCurrent,
+  mergeChatMessages,
+  reconcileConfirmedChatMessage,
+  updateChatStateForIdentity,
+  upsertChatMessages,
+} from '@/utils/chatMessageHistory';
 import { CHAT_HISTORY_LIST_CONFIG, getDmUploadProgressUpdate } from '@/utils/chatListPerformance';
 import { nextDmRetry } from '@/utils/dmRetryPolicy';
 import { useSound } from '@/context/SoundContext';
@@ -566,6 +578,8 @@ function MessagesScreenContent() {
     localCacheReadyRef.current = initialMessages.length > 0;
     conversationEpochRef.current++;
     serverMessageIdsRef.current = new Set();
+    deletedMessageIdsRef.current.clear();
+    deleteForEveryoneRef.current.clear();
     outboxRef.current = initialOutbox;
     retryingMessageIdsRef.current.clear();
     lastMsgIdRef.current = initialMessages.at(-1)?.id ?? null;
@@ -629,6 +643,8 @@ function MessagesScreenContent() {
   const localCacheReadyRef = useRef(initialMessages.length > 0);
   const conversationEpochRef = useRef(0);
   const serverMessageIdsRef = useRef(new Set<string>());
+  const deletedMessageIdsRef = useRef(new Set<string>());
+  const deleteForEveryoneRef = useRef(new Map<string, boolean>());
   const outboxRef = useRef<DmOutboxItem[]>(initialOutbox);
   const retryingMessageIdsRef = useRef(new Set<string>());
   const sendControllersRef = useRef(new Map<string, AbortController>());
@@ -888,6 +904,7 @@ function MessagesScreenContent() {
           previous,
           [...msgs, ...liveMessages, ...recentMessages],
           olderHistoryLoadedRef.current,
+          deletedMessageIdsRef.current,
         );
       });
       markDmThreadRead(userId);
@@ -913,7 +930,7 @@ function MessagesScreenContent() {
       if (!active || identity !== photoIdentityRef.current) return;
       localCacheReadyRef.current = true;
       if (serverSnapshotReadyRef.current || cached.length === 0) return;
-      setMessages(previous => upsertChatMessages(previous, cached));
+      setMessages(previous => upsertChatMessages(previous, cached, deletedMessageIdsRef.current));
       setHasOlderMessages(cached.length === CHAT_PAGE_SIZE);
     });
 
@@ -924,7 +941,8 @@ function MessagesScreenContent() {
         await saveDmOutbox(myUserId, userId, []);
         return;
       }
-      const remaining = stored.filter(item => !serverMessageIdsRef.current.has(item.clientMessageId));
+      const remaining = removeConfirmedDmOutboxItems(stored, serverMessageIdsRef.current)
+        .filter(item => !deletedMessageIdsRef.current.has(item.clientMessageId));
       outboxRef.current = remaining;
       if (remaining.length !== stored.length) {
         try { await saveDmOutbox(myUserId, userId, remaining); } catch { /* replay remains idempotent */ }
@@ -936,7 +954,7 @@ function MessagesScreenContent() {
         item,
         item.retryAt >= Number.MAX_SAFE_INTEGER ? 'failed' : 'queued',
       ));
-      if (pending.length) setMessages(previous => upsertChatMessages(previous, pending));
+      if (pending.length) setMessages(previous => upsertChatMessages(previous, pending, deletedMessageIdsRef.current));
     }).catch(() => {
       if (active && identity === photoIdentityRef.current) {
         showToastGlobal('Queued messages could not be restored. Reopen this chat before sending.', 'warning');
@@ -960,7 +978,7 @@ function MessagesScreenContent() {
       });
       const older = await apiFetch<Message[]>(`/messages/${userId}?${query.toString()}`);
       if (identity !== photoIdentityRef.current) return;
-      setMessages(previous => mergeChatMessages(previous, [...older, ...previous]));
+      setMessages(previous => mergeChatMessages(previous, [...older, ...previous], false, deletedMessageIdsRef.current));
       if (older.length > 0) olderHistoryLoadedRef.current = true;
       setHasOlderMessages(older.length === CHAT_PAGE_SIZE);
     } catch {
@@ -1010,6 +1028,12 @@ function MessagesScreenContent() {
         return;
       }
 
+      if (ev?.type === 'new_message' && ev.id && deletedMessageIdsRef.current.has(ev.id)) return;
+      const confirmedRetry = ev?.type === 'new_message'
+        && ev.fromUserId === myUserId
+        && ev.toUserId === userId
+        && !!ev.id
+        && outboxRef.current.some(item => item.clientMessageId === ev.id);
       const ownSharedReaction = ev?.fromUserId === myUserId && ev.toUserId === userId
         && !!parseSharedReaction(ev.content) && !ev.imageUri && !ev.videoUri && !ev.expression;
       if (ev?.type === 'new_message' && (ev.fromUserId === userId || ownSharedReaction) && ev.id) {
@@ -1023,6 +1047,9 @@ function MessagesScreenContent() {
         };
         recordSharedReaction(newMsg);
         setMessages(prev => {
+          if (confirmedRetry) return reconcileConfirmedChatMessage(
+            prev, newMsg, newMsg.id, deletedMessageIdsRef.current,
+          );
           if (prev.find(m => m.id === ev.id)) return prev;
           lastMsgIdRef.current = ev.id!;
           if (ev.expression) queueSticker(getSticker(ev.expression));
@@ -1033,6 +1060,19 @@ function MessagesScreenContent() {
       }
 
       if (ev?.type === 'message_deleted' && ev.messageId) {
+        if (retryingMessageIdsRef.current.has(ev.messageId)
+          || outboxRef.current.some(item => item.clientMessageId === ev.messageId)) {
+          deletedMessageIdsRef.current.add(ev.messageId);
+          deleteForEveryoneRef.current.set(ev.messageId, false);
+          outboxRef.current = removeDmOutboxItem(outboxRef.current, ev.messageId);
+          sendControllersRef.current.get(ev.messageId)?.abort();
+          const upload = videoUploadsRef.current.get(ev.messageId);
+          if (upload) {
+            upload.cancelRequested = true;
+            upload.controller.abort();
+          }
+          void discardDmOutboxItem(myUserId, userId, ev.messageId).catch(() => undefined);
+        }
         setMessages(prev => prev.filter(m => m.id !== ev.messageId));
         return;
       }
@@ -1140,6 +1180,7 @@ function MessagesScreenContent() {
     const partnerId = userId;
     const identity = photoIdentityRef.current;
     if (!accountId || !partnerId || identity !== JSON.stringify([accountId, partnerId])) return;
+    if (deletedMessageIdsRef.current.has(item.clientMessageId)) return;
     if ((isBlocked || deletedPartner) && !options.manual) return;
     if (!options.manual && item.retryAt > Date.now()) return;
     if (retryingMessageIdsRef.current.has(item.clientMessageId)) return;
@@ -1162,15 +1203,23 @@ function MessagesScreenContent() {
       sendControllersRef.current.set(item.clientMessageId, videoUpload.controller);
       setActiveVideoUpload({ messageId: item.clientMessageId, thumbnailUri: videoUpload.thumbnailUri, progress: 0 });
     }
-    setMessages(previous => upsertChatMessages(
+    setMessages(previous => updateChatStateForIdentity(
+      identity,
+      photoIdentityRef.current,
       previous,
-      [outboxMessage(accountId, partnerId, item, 'sending')],
+      current => upsertChatMessages(
+        current,
+        [outboxMessage(accountId, partnerId, item, 'sending')],
+        deletedMessageIdsRef.current,
+      ),
     ));
 
     let prepared = item;
     try {
       if (!prepared.imageUri && prepared.localPhotoUri) {
         const uploaded = await persistImageUri(prepared.localPhotoUri);
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)
+          || deletedMessageIdsRef.current.has(prepared.clientMessageId)) return;
         const path = uploaded.startsWith('/') ? uploaded : new URL(uploaded).pathname;
         if (!/^\/api\/images\/[\w.-]+$/.test(path)) throw new Error('Invalid uploaded photo');
         prepared = { ...prepared, imageUri: path };
@@ -1178,6 +1227,7 @@ function MessagesScreenContent() {
           entry.clientMessageId === prepared.clientMessageId ? prepared : entry,
         );
         await saveDmOutbox(accountId, partnerId, outboxRef.current);
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
       }
       if (!prepared.videoUri && prepared.localVideoUri) {
         const progressCheckpoint = { percent: 0, updatedAt: Date.now() };
@@ -1200,6 +1250,8 @@ function MessagesScreenContent() {
             });
           },
         });
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)
+          || deletedMessageIdsRef.current.has(prepared.clientMessageId)) return;
         const path = uploaded.startsWith('/') ? uploaded : new URL(uploaded).pathname;
         if (!/^\/api\/videos\/[\w.-]+$/.test(path)) throw new Error('Invalid uploaded video');
         videoUpload?.paths.push(path);
@@ -1217,10 +1269,15 @@ function MessagesScreenContent() {
           entry.clientMessageId === prepared.clientMessageId ? prepared : entry,
         );
         await saveDmOutbox(accountId, partnerId, outboxRef.current);
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+        if (videoUpload?.cancelRequested
+          || (videoUpload && videoUploadsRef.current.get(prepared.clientMessageId) !== videoUpload)) return;
       }
       if (!prepared.thumbnailUri && prepared.localThumbnailUri) {
         if (videoUpload?.controller.signal.aborted) throw new ImageUploadError('Video upload was cancelled.');
         const uploaded = await persistImageUri(prepared.localThumbnailUri);
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)
+          || deletedMessageIdsRef.current.has(prepared.clientMessageId)) return;
         const path = uploaded.startsWith('/') ? uploaded : new URL(uploaded).pathname;
         if (!/^\/api\/images\/[\w.-]+$/.test(path)) throw new Error('Invalid video poster');
         videoUpload?.paths.push(path);
@@ -1229,8 +1286,12 @@ function MessagesScreenContent() {
           entry.clientMessageId === prepared.clientMessageId ? prepared : entry,
         );
         await saveDmOutbox(accountId, partnerId, outboxRef.current);
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+        if (videoUpload?.cancelRequested
+          || (videoUpload && videoUploadsRef.current.get(prepared.clientMessageId) !== videoUpload)) return;
       }
-      if (identity !== photoIdentityRef.current) return;
+      if (!isChatIdentityCurrent(identity, photoIdentityRef.current)
+        || deletedMessageIdsRef.current.has(prepared.clientMessageId)) return;
       const body: ChatMessageInput = {
         clientMessageId: prepared.clientMessageId,
         ...(prepared.content ? { content: prepared.content } : {}),
@@ -1256,13 +1317,30 @@ function MessagesScreenContent() {
         });
       } finally {
         clearTimeout(timeout);
-        sendControllersRef.current.delete(prepared.clientMessageId);
+        if (sendControllersRef.current.get(prepared.clientMessageId) === requestController) {
+          sendControllersRef.current.delete(prepared.clientMessageId);
+        }
       }
       if (!sent?.id || sent.fromUserId !== accountId || sent.toUserId !== partnerId) {
         throw new Error('Message was not confirmed');
       }
-      if (identity !== photoIdentityRef.current) return;
-      if (!outboxRef.current.some(entry => entry.clientMessageId === prepared.clientMessageId)) {
+      if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+      if (deletedMessageIdsRef.current.has(prepared.clientMessageId)) {
+        outboxRef.current = removeDmOutboxItem(outboxRef.current, prepared.clientMessageId);
+        await saveDmOutbox(accountId, partnerId, outboxRef.current).catch(() => undefined);
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+        const forEveryone = deleteForEveryoneRef.current.get(prepared.clientMessageId) ?? false;
+        void apiFetch(`/messages/${sent.id}?forEveryone=${forEveryone}`, { method: 'DELETE' }).catch(() => undefined);
+        setMessages(previous => updateChatStateForIdentity(
+          identity, photoIdentityRef.current, previous,
+          current => current.filter(message =>
+            message.id !== prepared.clientMessageId && message.id !== sent.id,
+          ),
+        ));
+        return;
+      }
+      if (!outboxRef.current.some(entry => entry.clientMessageId === prepared.clientMessageId)
+        && !serverMessageIdsRef.current.has(sent.id)) {
         // A clear from another device may race the POST response. Keep the
         // sender's copy hidden without touching the recipient's copy.
         void apiFetch(`/messages/${sent.id}?forEveryone=false`, { method: 'DELETE' }).catch(() => undefined);
@@ -1273,8 +1351,24 @@ function MessagesScreenContent() {
       // If secure storage fails here, a future replay still has the same
       // client UUID and the API returns this committed row instead of duplicating it.
       try { await saveDmOutbox(accountId, partnerId, outboxRef.current); } catch { /* idempotent replay is safe */ }
-      setMessages(previous => upsertChatMessages(
-        previous.filter(message => message.id !== prepared.clientMessageId), [confirmed],
+      if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+      if (deletedMessageIdsRef.current.has(prepared.clientMessageId)) {
+        const forEveryone = deleteForEveryoneRef.current.get(prepared.clientMessageId) ?? false;
+        void apiFetch(`/messages/${confirmed.id}?forEveryone=${forEveryone}`, { method: 'DELETE' }).catch(() => undefined);
+        setMessages(previous => updateChatStateForIdentity(
+          identity, photoIdentityRef.current, previous,
+          current => current.filter(message =>
+            message.id !== prepared.clientMessageId && message.id !== confirmed.id,
+          ),
+        ));
+        return;
+      }
+      serverMessageIdsRef.current.add(confirmed.id);
+      setMessages(previous => updateChatStateForIdentity(
+        identity, photoIdentityRef.current, previous,
+        current => reconcileConfirmedChatMessage(
+          current, confirmed, prepared.clientMessageId, deletedMessageIdsRef.current,
+        ),
       ));
       recordSharedReaction(confirmed);
       lastMsgIdRef.current = confirmed.id;
@@ -1286,7 +1380,25 @@ function MessagesScreenContent() {
         setVideoDraft(current => current?.uri === prepared.localVideoUri ? null : current);
       }
     } catch (err) {
-      if (identity !== photoIdentityRef.current) return;
+      if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+      if (deletedMessageIdsRef.current.has(prepared.clientMessageId)) {
+        outboxRef.current = removeDmOutboxItem(outboxRef.current, prepared.clientMessageId);
+        await saveDmOutbox(accountId, partnerId, outboxRef.current).catch(() => undefined);
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+        setMessages(previous => updateChatStateForIdentity(
+          identity, photoIdentityRef.current, previous,
+          current => current.filter(message => message.id !== prepared.clientMessageId),
+        ));
+        return;
+      }
+      if (serverMessageIdsRef.current.has(prepared.clientMessageId)) {
+        outboxRef.current = removeConfirmedDmOutboxItems(
+          outboxRef.current, new Set([prepared.clientMessageId]),
+        );
+        await saveDmOutbox(accountId, partnerId, outboxRef.current).catch(() => undefined);
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+        return;
+      }
       if (!outboxRef.current.some(entry => entry.clientMessageId === prepared.clientMessageId)) return;
       if (videoUpload?.cancelRequested) return;
       const status = err instanceof ApiError ? err.status : null;
@@ -1297,7 +1409,11 @@ function MessagesScreenContent() {
       if (status === 410) {
         outboxRef.current = outboxRef.current.filter(entry => entry.clientMessageId !== prepared.clientMessageId);
         await saveDmOutbox(accountId, partnerId, outboxRef.current).catch(() => undefined);
-        setMessages(previous => previous.filter(message => message.id !== prepared.clientMessageId));
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+        setMessages(previous => updateChatStateForIdentity(
+          identity, photoIdentityRef.current, previous,
+          current => current.filter(message => message.id !== prepared.clientMessageId),
+        ));
         return;
       }
       const policy = nextDmRetry(
@@ -1314,9 +1430,14 @@ function MessagesScreenContent() {
         entry.clientMessageId === retryItem.clientMessageId ? retryItem : entry,
       );
       try { await saveDmOutbox(accountId, partnerId, outboxRef.current); } catch { /* preserve memory retry state */ }
-      setMessages(previous => upsertChatMessages(
-        previous,
-        [outboxMessage(accountId, partnerId, retryItem, permanent ? 'failed' : 'queued')],
+      if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+      setMessages(previous => updateChatStateForIdentity(
+        identity, photoIdentityRef.current, previous,
+        current => upsertChatMessages(
+          current,
+          [outboxMessage(accountId, partnerId, retryItem, permanent ? 'failed' : 'queued')],
+          deletedMessageIdsRef.current,
+        ),
       ));
       if (options.notify) {
         if (err instanceof ApiError && err.status === 429) {
@@ -1331,17 +1452,19 @@ function MessagesScreenContent() {
         }
       }
     } finally {
-      retryingMessageIdsRef.current.delete(item.clientMessageId);
-      if (videoUploadsRef.current.get(item.clientMessageId) === videoUpload) {
-        videoUploadsRef.current.delete(item.clientMessageId);
+      if (isChatIdentityCurrent(identity, photoIdentityRef.current)) {
+        retryingMessageIdsRef.current.delete(item.clientMessageId);
+        if (videoUploadsRef.current.get(item.clientMessageId) === videoUpload) {
+          videoUploadsRef.current.delete(item.clientMessageId);
+        }
+        if (videoUpload && sendControllersRef.current.get(item.clientMessageId) === videoUpload.controller) {
+          sendControllersRef.current.delete(item.clientMessageId);
+        }
+        if (videoUpload?.cancelRequested && videoUpload.cleanupOnCancel !== false && videoUpload.paths.length) {
+          discardPendingChatMedia(videoUpload.paths);
+        }
+        setActiveVideoUpload(current => current?.messageId === item.clientMessageId ? null : current);
       }
-      if (videoUpload && sendControllersRef.current.get(item.clientMessageId) === videoUpload.controller) {
-        sendControllersRef.current.delete(item.clientMessageId);
-      }
-      if (videoUpload?.cancelRequested && videoUpload.cleanupOnCancel !== false && videoUpload.paths.length) {
-        discardPendingChatMedia(videoUpload.paths);
-      }
-      setActiveVideoUpload(current => current?.messageId === item.clientMessageId ? null : current);
     }
   }, [myUserId, userId, isBlocked, deletedPartner, recordSharedReaction, t, markPartnerUnavailable]);
 
@@ -1453,14 +1576,192 @@ function MessagesScreenContent() {
       showToastGlobal(isBlocked ? 'Unblock this person before retrying.' : 'This account is no longer available.', 'warning');
       return;
     }
+    const accountId = myUserId;
+    const partnerId = userId;
+    if (!accountId || !partnerId) return;
     const item = outboxRef.current.find(entry => entry.clientMessageId === messageId);
-    if (!item) return;
-    const retry = { ...item, retryAt: Date.now() };
-    outboxRef.current = outboxRef.current.map(entry => entry.clientMessageId === messageId ? retry : entry);
-    void saveDmOutbox(myUserId, userId, outboxRef.current).then(() =>
-      deliverQueuedMessage(retry, { manual: true, notify: true }),
-    ).catch(() => showToastGlobal('Could not save retry. Please try again.', 'warning'));
-  }, [myUserId, userId, isBlocked, deletedPartner, deliverQueuedMessage]);
+    if (!item || serverMessageIdsRef.current.has(messageId)) return;
+    const identity = photoIdentityRef.current;
+    retryingMessageIdsRef.current.add(messageId);
+    const chooseReplacement = async () => {
+      showToastGlobal('That attachment is no longer available. Choose a replacement.', 'warning');
+      setPickingPhoto(true);
+      try {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images', 'videos'],
+          allowsMultipleSelection: false,
+          quality: 0.85,
+          videoMaxDuration: 60,
+        });
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)) return;
+        const asset = !result.canceled ? result.assets[0] : null;
+        if (!asset?.uri) return;
+
+        let replacement: DmOutboxAttachmentReplacement;
+        if (asset.type === 'video') {
+          if (asset.fileSize != null && asset.fileSize > CHAT_VIDEO_MAX_BYTES) {
+            showToastGlobal('Choose a video under 25 MB to send in chat.', 'warning');
+            return;
+          }
+          if (asset.duration != null && asset.duration > CHAT_VIDEO_MAX_DURATION_MS) {
+            showToastGlobal('Chat videos can be up to 60 seconds long.', 'warning');
+            return;
+          }
+          let thumbnailUri: string | null = null;
+          if (Platform.OS !== 'web') {
+            try {
+              const { getThumbnailAsync } = await import('expo-video-thumbnails');
+              thumbnailUri = (await getThumbnailAsync(asset.uri, { time: 0, quality: 0.72 })).uri;
+            } catch {
+              // A missing poster must not prevent the video itself from being sent.
+            }
+          }
+          replacement = {
+            kind: 'video',
+            uri: asset.uri,
+            thumbnailUri,
+            mimeType: asset.mimeType,
+            fileName: asset.fileName,
+          };
+        } else {
+          replacement = { kind: 'photo', uri: asset.uri };
+        }
+
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)
+          || serverMessageIdsRef.current.has(messageId)) return;
+        const current = outboxRef.current.find(entry => entry.clientMessageId === messageId);
+        if (!current) return;
+        const next = replaceDmOutboxAttachment(
+          outboxRef.current, messageId, replacement, serverMessageIdsRef.current,
+        );
+        const updated = next.find(entry => entry.clientMessageId === messageId);
+        if (!updated || updated === current) return;
+        outboxRef.current = next;
+        setMessages(previous => updateChatStateForIdentity(
+          identity, photoIdentityRef.current, previous,
+          current => upsertChatMessages(
+            current, [outboxMessage(accountId, partnerId, updated, 'failed')],
+          ),
+        ));
+        try {
+          await saveDmOutbox(accountId, partnerId, next);
+        } catch {
+          if (isChatIdentityCurrent(identity, photoIdentityRef.current)
+            && !serverMessageIdsRef.current.has(messageId)
+            && outboxRef.current.some(entry => entry.clientMessageId === messageId)) {
+            outboxRef.current = outboxRef.current.map(entry =>
+              entry.clientMessageId === messageId && entry.localPhotoUri === replacement.uri
+                || entry.clientMessageId === messageId && entry.localVideoUri === replacement.uri
+                ? current
+                : entry,
+            );
+            setMessages(previous => updateChatStateForIdentity(
+              identity, photoIdentityRef.current, previous,
+              messages => upsertChatMessages(
+                messages, [outboxMessage(accountId, partnerId, current, 'failed')],
+              ),
+            ));
+          }
+          if (isChatIdentityCurrent(identity, photoIdentityRef.current)) {
+            showToastGlobal('Could not securely save the replacement. Please try again.', 'warning');
+          }
+          return;
+        }
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)
+          || serverMessageIdsRef.current.has(messageId)
+          || !outboxRef.current.some(entry => entry.clientMessageId === messageId)) return;
+        setMessages(previous => updateChatStateForIdentity(
+          identity, photoIdentityRef.current, previous,
+          currentMessages => upsertChatMessages(
+            currentMessages, [outboxMessage(accountId, partnerId, updated, 'sending')],
+          ),
+        ));
+        setPickingPhoto(false);
+        retryingMessageIdsRef.current.delete(messageId);
+        await deliverQueuedMessage(updated, { manual: true, notify: true });
+      } catch {
+        if (isChatIdentityCurrent(identity, photoIdentityRef.current)) {
+          showToastGlobal('Could not open your photos. Check photo permissions and try again.', 'warning');
+        }
+      } finally {
+        if (isChatIdentityCurrent(identity, photoIdentityRef.current)) setPickingPhoto(false);
+      }
+    };
+
+    void (async () => {
+      try {
+        const missingPhoto = !item.imageUri && !!item.localPhotoUri
+          && !(await isLocalMediaUriAvailable(item.localPhotoUri));
+        const missingVideo = !item.videoUri && !!item.localVideoUri
+          && !(await isLocalMediaUriAvailable(item.localVideoUri));
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)
+          || serverMessageIdsRef.current.has(messageId)) return;
+        if (missingPhoto || missingVideo) {
+          await chooseReplacement();
+          return;
+        }
+        // A video poster is optional. If its cache file expired, retry the video
+        // without a poster rather than asking the user to replace the video.
+        let retryItem = item;
+        if (!item.thumbnailUri && item.localThumbnailUri
+          && !(await isLocalMediaUriAvailable(item.localThumbnailUri))) {
+          retryItem = { ...item, localThumbnailUri: null, retryAt: Number.MAX_SAFE_INTEGER };
+          outboxRef.current = outboxRef.current.map(entry =>
+            entry.clientMessageId === messageId ? retryItem : entry,
+          );
+          try {
+            await saveDmOutbox(accountId, partnerId, outboxRef.current);
+          } catch {
+            if (isChatIdentityCurrent(identity, photoIdentityRef.current)) {
+              showToastGlobal('Could not save retry. Please try again.', 'warning');
+            }
+            return;
+          }
+        }
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)
+          || serverMessageIdsRef.current.has(messageId)
+          || !outboxRef.current.some(entry => entry.clientMessageId === messageId)) return;
+        // Keep this explicit retry paused in durable storage until the request
+        // is confirmed. If the app closes mid-send, it remains retryable.
+        const retry = { ...retryItem, retryAt: Number.MAX_SAFE_INTEGER };
+        outboxRef.current = pauseDmOutboxItemForRetry(outboxRef.current, messageId);
+        setMessages(previous => updateChatStateForIdentity(
+          identity, photoIdentityRef.current, previous,
+          current => upsertChatMessages(
+            current,
+            [outboxMessage(accountId, partnerId, retry, 'sending')],
+          ),
+        ));
+        try {
+          await saveDmOutbox(accountId, partnerId, outboxRef.current);
+        } catch {
+          if (isChatIdentityCurrent(identity, photoIdentityRef.current)) {
+            setMessages(previous => updateChatStateForIdentity(
+              identity, photoIdentityRef.current, previous,
+              current => upsertChatMessages(
+                current, [outboxMessage(accountId, partnerId, retry, 'failed')],
+              ),
+            ));
+            showToastGlobal('Could not save retry. Please try again.', 'warning');
+          }
+          return;
+        }
+        if (!isChatIdentityCurrent(identity, photoIdentityRef.current)
+          || serverMessageIdsRef.current.has(messageId)
+          || !outboxRef.current.some(entry => entry.clientMessageId === messageId)) return;
+        retryingMessageIdsRef.current.delete(messageId);
+        await deliverQueuedMessage(retry, { manual: true, notify: true });
+      } catch {
+        if (isChatIdentityCurrent(identity, photoIdentityRef.current)) {
+          showToastGlobal('Could not prepare this message to retry. Please try again.', 'warning');
+        }
+      } finally {
+        if (isChatIdentityCurrent(identity, photoIdentityRef.current)) {
+          retryingMessageIdsRef.current.delete(messageId);
+        }
+      }
+    })();
+  }, [myUserId, userId, isBlocked, deletedPartner, deliverQueuedMessage, pickingPhoto]);
 
   const retryDueMessages = useCallback(() => {
     if (AppState.currentState !== 'active' || isBlocked || deletedPartner) return;
@@ -1514,11 +1815,42 @@ function MessagesScreenContent() {
 
   const handleDeleteMsg = useCallback(async (msg: Message) => {
     if (!msg.isOwn) return;
-    if (retryingMessageIdsRef.current.has(msg.id)) {
-      showToastGlobal('This message is still sending. Try again when it finishes.', 'warning');
-      return;
-    }
     const deleteMessage = async (forEveryone: boolean) => {
+      const retryWasActive = retryingMessageIdsRef.current.has(msg.id);
+      if (retryWasActive) {
+        deletedMessageIdsRef.current.add(msg.id);
+        deleteForEveryoneRef.current.set(msg.id, forEveryone);
+        const upload = videoUploadsRef.current.get(msg.id);
+        if (upload) {
+          upload.cancelRequested = true;
+          upload.controller.abort();
+        }
+        sendControllersRef.current.get(msg.id)?.abort();
+        outboxRef.current = removeDmOutboxItem(outboxRef.current, msg.id);
+        setMessages(previous => previous.filter(message => message.id !== msg.id));
+        setActiveVideoUpload(current => current?.messageId === msg.id ? null : current);
+        let outboxSaved = true;
+        try {
+          await discardDmOutboxItem(myUserId, userId, msg.id);
+        } catch {
+          // The in-memory tombstone still prevents a late retry snapshot from
+          // re-adding this send; try persisting the filtered outbox once more.
+          try {
+            await saveDmOutbox(myUserId, userId, outboxRef.current);
+          } catch {
+            outboxSaved = false;
+          }
+        }
+        if (!outboxSaved) showToastGlobal('Could not securely save this deletion. Keep this chat open and try again.', 'warning');
+        try {
+          await apiFetch(`/messages/${msg.id}?forEveryone=${forEveryone}`, { method: 'DELETE' });
+        } catch (err) {
+          if (!(msg.deliveryState && err instanceof ApiError && err.status === 404)) {
+            showToastGlobal('Could not delete this message from the server. It will stay hidden here.', 'warning');
+          }
+        }
+        return;
+      }
       try {
         // Pause a queued item before the network operation so an offline delete
         // cannot race an automatic resend.
@@ -1534,7 +1866,9 @@ function MessagesScreenContent() {
         await removeQueuedMessage(msg.id);
         setMessages(previous => previous.filter(message => message.id !== msg.id));
       } catch {
-        if (msg.deliveryState) setMessages(previous => upsertChatMessages(previous, [{ ...msg, deliveryState: 'failed' }]));
+        if (msg.deliveryState) setMessages(previous => upsertChatMessages(
+          previous, [{ ...msg, deliveryState: 'failed' }], deletedMessageIdsRef.current,
+        ));
         showToastGlobal('Could not delete this message. Please try again.', 'warning');
       }
     };
