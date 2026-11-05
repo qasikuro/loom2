@@ -18,6 +18,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { visibleOutfitTags } from '@/utils/outfitShowcase';
 
 const GUTTER = 14;
 const GAP    = 10;
@@ -79,7 +80,8 @@ function OutfitCard({ outfit, isActive, onSetActive, colors, cardWidth }: {
 }) {
   const { t } = useTranslation();
   const grad = getGradient(outfit.id);
-  const emoji = moodEmoji(outfit.tags);
+  const visibleTags = visibleOutfitTags(outfit.tags);
+  const emoji = moodEmoji(visibleTags);
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, width: cardWidth }]}>
@@ -129,9 +131,9 @@ function OutfitCard({ outfit, isActive, onSetActive, colors, cardWidth }: {
           <Text style={[styles.cardEmoji, { color: colors.primary }]}>{emoji}</Text>
         </View>
 
-        {outfit.tags.length > 0 && (
+        {visibleTags.length > 0 && (
           <View style={styles.tagRow}>
-            {outfit.tags.slice(0, 3).map(tag => {
+            {visibleTags.slice(0, 3).map(tag => {
               const [c1] = tagColor(tag);
               return (
                 <View

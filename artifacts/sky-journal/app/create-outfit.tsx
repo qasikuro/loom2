@@ -33,6 +33,15 @@ import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { AudiusMusicPicker } from '@/features/story-studio/components/AudiusMusicPicker';
 import { VIBE_DEFS } from '@/components/VibeOverlay';
+import { OutfitShowcasePicker } from '@/components/OutfitShowcase';
+import {
+  getOutfitShowcase,
+  getOutfitShowcaseTransition,
+  visibleOutfitTags,
+  withOutfitShowcase,
+  withOutfitShowcaseTransition,
+} from '@/utils/outfitShowcase';
+import type { OutfitShowcaseTransition } from '@/utils/outfitShowcase';
 import type { StoryMusic } from '@/context/mappers';
 
 const VIBE_TAGS = [
@@ -109,9 +118,21 @@ export default function CreateOutfitScreen() {
   const [selectedTags, setSelectedTags] = useState<string[]>(() => {
     try {
       const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
-      return all.filter(t => !t.startsWith('vibe:'));
+      return visibleOutfitTags(all);
     }
     catch { return []; }
+  });
+  const [selectedPresentation, setSelectedPresentation] = useState(() => {
+    try {
+      const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
+      return getOutfitShowcase(all);
+    } catch { return null; }
+  });
+  const [selectedTransition, setSelectedTransition] = useState<OutfitShowcaseTransition>(() => {
+    try {
+      const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
+      return getOutfitShowcaseTransition(all);
+    } catch { return 'fade'; }
   });
   const [selectedVibe, setSelectedVibe] = useState<string | null>(() => {
     try {
@@ -147,7 +168,7 @@ export default function CreateOutfitScreen() {
     tags:         (() => {
       try {
         const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
-        return all.filter((t: string) => !t.startsWith('vibe:')).sort().join(',');
+        return visibleOutfitTags(all).sort().join(',');
       } catch { return ''; }
     })(),
     vibe: (() => {
@@ -156,6 +177,18 @@ export default function CreateOutfitScreen() {
         const vt = all.find((t: string) => t.startsWith('vibe:'));
         return vt ? vt.slice(5) : null as string | null;
       } catch { return null; }
+    })(),
+    presentation: (() => {
+      try {
+        const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
+        return getOutfitShowcase(all);
+      } catch { return null; }
+    })(),
+    transition: (() => {
+      try {
+        const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
+        return getOutfitShowcaseTransition(all);
+      } catch { return 'fade' as OutfitShowcaseTransition; }
     })(),
     isPublic:     initialIsPublic,
     music: (() => {
@@ -171,6 +204,8 @@ export default function CreateOutfitScreen() {
     imageUri    !== initBaseline.imageUri     ||
     selectedTags.slice().sort().join(',') !== initBaseline.tags ||
     selectedVibe !== initBaseline.vibe        ||
+    selectedPresentation !== initBaseline.presentation ||
+    selectedTransition !== initBaseline.transition ||
     isPublic    !== initBaseline.isPublic ||
     JSON.stringify(music) !== initBaseline.music;
 
@@ -184,10 +219,12 @@ export default function CreateOutfitScreen() {
       setImageUri(params.editImageUri || undefined);
       try {
         const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
-        setSelectedTags(all.filter(t => !t.startsWith('vibe:')));
+        setSelectedTags(visibleOutfitTags(all));
         const vt = all.find(t => t.startsWith('vibe:'));
         setSelectedVibe(vt ? vt.slice(5) : null);
-      } catch { setSelectedTags([]); setSelectedVibe(null); }
+        setSelectedPresentation(getOutfitShowcase(all));
+        setSelectedTransition(getOutfitShowcaseTransition(all));
+      } catch { setSelectedTags([]); setSelectedVibe(null); setSelectedPresentation(null); setSelectedTransition('fade'); }
       setIsPublic(params.editIsPublic !== 'false');
       try { setMusic(params.editMusic ? JSON.parse(params.editMusic) as StoryMusic : null); }
       catch { setMusic(null); }
@@ -265,10 +302,14 @@ export default function CreateOutfitScreen() {
     setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const allTags = [
+    const presentationTags = withOutfitShowcase([
       ...selectedTags,
       ...(selectedVibe ? [`vibe:${selectedVibe}`] : []),
-    ];
+    ], selectedPresentation);
+    const allTags = withOutfitShowcaseTransition(
+      presentationTags,
+      selectedPresentation ? selectedTransition : null,
+    );
     if (isEditing && editId) {
       updateOutfit(editId, {
         name:        name.trim(),
@@ -504,6 +545,17 @@ export default function CreateOutfitScreen() {
                 {VIBE_DEFS[selectedVibe].effects.map(effect => effect.label).join('  ·  ')}
               </Text>
             ) : null}
+          </View>
+
+          <View style={styles.field}>
+            <OutfitShowcasePicker
+              value={selectedPresentation}
+              transition={selectedTransition}
+              imageUri={imageUri}
+              title={name.trim()}
+              onChange={setSelectedPresentation}
+              onTransitionChange={setSelectedTransition}
+            />
           </View>
 
           {/* Visibility */}

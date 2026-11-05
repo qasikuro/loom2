@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { visibleOutfitTags } from '@/utils/outfitShowcase';
 import { Images } from '@/assets/images';
 import { resolveUri, type FriendSummary } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -273,6 +274,7 @@ export function FriendOutfitsRow({ items, loading, error, onRetry, onOpen, onFin
         const uri = it.outfit.imageUri ? resolveUri(it.outfit.imageUri) ?? it.outfit.imageUri : undefined;
         const av = it.author.avatarUri ? resolveUri(it.author.avatarUri) ?? it.author.avatarUri : null;
         const name = it.author.username || it.author.name;
+        const outfitTags = visibleOutfitTags(it.outfit.tags ?? []);
         return (
           <Animated.View key={it.outfit.id} entering={animate ? FadeIn.delay(Math.min(i, 2) * 50).duration(220) : undefined}>
             <TouchableOpacity onPress={() => { tap(); onOpen(it); }} style={[s.creation, { width: w, height: h }]} activeOpacity={0.85}
@@ -289,7 +291,7 @@ export function FriendOutfitsRow({ items, loading, error, onRetry, onOpen, onFin
                   </View>
                   <Text style={s.creationAuthor} numberOfLines={1}>{name}</Text>
                 </View>
-                {it.outfit.tags?.[0] ? <Text style={s.tag} numberOfLines={1}>#{it.outfit.tags[0]}</Text> : null}
+                {outfitTags[0] ? <Text style={s.tag} numberOfLines={1}>#{outfitTags[0]}</Text> : null}
               </View>
             </TouchableOpacity>
           </Animated.View>

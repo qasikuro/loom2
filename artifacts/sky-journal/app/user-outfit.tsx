@@ -1,5 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
+import { OutfitShowcaseMotion } from '@/components/OutfitShowcase';
 import { VibeMotion, VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
@@ -28,6 +29,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { registerNativeSound, unregisterNativeSound } from '@/utils/soundRegistry';
 import { prepareNativeOutfitAudio } from '@/utils/prepareNativeOutfitAudio';
+import {
+  getOutfitShowcase,
+  getOutfitShowcaseTransition,
+  visibleOutfitTags,
+} from '@/utils/outfitShowcase';
+import { useColors as useDesignColors } from '@workspace/storigam-kindness/hooks/use-colors';
 
 const MOOD_COLORS: Record<string, string> = {
   Peaceful:    '#8B7AB5',
@@ -93,14 +100,11 @@ function extractVibe(tags: string[]): string | null {
   return tag ? tag.slice(5) : null;
 }
 
-function visibleTags(tags: string[]): string[] {
-  return tags.filter(t => !t.startsWith('vibe:'));
-}
-
 export default function UserOutfitScreen() {
   const { isDark } = useTheme();
   const mode: NativeThemeMode = isDark ? 'dark' : 'light';
   const colors    = useColors();
+  const designColors = useDesignColors(mode);
   const { t, i18n } = useTranslation();
   const insets    = useSafeAreaInsets();
   const { width: windowWidth, height: screenHeight } = useWindowDimensions();
@@ -263,8 +267,10 @@ export default function UserOutfitScreen() {
   }, [musicMuted]);
 
   const vibe       = extractVibe(outfit?.tags ?? []);
+  const presentation = getOutfitShowcase(outfit?.tags ?? []);
+  const transition = getOutfitShowcaseTransition(outfit?.tags ?? []);
   const vibeInfo   = vibe ? (VIBE_DEFS[vibe] ?? VIBE_LABELS[vibe] ?? null) : null;
-  const tags       = visibleTags(outfit?.tags ?? []);
+  const tags       = visibleOutfitTags(outfit?.tags ?? []);
   const traits     = params.authorTraits ? (JSON.parse(params.authorTraits) as string[]) : [];
   const moodColor  = MOOD_COLORS[params.authorMood ?? ''] ?? colors.primary;
   const darkBg     = MOOD_DARK_BG[params.authorMood ?? ''] ?? (['#100828', '#1C1040', '#281850'] as const);
@@ -430,7 +436,22 @@ export default function UserOutfitScreen() {
         pointerEvents="none"
       >
         <View style={{ width: 44 }} />
-        <Text style={[styles.stickyTitle, { color: colors.foreground }]} numberOfLines={1}>
+        <Text
+          style={[
+            styles.stickyTitle,
+            presentation === 'dreamy' && styles.dreamyHeroName,
+            presentation === 'holographic' && styles.holographicHeroName,
+            {
+              color: colors.foreground,
+              textShadowColor: presentation === 'dreamy'
+                ? designColors.chart2
+                : presentation === 'holographic' ? designColors.chart4 : 'transparent',
+              textShadowOffset: { width: 0, height: 1 },
+              textShadowRadius: presentation ? 7 : 0,
+            },
+          ]}
+          numberOfLines={1}
+        >
           {outfit?.name}
         </Text>
         <View style={{ width: 44 }} />
@@ -463,11 +484,17 @@ export default function UserOutfitScreen() {
           >
             {outfit?.imageUri ? (
               <VibeMotion key={`${outfit.id ?? outfit.imageUri}:${vibe ?? ''}`} vibe={vibe ?? ''}>
-                <Image
-                  source={{ uri: outfit.imageUri }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="contain"
-                />
+                <OutfitShowcaseMotion
+                  key={`${outfit.id ?? outfit.imageUri}:${presentation ?? 'original'}:${transition}`}
+                  style={presentation}
+                  transition={transition}
+                >
+                  <Image
+                    source={{ uri: outfit.imageUri }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="contain"
+                  />
+                </OutfitShowcaseMotion>
               </VibeMotion>
             ) : (
               <LinearGradient
@@ -597,7 +624,15 @@ export default function UserOutfitScreen() {
             )}
 
             <Animated.Text
-              style={[styles.heroName, { transform: [{ translateY: entryY }] }]}
+              style={[
+                styles.heroName,
+                presentation === 'dreamy' && styles.dreamyHeroName,
+                presentation === 'holographic' && styles.holographicHeroName,
+                presentation ? {
+                  textShadowColor: presentation === 'dreamy' ? designColors.chart2 : designColors.chart4,
+                } : undefined,
+                { transform: [{ translateY: entryY }] },
+              ]}
               numberOfLines={3}
             >
               {outfit?.name}
@@ -963,6 +998,8 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 18,
   },
+  dreamyHeroName: { fontStyle: 'italic', letterSpacing: -0.6 },
+  holographicHeroName: { textTransform: 'uppercase', letterSpacing: 1.2 },
   datePill: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12,
     alignSelf: 'flex-start',

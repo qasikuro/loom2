@@ -1,9 +1,12 @@
 import { Icon } from '@/components/Icon';
 import { MoodBadge } from '@/components/MoodBadge';
+import { OutfitShowcaseMotion } from '@/components/OutfitShowcase';
 import { VibeMotion, VibeOverlay } from '@/components/VibeOverlay';
 
 import type { Character, Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
+import { useColors as useDesignColors } from '@workspace/storigam-kindness/hooks/use-colors';
 import { ShareButton } from '@/components/ShareButton';
 import { useUser } from '@clerk/expo';
 import { SecureImage as Image } from '@/components/SecureImage';
@@ -14,6 +17,11 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { shareOutfit } from '@/utils/shareContent';
+import {
+  getOutfitShowcase,
+  getOutfitShowcaseTransition,
+  visibleOutfitTags,
+} from '@/utils/outfitShowcase';
 
 interface Props {
   outfit: Outfit | null;
@@ -32,10 +40,15 @@ export function OutfitDetailModal({
   onClose, onSetDisplay, onDelete,
 }: Props) {
   const colors          = useColors();
+  const { isDark }      = useTheme();
+  const designColors    = useDesignColors(isDark ? 'dark' : 'light');
   const { t, i18n }     = useTranslation();
   const { user }        = useUser();
   const [imageFit, setImageFit] = useState<'contain' | 'cover'>('contain');
   const vibe = outfit?.tags?.find(tag => tag.startsWith('vibe:'))?.slice(5) ?? '';
+  const presentation = getOutfitShowcase(outfit?.tags ?? []);
+  const transition = getOutfitShowcaseTransition(outfit?.tags ?? []);
+  const tags = visibleOutfitTags(outfit?.tags ?? [], { includeVibe: true });
   const displayTag = (tag: string) => {
     if (tag.startsWith('vibe:')) {
       const label = tag.slice(5).replace(/(^\w|-\w)/g, value => value.replace('-', '').toUpperCase());
@@ -65,11 +78,17 @@ export function OutfitDetailModal({
                   {outfit.imageUri ? (
                     <View style={s.photoFrame}>
                       <VibeMotion key={`${outfit.id}:${vibe}`} vibe={vibe}>
-                        <Image
-                          source={{ uri: outfit.imageUri }}
-                          style={StyleSheet.absoluteFill}
-                          contentFit={imageFit}
-                        />
+                        <OutfitShowcaseMotion
+                          key={`${outfit.id}:${presentation ?? 'original'}:${transition}`}
+                          style={presentation}
+                          transition={transition}
+                        >
+                          <Image
+                            source={{ uri: outfit.imageUri }}
+                            style={StyleSheet.absoluteFill}
+                            contentFit={imageFit}
+                          />
+                        </OutfitShowcaseMotion>
                       </VibeMotion>
                       {vibe ? <VibeOverlay key={`${outfit.id}:${vibe}`} vibe={vibe} /> : null}
                     </View>
@@ -112,7 +131,22 @@ export function OutfitDetailModal({
 
                 <View style={[s.body, { paddingHorizontal: 20 }]}>
                   <View style={s.nameRow}>
-                    <Text style={[s.outfitName, { color: colors.foreground }]} numberOfLines={2}>
+                    <Text
+                      style={[
+                        s.outfitName,
+                        presentation === 'dreamy' && s.dreamyTitle,
+                        presentation === 'holographic' && s.holographicTitle,
+                        {
+                          color: colors.foreground,
+                          textShadowColor: presentation === 'dreamy'
+                            ? designColors.chart2
+                            : presentation === 'holographic' ? designColors.chart4 : 'transparent',
+                          textShadowOffset: { width: 0, height: 1 },
+                          textShadowRadius: presentation ? 8 : 0,
+                        },
+                      ]}
+                      numberOfLines={2}
+                    >
                       {outfit.name}
                     </Text>
                     <Text style={[s.outfitDate, { color: colors.mutedForeground }]}>
@@ -120,9 +154,9 @@ export function OutfitDetailModal({
                     </Text>
                   </View>
 
-                  {outfit.tags.length > 0 && (
+                  {tags.length > 0 && (
                     <View style={s.tags}>
-                      {outfit.tags.map(tag => (
+                      {tags.map(tag => (
                         <View key={tag} style={[s.tag, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>
                           <Text style={[s.tagText, { color: colors.primary }]}>{displayTag(tag)}</Text>
                         </View>
@@ -364,6 +398,8 @@ const s = StyleSheet.create({
   body:          { paddingVertical: 16, gap: 12 },
   nameRow:       { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
   outfitName:    { flex: 1, fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4 },
+  holographicTitle: { textTransform: 'uppercase', letterSpacing: 1.1 },
+  dreamyTitle: { fontStyle: 'italic', letterSpacing: -0.2, textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
   outfitDate:    { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 4, flexShrink: 0 },
   tags:          { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tag:           { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1 },
