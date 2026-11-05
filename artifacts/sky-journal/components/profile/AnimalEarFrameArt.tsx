@@ -16,8 +16,17 @@ export type AnimalEarFrameId =
   | 'frame_moonhare_ears'
   | 'frame_frost_lynx_ears';
 
+export type DpCompanionFrameId =
+  | 'frame_baby_dragon'
+  | 'frame_moon_bunny'
+  | 'frame_shadow_keeper'
+  | 'frame_forest_spirit'
+  | 'frame_star_guardian';
+
 /** Includes the full 112px frame artwork plus the longest animated ear tips. */
 export const ANIMAL_EAR_FRAME_RENDER_BOUNDS = 204;
+/** Full companion illustration is sized to the portrait plus its extended wings and tail. */
+export const DP_COMPANION_FRAME_RENDER_BOUNDS = 204;
 
 type FrameLayer = 'wings' | 'ornament' | 'all';
 
@@ -57,6 +66,28 @@ export function isAnimalEarFrameId(frameId: string): frameId is AnimalEarFrameId
   return frameId in ANIMAL_FRAME_ART;
 }
 
+const DP_COMPANION_FRAME_IDS: ReadonlySet<string> = new Set([
+  'frame_baby_dragon',
+  'frame_moon_bunny',
+  'frame_shadow_keeper',
+  'frame_forest_spirit',
+  'frame_star_guardian',
+]);
+
+export function isDpCompanionFrameId(frameId: string): frameId is DpCompanionFrameId {
+  return DP_COMPANION_FRAME_IDS.has(frameId);
+}
+
+export function isProfileCompanionFrameId(frameId: string): frameId is AnimalEarFrameId | DpCompanionFrameId {
+  return isAnimalEarFrameId(frameId) || isDpCompanionFrameId(frameId);
+}
+
+export function getProfileCompanionRenderBounds(frameId: string): number | undefined {
+  if (isDpCompanionFrameId(frameId)) return DP_COMPANION_FRAME_RENDER_BOUNDS;
+  if (isAnimalEarFrameId(frameId)) return ANIMAL_EAR_FRAME_RENDER_BOUNDS;
+  return undefined;
+}
+
 interface AnimalEarFrameArtProps {
   frameId: AnimalEarFrameId;
   size: number;
@@ -80,7 +111,6 @@ export function AnimalEarFrameArt({
   const rootY = size * (compact ? 0.24 : art.rootY);
   const earLength = size * (compact ? 0.48 : art.earLength);
   const earWidth = size * 0.5;
-  const pivotHeight = size * 0.82;
   const ringDiameter = size * (compact ? 1.34 : 1.46);
   const bodyMotionEnabled = motionEnabled && !compact && (layer === 'ornament' || layer === 'all');
 
@@ -133,7 +163,6 @@ export function AnimalEarFrameArt({
               size={size}
               width={earWidth}
               height={earLength}
-              pivotHeight={pivotHeight}
               centerY={rootY}
               motionEnabled={motionEnabled}
             />
@@ -143,7 +172,6 @@ export function AnimalEarFrameArt({
               size={size}
               width={earWidth}
               height={earLength}
-              pivotHeight={pivotHeight}
               centerY={rootY}
               motionEnabled={motionEnabled}
             />
@@ -200,7 +228,6 @@ interface AnimatedEarProps {
   size: number;
   width: number;
   height: number;
-  pivotHeight: number;
   centerY: number;
   motionEnabled: boolean;
 }
@@ -211,23 +238,33 @@ function AnimatedEar({
   size,
   width,
   height,
-  pivotHeight,
   centerY,
   motionEnabled,
 }: AnimatedEarProps) {
   const flick = useSharedValue(0);
+  const sway = useSharedValue(0);
   const isLeft = side === 'left';
   const delay = isLeft ? 380 : 1120;
   const rest = isLeft ? 2100 : 2460;
   const centerX = size * (isLeft ? 0.19 : 0.81);
+  const split = height * 0.62;
+  const overlap = Math.min(size * 0.035, height * 0.06);
+  const phaseOffset = isLeft ? 0.4 : 2.15;
 
   useEffect(() => {
     cancelAnimation(flick);
+    cancelAnimation(sway);
     if (!motionEnabled) {
       flick.value = 0;
+      sway.value = 0;
       return;
     }
 
+    sway.value = withRepeat(
+      withTiming(Math.PI * 2, { duration: 4300, easing: Easing.linear }),
+      -1,
+      false,
+    );
     flick.value = withDelay(
       delay,
       withRepeat(
@@ -242,50 +279,93 @@ function AnimatedEar({
       ),
     );
 
-    return () => cancelAnimation(flick);
-  }, [delay, flick, motionEnabled, rest]);
+    return () => {
+      cancelAnimation(flick);
+      cancelAnimation(sway);
+    };
+  }, [delay, flick, motionEnabled, rest, sway]);
 
-  const motionStyle = useAnimatedStyle(() => {
+  const rootMotionStyle = useAnimatedStyle(() => {
     const amount = flick.value;
     const direction = isLeft ? 1 : -1;
-    const baseAngle = isLeft ? -2 : 2;
+    const wave = Math.sin(sway.value + phaseOffset);
+    const baseAngle = isLeft ? -1.1 : 1.1;
     return {
       transform: [
-        { translateY: -Math.sin(amount * Math.PI) * size * 0.018 },
-          { rotate: `${baseAngle + direction * amount * 10}deg` },
+        { translateX: wave * size * 0.002 },
+        { translateY: -Math.max(0, wave) * size * 0.004 - Math.sin(amount * Math.PI) * size * 0.008 },
+        { rotate: `${baseAngle + wave * 1.2 + direction * amount * 4.2}deg` },
       ],
+    };
+  });
+  const tipMotionStyle = useAnimatedStyle(() => {
+    const wave = Math.sin(sway.value + phaseOffset + 0.85);
+    const followThrough = Math.sin(sway.value * 1.35 + phaseOffset) * 0.45;
+    const direction = isLeft ? 1 : -1;
+    return {
+      transform: [{ rotate: `${wave * 1.7 + followThrough + direction * flick.value * 4.4}deg` }],
     };
   });
 
   return (
-    <View
+    <Animated.View
       style={[
-        styles.earPivot,
-        {
-          width,
-          height: pivotHeight,
-          left: centerX - width / 2,
-          top: centerY - pivotHeight / 2,
-        },
+        styles.earJoint,
+        { left: centerX, top: centerY },
+        rootMotionStyle,
       ]}
     >
-      <Animated.View style={[StyleSheet.absoluteFill, motionStyle]}>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          left: -width / 2,
+          top: -height + split - overlap,
+          width,
+          height: height - split + overlap,
+          overflow: 'hidden',
+        }}
+      >
         <Image
           accessible={false}
           source={source}
           resizeMode="contain"
           style={[
             styles.earImage,
-            {
-              width,
-              height,
-              bottom: pivotHeight / 2,
-              transform: [{ scaleX: isLeft ? 1 : -1 }],
-            },
+            { width, height, top: -(split - overlap), transform: [{ scaleX: isLeft ? 1 : -1 }] },
           ]}
         />
+      </View>
+      <Animated.View
+        style={[
+          styles.earTipJoint,
+          { top: -height + split },
+          tipMotionStyle,
+        ]}
+      >
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: -width / 2,
+            top: -split,
+            width,
+            height: split + overlap,
+            overflow: 'hidden',
+          }}
+        >
+          <Image
+            accessible={false}
+            source={source}
+            resizeMode="contain"
+            style={[
+              styles.earImage,
+              { width, height, transform: [{ scaleX: isLeft ? 1 : -1 }] },
+            ]}
+          />
+        </View>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -294,9 +374,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     overflow: 'visible',
   },
-  earPivot: {
+  earJoint: {
     position: 'absolute',
     overflow: 'visible',
+    width: 1,
+    height: 1,
+  },
+  earTipJoint: {
+    position: 'absolute',
+    overflow: 'visible',
+    width: 1,
+    height: 1,
   },
   earImage: {
     position: 'absolute',

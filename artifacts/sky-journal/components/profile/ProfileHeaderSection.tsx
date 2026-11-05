@@ -21,7 +21,7 @@ import {
   BreathingAvatarRing, FrameRing,
   FRAME_CONFIGS,
 } from './CharacterAuraHeader';
-import { isAnimalEarFrameId } from './AnimalEarFrameArt';
+import { isProfileCompanionFrameId } from './AnimalEarFrameArt';
 import { USERNAME_REGEX, MOOD_ORBS } from './profileConstants';
 
 interface Props {
@@ -60,7 +60,7 @@ export function OwnProfileAvatar({ avatarSource, contain, activeFrame, mood, dec
 }) {
   const colors = useColors();
   const moodData = MOOD_ORBS.find(m => m.key === mood) || MOOD_ORBS[2];
-  const hasAnimalFrame = isAnimalEarFrameId(activeFrame ?? '');
+  const hasAnimalFrame = isProfileCompanionFrameId(activeFrame ?? '');
   const frameMotionEnabled = activeFrame !== 'frame_celestial_wings';
   return (
     <View pointerEvents="none" style={s.avatarVisual}>

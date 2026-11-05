@@ -36,7 +36,7 @@ import { SHADOW } from '@/constants/colors';
 import { ReportSheet } from '@/components/ReportSheet';
 import { WeatherWidget } from '@/components/WeatherWidget';
 import { FrameRing } from '@/components/profile/CharacterAuraHeader';
-import { ANIMAL_EAR_FRAME_RENDER_BOUNDS, isAnimalEarFrameId } from '@/components/profile/AnimalEarFrameArt';
+import { getProfileCompanionRenderBounds, isProfileCompanionFrameId } from '@/components/profile/AnimalEarFrameArt';
 import AuroraCloudBackdrop from '@/components/profile/AuroraCloudBackdrop';
 import { ProfileEffect } from '@/components/ProfileEffect';
 import FounderAuroraCardFrame from '@/components/profile/FounderAuroraCardFrame';
@@ -142,7 +142,7 @@ function AnimatedAvatarRing({
   decorationOpacity?: Animated.AnimatedInterpolation<number>;
 }) {
   const aura    = MOOD_AURA[mood] ?? DEFAULT_AURA;
-  const hasAnimalFrame = isAnimalEarFrameId(activeFrame ?? '');
+  const hasAnimalFrame = isProfileCompanionFrameId(activeFrame ?? '');
   const breathe = useRef(new Animated.Value(0)).current;
   const rotate  = useRef(new Animated.Value(0)).current;
   const pulse   = useRef(new Animated.Value(0)).current;
@@ -1447,7 +1447,7 @@ export default function UserProfileScreen() {
         hasLeftAction
         boxSize={PROFILE_AVATAR_RENDER_BOUNDS}
         avatarSize={PUBLIC_PROFILE_AVATAR_SIZE}
-        fitBoxSize={isAnimalEarFrameId(profile.activeFrame ?? '') ? ANIMAL_EAR_FRAME_RENDER_BOUNDS : PUBLIC_PROFILE_HALO_SIZE}
+        fitBoxSize={getProfileCompanionRenderBounds(profile.activeFrame ?? '') ?? PUBLIC_PROFILE_HALO_SIZE}
         hidden={founderIntroVisible || moonlitMuseIntroVisible}
       >
         {decorationOpacity => (

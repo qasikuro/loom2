@@ -21,16 +21,28 @@ import { Button as KindnessButton } from '@workspace/storigam-kindness/component
 import { useColors as useDesignSystemColors } from '@workspace/storigam-kindness/hooks/use-colors';
 import type { NativeThemeColors, NativeThemeMode } from '@workspace/storigam-kindness/lib/native-theme';
 import { Icon } from '@/components/Icon';
+import { SecureImage } from '@/components/SecureImage';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { CharacterAuraHeader, FrameRing } from '@/components/profile/CharacterAuraHeader';
-import { AnimalEarFrameArt, isAnimalEarFrameId } from '@/components/profile/AnimalEarFrameArt';
-import { SecureImage } from '@/components/SecureImage';
+import {
+  AnimalEarFrameArt,
+  isAnimalEarFrameId,
+  isDpCompanionFrameId,
+  isProfileCompanionFrameId,
+} from '@/components/profile/AnimalEarFrameArt';
+import { DpCompanionArt } from '@/components/profile/DpCompanionArt';
 import { OwnProfileAvatar } from '@/components/profile/ProfileHeaderSection';
 import { Images } from '@/assets/images';
 import AuroraCloudBackdrop from '@/components/profile/AuroraCloudBackdrop';
 import FounderAuroraCardFrame from '@/components/profile/FounderAuroraCardFrame';
 import { CosmicProfileArrivalOverlay } from '@/components/profile/CosmicProfileArrivalOverlay';
 import { useTranslation } from 'react-i18next';
+import {
+  animalEarFrameIds,
+  dpCompanionFrameIds,
+  filterShopCatalogByCategory,
+  mergeAnimalEarFrames,
+} from '@/utils/shopCatalog';
 
 const COLLECTION_CACHE_KEY  = 'collection_v1';
 const SHOP_CATALOG_CACHE_KEY = 'shop_catalog_v2';
@@ -66,6 +78,11 @@ const ITEM_ICON_MAP: Record<string, string> = {
   frame_ember_fox_ears: '✦',
   frame_moonhare_ears: '✦',
   frame_frost_lynx_ears: '✦',
+  frame_baby_dragon: '✦',
+  frame_moon_bunny: '✦',
+  frame_shadow_keeper: '✦',
+  frame_forest_spirit: '✦',
+  frame_star_guardian: '✦',
   accent_aura:        '◈',
   theme_locket:       '◇',
   theme_aurora:       '⋆',
@@ -100,6 +117,11 @@ const FALLBACK_CATALOG: ShopItem[] = [
   { id: 'frame_ember_fox_ears', name: 'Ember Fox', description: 'Detailed russet fur, a plush copper halo, and softly flicking fox ears.', icon: '✦', category: 'frame', cost: { stars: 360 } },
   { id: 'frame_moonhare_ears', name: 'Moonhare', description: 'Velvet ivory rabbit ears with a gentle, independent sway around your portrait.', icon: '✦', category: 'frame', cost: { stars: 360 } },
   { id: 'frame_frost_lynx_ears', name: 'Frost Lynx', description: 'Soft, tufted lynx ears that perk and settle around your profile picture.', icon: '✦', category: 'frame', cost: { stars: 360 } },
+  { id: 'frame_baby_dragon', name: 'Baby Dragon', description: 'A tiny lavender dragon hugs your portrait, gently flaps its wings and puffs a little magic.', icon: '✦', category: 'frame', cost: { stars: 360 } },
+  { id: 'frame_moon_bunny', name: 'Moon Bunny', description: 'A sleepy pearl bunny cuddles your portrait with softly swaying ears and a tiny twitching nose.', icon: '✦', category: 'frame', cost: { stars: 360 } },
+  { id: 'frame_shadow_keeper', name: 'Shadow Keeper', description: 'A midnight-violet guardian peeks around your portrait with softly glowing eyes and drifting motes.', icon: '✦', category: 'frame', cost: { stars: 360 } },
+  { id: 'frame_forest_spirit', name: 'Forest Spirit', description: 'A leafy woodland friend hugs your portrait as little leaves and blossoms drift by.', icon: '✦', category: 'frame', cost: { stars: 360 } },
+  { id: 'frame_star_guardian', name: 'Star Guardian', description: 'A pearl-feathered guardian holds your portrait beneath a softly shimmering golden halo.', icon: '✦', category: 'frame', cost: { stars: 360 } },
   { id: 'effect_butterfly', name: 'Ethereal Butterflies', description: 'Luminous butterflies drift across your profile, wings catching the light of distant stars.', icon: '🦋', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_fireflies', name: 'Firefly Glow',         description: 'Golden fireflies blink softly around you like scattered wishes under a summer sky.',         icon: '✨', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_hearts',    name: 'Floating Hearts',      description: 'Soft hearts rise gently from below, carrying warmth to every corner of your sky.',           icon: '💜', category: 'effect', cost: { stars: 0 } },
@@ -111,6 +133,7 @@ const FALLBACK_CATALOG: ShopItem[] = [
 
 const CATEGORY_COLORS: Record<string, keyof NativeThemeColors> = {
   ears: 'chart3',
+  companions: 'chart4',
   frame:  'chart3',
   accent: 'primary',
   theme:  'chart4',
@@ -135,6 +158,7 @@ function getSeasonColor(season: string, colors: NativeThemeColors) {
 function categoryLabel(t: (k: string, o?: Record<string, unknown>) => string, category: string) {
   const defaultLabels: Record<string, string> = {
     ears: 'Animal ears',
+    companions: 'DP companions',
     frame: 'Profile frame',
     effect: 'Profile effect',
     accent: 'Profile accent',
@@ -244,28 +268,66 @@ function ItemPreview({ category, icon, color, itemId, large = false, avatarSourc
   avatarSource?: React.ComponentProps<typeof SecureImage>['source'];
 }) {
   const animalEarFrameId = isAnimalEarFrameId(itemId) ? itemId : null;
-  const isAnimalEarFrame = animalEarFrameId !== null;
-  const isFrame = category === 'frame' || isAnimalEarFrame;
-  const frameSize = large ? (isAnimalEarFrame ? 76 : itemId === 'frame_celestial_wings' ? 68 : 72) : (isAnimalEarFrame ? 40 : itemId === 'frame_celestial_wings' ? 30 : 58);
+  const dpCompanionFrameId = isDpCompanionFrameId(itemId) ? itemId : null;
+  const isProfileCompanion = isProfileCompanionFrameId(itemId);
+  const isFrame = category === 'frame' || isProfileCompanion;
+  const frameSize = dpCompanionFrameId
+    ? (large ? 40 : 28)
+    : large
+      ? (animalEarFrameId ? 76 : itemId === 'frame_celestial_wings' ? 68 : 72)
+      : (animalEarFrameId ? 40 : itemId === 'frame_celestial_wings' ? 30 : 58);
   return (
     <View style={[pv.wrap, large && pv.largeWrap, { backgroundColor: `${color}0C`, borderColor: `${color}28` }]}>
       {isFrame && (
-        itemId === 'frame_moonlight' || itemId === 'frame_fire' || itemId === 'frame_celestial_wings' || isAnimalEarFrame ? (
+        itemId === 'frame_moonlight' || itemId === 'frame_fire' || itemId === 'frame_celestial_wings' || isProfileCompanion ? (
           <View style={pv.premiumFramePreview}>
-            {animalEarFrameId ? (
-              <AnimalEarFrameArt frameId={animalEarFrameId} size={frameSize} layer="wings" motionEnabled={false} ringColor={color} ringGlow={color} />
+            {dpCompanionFrameId ? (
+              <DpCompanionArt
+                frameId={dpCompanionFrameId}
+                size={frameSize}
+                layer="wings"
+                motionEnabled={false}
+              />
+            ) : animalEarFrameId ? (
+              <AnimalEarFrameArt
+                frameId={animalEarFrameId}
+                size={frameSize}
+                layer="wings"
+                motionEnabled={false}
+                ringColor={color}
+                ringGlow={color}
+              />
             ) : (
               <FrameRing frameId={itemId} size={frameSize} layer="wings" />
             )}
-            <View style={[pv.previewAvatar, large && pv.largePreviewAvatar, { backgroundColor: `${color}20`, borderColor: `${color}65` }]}>
-              {isAnimalEarFrame && avatarSource
+            <View style={[
+              pv.previewAvatar,
+              large && pv.largePreviewAvatar,
+              isProfileCompanion && styles.companionPreviewAvatar,
+              { backgroundColor: `${color}20`, borderColor: `${color}65` },
+            ]}>
+              {isProfileCompanion && avatarSource
                 ? <SecureImage source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" />
-                : isAnimalEarFrame
+                : isProfileCompanion
                   ? <Icon name="user" size={large ? 19 : 14} color={color} strokeWidth={1.7} />
                   : <Text style={[pv.icon, { color }]}>{itemId === 'frame_moonlight' ? '✧' : itemId === 'frame_celestial_wings' ? '✦' : '◉'}</Text>}
             </View>
-            {animalEarFrameId ? (
-              <AnimalEarFrameArt frameId={animalEarFrameId} size={frameSize} layer="ornament" motionEnabled={false} ringColor={color} ringGlow={color} />
+            {dpCompanionFrameId ? (
+              <DpCompanionArt
+                frameId={dpCompanionFrameId}
+                size={frameSize}
+                layer="ornament"
+                motionEnabled={false}
+              />
+            ) : animalEarFrameId ? (
+              <AnimalEarFrameArt
+                frameId={animalEarFrameId}
+                size={frameSize}
+                layer="ornament"
+                motionEnabled={false}
+                ringColor={color}
+                ringGlow={color}
+              />
             ) : (
               <FrameRing frameId={itemId} size={frameSize} layer="ornament" />
             )}
@@ -406,7 +468,11 @@ function ItemCard({ item, previewAvatarSource, owned, isActive, canAfford, onBuy
   const colors   = useShopColors();
   const { isDark } = useTheme();
   const mode: NativeThemeMode = isDark ? 'dark' : 'light';
-  const itemCategory = isAnimalEarFrameId(item.id) ? 'ears' : item.category;
+  const itemCategory = isDpCompanionFrameId(item.id)
+    ? 'companions'
+    : isAnimalEarFrameId(item.id)
+      ? 'ears'
+      : item.category;
   const catColor = categoryColor(itemCategory, colors);
 
   // availableNow is only set to false for out-of-season seasonal items
@@ -431,7 +497,7 @@ function ItemCard({ item, previewAvatarSource, owned, isActive, canAfford, onBuy
         ]}>
           {onPreview ? (
             <TouchableOpacity
-              style={[styles.cardPreview, isAnimalEarFrameId(item.id) && styles.earFrameCardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}
+              style={[styles.cardPreview, isProfileCompanionFrameId(item.id) && styles.earFrameCardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}
               onPress={() => onPreview(item)}
               activeOpacity={0.82}
               accessibilityRole="button"
@@ -463,7 +529,7 @@ function ItemCard({ item, previewAvatarSource, owned, isActive, canAfford, onBuy
               </View>
             </TouchableOpacity>
           ) : (
-            <View style={[styles.cardPreview, isAnimalEarFrameId(item.id) && styles.earFrameCardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <View style={[styles.cardPreview, isProfileCompanionFrameId(item.id) && styles.earFrameCardPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}>
               <ItemPreview category={itemCategory} icon={item.icon} color={catColor} itemId={item.id} large avatarSource={previewAvatarSource} />
               {(owned || isUnavailable) && (
                 <View style={[
@@ -568,7 +634,11 @@ function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
   const colors   = useShopColors();
   const { isDark } = useTheme();
   const mode: NativeThemeMode = isDark ? 'dark' : 'light';
-  const category = isAnimalEarFrameId(entry.itemId) ? 'ears' : COSMETIC_CATEGORY_MAP[entry.itemId] ?? 'frame';
+  const category = isDpCompanionFrameId(entry.itemId)
+    ? 'companions'
+    : isAnimalEarFrameId(entry.itemId)
+      ? 'ears'
+      : COSMETIC_CATEGORY_MAP[entry.itemId] ?? 'frame';
   const catColor = categoryColor(category, colors);
   const icon     = ITEM_ICON_MAP[entry.itemId] ?? '✦';
 
@@ -840,8 +910,8 @@ function ProfileTryOnPreview({
   const { t } = useTranslation();
   const colors = useShopColors();
   const { isDark } = useTheme();
-  const selectedFrame = item.category === 'frame' || isAnimalEarFrameId(item.id) ? item.id : activeCosmetics.frame;
-  const tryOnFrame = isAnimalEarFrameId(item.id) ? item.id : selectedFrame;
+  const selectedFrame = item.category === 'frame' ? item.id : activeCosmetics.frame;
+  const tryOnFrame = isProfileCompanionFrameId(item.id) ? item.id : selectedFrame;
   const selectedEffect = item.category === 'effect'
     ? item.id === 'effect_cosmic_arrival' ? undefined : item.id
     : activeCosmetics.effect;
@@ -851,7 +921,7 @@ function ProfileTryOnPreview({
       ? { uri: activeOutfit.imageUri }
       : Images.character_default;
   const showCatalogVisual =
-    ((item.category !== 'frame' && !isAnimalEarFrameId(item.id)) && item.category !== 'effect' && item.category !== 'card_frame') ||
+    (item.category !== 'frame' && item.category !== 'effect' && item.category !== 'card_frame' && !isProfileCompanionFrameId(item.id)) ||
     item.id === 'effect_cosmic_arrival';
 
   return (
@@ -1007,7 +1077,8 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
           activeCosmetics: Record<string, string>;
         }>(`/rewards/shop?t=${Date.now()}`);
         if (!cancelled) {
-          setCatalogItems(data.catalog.length > 0 ? data.catalog : FALLBACK_CATALOG);
+          const serverCatalog = Array.isArray(data.catalog) ? data.catalog : [];
+          setCatalogItems(mergeAnimalEarFrames(serverCatalog, FALLBACK_CATALOG));
           setPreviewItems(data.seasonalPreview ?? []);
         }
       } catch {
@@ -1187,6 +1258,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
               const cats: { id: string | null; label: string; icon: string; color: string }[] = [
                 { id: null,     label: t('components.shop.all'), icon: '✦', color: colors.primary },
                 { id: 'ears',   label: t('components.shop.categories.ears', { defaultValue: 'Animal ears' }), icon: '⌁', color: categoryColor('ears', colors) },
+                { id: 'companions', label: t('components.shop.categories.companions', { defaultValue: 'DP companions' }), icon: '✧', color: categoryColor('companions', colors) },
                 { id: 'frame',  label: t('components.shop.categories.frame'), icon: '◉', color: categoryColor('frame', colors) },
                 { id: 'effect', label: t('components.shop.categories.effect'), icon: '✧', color: categoryColor('effect', colors) },
                 { id: 'accent', label: t('components.shop.categories.accent'), icon: '◈', color: categoryColor('accent', colors) },
@@ -1220,22 +1292,16 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
 
             {/* Items — split into This Season + Always Available */}
             {(() => {
-              const visible_catalog = filterCat === 'ears'
-                ? catalogItems.filter(i => isAnimalEarFrameId(i.id))
-                : filterCat === 'frame'
-                  ? catalogItems.filter(i => i.category === 'frame' && !isAnimalEarFrameId(i.id))
-                  : filterCat
-                    ? catalogItems.filter(i => i.category === filterCat)
-                    : catalogItems;
-              const visible_preview_items = filterCat === 'ears'
-                ? previewItems.filter(i => isAnimalEarFrameId(i.id))
-                : filterCat === 'frame'
-                  ? previewItems.filter(i => i.category === 'frame' && !isAnimalEarFrameId(i.id))
-                  : filterCat
-                    ? previewItems.filter(i => i.category === filterCat)
-                    : previewItems;
-              const seasonalItems  = visible_catalog.filter(i => i.seasonal);
-              const permanentItems = visible_catalog.filter(i => !i.seasonal);
+              const visible_catalog = filterShopCatalogByCategory(catalogItems, filterCat);
+              const visible_preview_items = filterShopCatalogByCategory(previewItems, filterCat);
+              const earItems = visible_catalog.filter(i => animalEarFrameIds.includes(i.id as typeof animalEarFrameIds[number]));
+              const companionItems = visible_catalog.filter(i => dpCompanionFrameIds.includes(i.id as typeof dpCompanionFrameIds[number]));
+              const remainingItems = visible_catalog.filter(i =>
+                !animalEarFrameIds.includes(i.id as typeof animalEarFrameIds[number]) &&
+                !dpCompanionFrameIds.includes(i.id as typeof dpCompanionFrameIds[number]),
+              );
+              const seasonalItems  = remainingItems.filter(i => i.seasonal);
+              const permanentItems = remainingItems.filter(i => !i.seasonal);
 
               // Derive current season label + colour from the first seasonal item
               const seasonLabel = seasonalItems[0]?.seasonalLabel ?? null;
@@ -1282,6 +1348,46 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                       {visible_catalog.length}
                     </Text>
                   </View>
+                  {earItems.length > 0 && (
+                    <View style={styles.catalogSection}>
+                      <View style={styles.catalogSectionHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.catalogSectionTitle, { color: colors.foreground }]}>
+                            {t('components.shop.categories.ears', { defaultValue: 'Animal ears' })}
+                          </Text>
+                          <Text style={[styles.catalogSectionSubtitle, { color: colors.mutedForeground }]}>
+                            {t('components.shop.earFrameSubtitle', { defaultValue: 'Animated profile-picture frames' })}
+                          </Text>
+                        </View>
+                        <Text style={[styles.resultsCount, { color: colors.mutedForeground }]}>
+                          {earItems.length}
+                        </Text>
+                      </View>
+                      <View style={styles.itemGrid}>
+                        {earItems.map(item => renderItem(item))}
+                      </View>
+                    </View>
+                  )}
+                  {companionItems.length > 0 && (
+                    <View style={styles.catalogSection}>
+                      <View style={styles.catalogSectionHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.catalogSectionTitle, { color: colors.foreground }]}>
+                            {categoryLabel(t, 'companions')}
+                          </Text>
+                          <Text style={[styles.catalogSectionSubtitle, { color: colors.mutedForeground }]}>
+                            {t('components.shop.companionSubtitle', { defaultValue: 'Living friends that hug your profile picture' })}
+                          </Text>
+                        </View>
+                        <Text style={[styles.resultsCount, { color: colors.mutedForeground }]}>
+                          {companionItems.length}
+                        </Text>
+                      </View>
+                      <View style={styles.itemGrid}>
+                        {companionItems.map(item => renderItem(item))}
+                      </View>
+                    </View>
+                  )}
                   {/* ── This Season ─────────────────────────────── */}
                   {seasonalItems.length > 0 && (
                     <>
@@ -1721,6 +1827,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     rowGap: 10,
   },
+  catalogSection: {
+    gap: 10,
+  },
+  catalogSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 4,
+  },
+  catalogSectionTitle: {
+    fontSize: 15,
+    fontFamily: 'Satoshi-Bold',
+    letterSpacing: -0.25,
+  },
+  catalogSectionSubtitle: {
+    marginTop: 2,
+    fontSize: 11,
+    fontFamily: 'Satoshi-Regular',
+  },
 
   // Card
   cardWrapper: {
@@ -1745,7 +1870,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
-  earFrameCardPreview: { height: 156 },
+  earFrameCardPreview: {
+    height: 156,
+  },
+  companionPreviewAvatar: {
+    borderWidth: 0,
+  },
   previewTapLabel: {
     position: 'absolute',
     left: 6,

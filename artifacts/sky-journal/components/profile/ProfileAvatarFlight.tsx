@@ -4,11 +4,11 @@ import { Animated, StyleSheet, View, type StyleProp, type ViewStyle } from 'reac
 import { anchorFromMeasure, getAvatarFlight, type AvatarAnchor } from './profileScrollGeometry';
 
 /**
- * The wing artwork extends well beyond the avatar circle. Keep the transformed
+ * Companion artwork extends well beyond the avatar circle. Keep the transformed
  * Android hardware layer wide enough to contain the full frame instead of
- * clipping feather tips at the portrait's old 124–128px bounds.
+ * clipping ears, wings or tails at the portrait's old 124–128px bounds.
  */
-export const PROFILE_AVATAR_RENDER_BOUNDS = 240;
+export const PROFILE_AVATAR_RENDER_BOUNDS = 264;
 
 /**
  * Measures an in-scroll avatar slot in the screen root's coordinate space.

@@ -95,7 +95,7 @@ describe('avatar flight geometry', () => {
     expect(flight).toContain('measurementVersion.current');
     expect(flight).toContain('fitBoxSize ?? boxSize');
     expect(tab).toContain('fitBoxSize={activeFrame');
-    expect(pub).toContain('fitBoxSize={isAnimalEarFrameId');
+    expect(pub).toContain('fitBoxSize={getProfileCompanionRenderBounds');
     // Founder regalia wraps the entire info card (incl. Founder panel), gated as before.
     const card = pub.slice(pub.indexOf('testID="public-profile-info-card"'), pub.indexOf('{/* Gallery filter */}'));
     expect(card).toContain('{hasRegalia && <FounderAuroraCardFrame />}');

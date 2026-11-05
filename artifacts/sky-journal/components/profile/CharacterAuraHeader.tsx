@@ -15,7 +15,8 @@ import {
   ACCENT_CONFIGS, DEFAULT_AURA, FRAME_CONFIGS, MOOD_AURA, MOOD_ORBS,
   PARTICLE_SIZES, PARTICLE_XS,
 } from './profileConstants';
-import { AnimalEarFrameArt, isAnimalEarFrameId } from './AnimalEarFrameArt';
+import { AnimalEarFrameArt, isAnimalEarFrameId, isDpCompanionFrameId } from './AnimalEarFrameArt';
+import { DpCompanionArt } from './DpCompanionArt';
 
 // ── Motion gate: reduced-motion preference + tab focus ─────────────────────
 
@@ -147,6 +148,17 @@ export function FrameRing({
     marginTop: -size / 2,
     overflow: 'visible' as const,
   };
+
+  if (isDpCompanionFrameId(frameId)) {
+    return (
+      <DpCompanionArt
+        frameId={frameId}
+        size={size}
+        layer={layer}
+        motionEnabled={animate && screenMotionEnabled}
+      />
+    );
+  }
 
   if (isAnimalEarFrameId(frameId)) {
     return (

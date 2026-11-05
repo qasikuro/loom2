@@ -87,14 +87,23 @@ describe("public profile shop effects", () => {
       "frame_moonhare_ears",
       "frame_frost_lynx_ears",
     ];
+    const companionIds = [
+      "frame_baby_dragon",
+      "frame_moon_bunny",
+      "frame_shadow_keeper",
+      "frame_forest_spirit",
+      "frame_star_guardian",
+    ];
     expect(shopFrames.filter(item => animalEarIds.includes(item.id)).map(item => item.id).sort())
       .toEqual([...animalEarIds].sort());
+    expect(shopFrames.filter(item => companionIds.includes(item.id)).map(item => item.id).sort())
+      .toEqual([...companionIds].sort());
 
     setTestUserId(OWNER);
     const catalogResponse = await request(app).get("/api/rewards/shop");
     expect(catalogResponse.status).toBe(200);
     expect(catalogResponse.body.catalog.map((item: { id: string }) => item.id))
-      .toEqual(expect.arrayContaining(animalEarIds));
+      .toEqual(expect.arrayContaining([...animalEarIds, ...companionIds]));
 
     for (const item of shopFrames) {
       setTestUserId(OWNER);
