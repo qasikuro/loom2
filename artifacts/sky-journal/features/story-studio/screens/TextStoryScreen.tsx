@@ -26,6 +26,7 @@ import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { persistImageUri } from '@/utils/persistImage';
 import { TEXT_STORY_DRAFT_KEY } from '@/utils/entryDraftStore';
 import { useColors } from '@workspace/storigam-kindness/hooks/use-colors';
+import { useApiFetch } from '../utils/apiClient';
 
 type TextBlockKind = 'paragraph' | 'heading' | 'quote' | 'bullet' | 'image';
 type TextBlock = {
@@ -82,15 +83,19 @@ export default function TextStoryScreen() {
   const navigation = useNavigation();
   const { isDark } = useTheme();
   const colors = useColors(isDark ? 'dark' : 'light');
+  const apiFetch = useApiFetch();
   const {
     addStory, updateStory, stories,
   } = useApp();
-  const { editId, eventPrompt, eventMood, resumeDraft } = useLocalSearchParams<{
+  const { editId, eventPrompt, eventMood, resumeDraft, chapterId, bookId } = useLocalSearchParams<{
     editId?: string;
     eventPrompt?: string;
     eventMood?: string;
     resumeDraft?: string;
+    chapterId?: string;
+    bookId?: string;
   }>();
+  const isBookChapter = !!chapterId && !!bookId;
   const topPad = Platform.OS === 'web' ? 20 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom;
 
@@ -105,7 +110,12 @@ export default function TextStoryScreen() {
   const [error, setError] = useState('');
   const [showCompletion, setShowCompletion] = useState(false);
   const [editSnapshot, setEditSnapshot] = useState('');
+  const [bookChapterSnapshot, setBookChapterSnapshot] = useState('');
+  const [bookChapterReady, setBookChapterReady] = useState(false);
+  const [loadingBookChapter, setLoadingBookChapter] = useState(isBookChapter);
+  const [bookChapterStatus, setBookChapterStatus] = useState<'draft' | 'published'>('draft');
   const loadedEditId = useRef<string | null>(null);
+  const loadedBookChapterId = useRef<string | null>(null);
   const hasLoadedDraft = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -116,14 +126,16 @@ export default function TextStoryScreen() {
   const hasContent = title.trim().length > 0
     || synopsis.trim().length > 0
     || blocks.some(block => block.text.trim() || block.imageUri);
-  const isDirty = editId
-    ? !!editSnapshot && snapshot !== editSnapshot
-    : hasContent || !isPublic || mood !== 'Dreamy';
+  const isDirty = isBookChapter
+    ? !!bookChapterSnapshot && snapshot !== bookChapterSnapshot
+    : editId
+      ? !!editSnapshot && snapshot !== editSnapshot
+      : hasContent || !isPublic || mood !== 'Dreamy';
   const markSaved = useNavigationGuard(isDirty);
   const activeBlock = blocks.find(block => block.id === activeBlockId && block.kind !== 'image');
 
   useEffect(() => {
-    if (!editId || loadedEditId.current === editId) return;
+    if (!editId || isBookChapter || loadedEditId.current === editId) return;
     const story = stories.find(item => item.id === editId);
     if (!story) return;
     const sourcePanels = story.pages?.length
@@ -150,10 +162,69 @@ export default function TextStoryScreen() {
     setBlocks(articleBlocks);
     setEditSnapshot(JSON.stringify(next));
     loadedEditId.current = editId;
-  }, [editId, stories]);
+  }, [editId, isBookChapter, stories]);
 
   useEffect(() => {
-    if (editId || hasLoadedDraft.current) return;
+    if (!isBookChapter || !chapterId || loadedBookChapterId.current === chapterId) return;
+    let active = true;
+    setBookChapterReady(false);
+    setBookChapterSnapshot('');
+    setLoadingBookChapter(true);
+    setError('');
+    void apiFetch<{ title: string; status?: 'draft' | 'published'; pages?: StoryPage[] }>(`/chapters/${encodeURIComponent(chapterId)}`)
+      .then(chapter => {
+        if (!active) return;
+        const sourcePanels = chapter.pages?.flatMap(page => page.panels) ?? [];
+        const hasIllustratedContent = sourcePanels.some(panel =>
+          !!(panel.bgPreset || panel.bubbleText?.trim() || panel.overlays?.length)
+          || (panel.textFormat !== 'rich' && !!(panel.text?.trim() || panel.imageUri)),
+        );
+        if (hasIllustratedContent) {
+          loadedBookChapterId.current = chapterId;
+          setError(t('studioEditor.richTextMangaPreserved', {
+            defaultValue: 'This chapter contains illustrated pages. Create a new chapter to write in rich text so those pages stay safe.',
+          }));
+          return;
+        }
+
+        const richBlocks = sourcePanels
+          .filter(panel => panel.textFormat === 'rich')
+          .map(fromPanel);
+        const nextBlocks = richBlocks.length ? richBlocks : [newTextBlock()];
+        const nextTitle = chapter.title ?? '';
+        const baseline = {
+          title: nextTitle,
+          synopsis: '',
+          mood: 'Dreamy',
+          isPublic: true,
+          blocks: nextBlocks,
+        };
+        setTitle(nextTitle);
+        setSynopsis('');
+        setMood('Dreamy');
+        setIsPublic(true);
+        setBlocks(nextBlocks);
+        setBookChapterStatus(chapter.status ?? 'draft');
+        setBookChapterSnapshot(JSON.stringify(baseline));
+        setBookChapterReady(true);
+        loadedBookChapterId.current = chapterId;
+      })
+      .catch(() => {
+        if (active) {
+          setError(t('studioEditor.couldNotLoadChapter', {
+            defaultValue: 'Could not load this chapter. Go back and try again.',
+          }));
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingBookChapter(false);
+      });
+    return () => { active = false; };
+  }, [apiFetch, chapterId, isBookChapter, t]);
+
+  useEffect(() => {
+    if (editId || isBookChapter || hasLoadedDraft.current) return;
+
     hasLoadedDraft.current = true;
     let active = true;
     void AsyncStorage.getItem(TEXT_STORY_DRAFT_KEY).then(raw => {
@@ -201,10 +272,11 @@ export default function TextStoryScreen() {
     return () => { active = false; };
   // Draft recovery is checked once when the editor mounts.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editId, resumeDraft]);
+  }, [editId, isBookChapter, resumeDraft]);
 
   useEffect(() => {
-    if (editId) return;
+    if (editId || isBookChapter) return;
+
     if (saveTimer.current) clearTimeout(saveTimer.current);
     if (!hasContent) return;
     saveTimer.current = setTimeout(() => {
@@ -215,10 +287,11 @@ export default function TextStoryScreen() {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [title, synopsis, mood, isPublic, blocks, hasContent, editId]);
+  }, [title, synopsis, mood, isPublic, blocks, hasContent, editId, isBookChapter]);
+
 
   useEffect(() => {
-    if (editId) return;
+    if (editId || isBookChapter) return;
     if (eventPrompt && !synopsis) setSynopsis(String(eventPrompt));
     if (eventMood && STORY_MOODS.includes(String(eventMood))) setMood(String(eventMood));
   // Event context is initial-only, before the user edits the story.
@@ -316,7 +389,7 @@ export default function TextStoryScreen() {
   }
 
   async function publish() {
-    if (posting || uploading) return;
+    if (posting || uploading || loadingBookChapter) return;
     const cleanTitle = title.trim();
     const savedBlocks = blocks.filter(block => block.text.trim() || block.imageUri);
     if (!cleanTitle || savedBlocks.length === 0) {
@@ -327,6 +400,27 @@ export default function TextStoryScreen() {
     setError('');
     const panels = savedBlocks.map(toPanel);
     const page: StoryPage = { id: blockId(), layoutKey: '1', panels };
+
+    if (isBookChapter) {
+      if (!chapterId || !bookId) {
+        setPosting(false);
+        setError(t('studioEditor.couldNotLoadChapter', { defaultValue: 'Could not load this chapter.' }));
+        return;
+      }
+      try {
+        await apiFetch(`/chapters/${encodeURIComponent(chapterId)}`, {
+          method: 'PATCH',
+          json: { title: cleanTitle, pages: [page], pageCount: 1 },
+        });
+        setPosting(false);
+        markSaved();
+        router.back();
+      } catch {
+        setPosting(false);
+        setError(t('studioEditor.couldNotSaveChanges', { defaultValue: 'Could not save this chapter. Please try again.' }));
+      }
+      return;
+    }
 
     if (editId) {
       updateStory(editId, {
@@ -371,7 +465,29 @@ export default function TextStoryScreen() {
     setShowCompletion(true);
   }
 
-  const headingTitle = editId ? t('studioEditor.editChapter') : t('studioEditor.textStoryHeader');
+  const headingTitle = isBookChapter
+    ? t('studioEditor.richTextBookChapter', { defaultValue: 'Rich-text book chapter' })
+    : editId
+      ? t('studioEditor.editChapter')
+      : t('studioEditor.textStoryHeader');
+
+  if (isBookChapter && (loadingBookChapter || !bookChapterReady)) {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', gap: 14 }]}>
+        {loadingBookChapter
+          ? <ActivityIndicator size="large" color={colors.primary} />
+          : <Icon name="alert-circle" size={28} color={colors.destructive} />}
+        <Text style={{ color: colors.mutedForeground, fontFamily: colors.fontFamily.regular }}>
+          {loadingBookChapter
+            ? t('studioEditor.loadingBookChapter', { defaultValue: 'Opening your chapter…' })
+            : error || t('studioEditor.couldNotLoadChapter', { defaultValue: 'Could not load this chapter.' })}
+        </Text>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
+          <Text style={{ color: colors.primary, fontFamily: colors.fontFamily.medium }}>{t('common.cancel')}</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -389,18 +505,29 @@ export default function TextStoryScreen() {
             {headingTitle}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.mutedForeground, fontFamily: colors.fontFamily.regular }]} numberOfLines={1}>
-            {t('studioEditor.textStorySubheader')}
+            {isBookChapter
+              ? t(
+                bookChapterStatus === 'published' ? 'studioEditor.publishedChapterSaveHint' : 'studioEditor.bookChapterSaveHint',
+                {
+                  defaultValue: bookChapterStatus === 'published'
+                    ? 'Saving updates this published chapter immediately.'
+                    : 'Save this draft, then review it to publish.',
+                },
+              )
+              : t('studioEditor.textStorySubheader')}
           </Text>
         </View>
-        <View
-          style={[styles.visibility, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-          accessibilityLabel={isPublic ? t('studioEditor.public') : t('studioEditor.private')}
-        >
-          <Icon name={isPublic ? 'globe' : 'lock'} size={14} color={isPublic ? colors.primary : colors.mutedForeground} />
-          <Text style={[styles.visibilityBadgeText, { color: isPublic ? colors.primary : colors.mutedForeground, fontFamily: colors.fontFamily.medium }]}>
-            {isPublic ? t('studioEditor.public') : t('studioEditor.private')}
-          </Text>
-        </View>
+        {!isBookChapter && (
+          <View
+            style={[styles.visibility, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+            accessibilityLabel={isPublic ? t('studioEditor.public') : t('studioEditor.private')}
+          >
+            <Icon name={isPublic ? 'globe' : 'lock'} size={14} color={isPublic ? colors.primary : colors.mutedForeground} />
+            <Text style={[styles.visibilityBadgeText, { color: isPublic ? colors.primary : colors.mutedForeground, fontFamily: colors.fontFamily.medium }]}>
+              {isPublic ? t('studioEditor.public') : t('studioEditor.private')}
+            </Text>
+          </View>
+        )}
       </View>
 
       <KeyboardAwareScrollView
@@ -416,10 +543,14 @@ export default function TextStoryScreen() {
           </View>
           <View style={styles.introCopy}>
             <Text style={[styles.introTitle, { color: colors.foreground, fontFamily: colors.fontFamily.bold }]}>
-              {t('studioEditor.textStoryHeader')}
+              {isBookChapter
+                ? t('studioEditor.richTextBookChapter', { defaultValue: 'Write your chapter' })
+                : t('studioEditor.textStoryHeader')}
             </Text>
             <Text style={[styles.introSubtitle, { color: colors.mutedForeground, fontFamily: colors.fontFamily.regular }]}>
-              {t('studioEditor.textStorySubheader')}
+              {isBookChapter
+                ? t('studioEditor.richTextBookChapterHint', { defaultValue: 'Use paragraphs, headings, quotes, and images to shape your chapter.' })
+                : t('studioEditor.textStorySubheader')}
             </Text>
           </View>
         </View>
@@ -435,17 +566,19 @@ export default function TextStoryScreen() {
           accessibilityLabel={t('create.titleLabel')}
           testID="text-story-title"
         />
-        <TextInput
-          value={synopsis}
-          onChangeText={setSynopsis}
-          placeholder={t('studioEditor.synopsisPlaceholder')}
-          placeholderTextColor={colors.mutedForeground}
-          maxLength={1000}
-          multiline
-          style={[styles.synopsisInput, { color: colors.mutedForeground, backgroundColor: colors.card, borderColor: colors.border, fontFamily: colors.fontFamily.regular }]}
-          accessibilityLabel={t('create.descLabel')}
-          testID="text-story-synopsis"
-        />
+        {!isBookChapter && (
+          <TextInput
+            value={synopsis}
+            onChangeText={setSynopsis}
+            placeholder={t('studioEditor.synopsisPlaceholder')}
+            placeholderTextColor={colors.mutedForeground}
+            maxLength={1000}
+            multiline
+            style={[styles.synopsisInput, { color: colors.mutedForeground, backgroundColor: colors.card, borderColor: colors.border, fontFamily: colors.fontFamily.regular }]}
+            accessibilityLabel={t('create.descLabel')}
+            testID="text-story-synopsis"
+          />
+        )}
 
         <View style={styles.sectionHeading}>
           <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: colors.fontFamily.bold }]}>
@@ -606,7 +739,7 @@ export default function TextStoryScreen() {
           </View>
         </View>
 
-        <View style={styles.moodSection}>
+        {!isBookChapter && <View style={styles.moodSection}>
           <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: colors.fontFamily.bold }]}>
             {t('studioEditor.textStoryMood')}
           </Text>
@@ -628,9 +761,9 @@ export default function TextStoryScreen() {
               </Pressable>
             ))}
           </View>
-        </View>
+        </View>}
 
-        <Pressable
+        {!isBookChapter && <Pressable
           onPress={() => setIsPublic(value => !value)}
           style={[styles.visibilityRow, { backgroundColor: colors.card, borderColor: colors.border }]}
           accessibilityRole="switch"
@@ -650,7 +783,7 @@ export default function TextStoryScreen() {
           <View style={[styles.switchTrack, { backgroundColor: isPublic ? colors.primary : colors.muted }]}>
             <View style={[styles.switchThumb, { alignSelf: isPublic ? 'flex-end' : 'flex-start', backgroundColor: colors.primaryForeground }]} />
           </View>
-        </Pressable>
+        </Pressable>}
 
         {!!error && (
           <Text accessibilityRole="alert" style={[styles.error, { color: colors.destructive, fontFamily: colors.fontFamily.medium }]}>
@@ -666,14 +799,18 @@ export default function TextStoryScreen() {
             { backgroundColor: colors.primary, opacity: posting || uploading ? 0.58 : pressed ? 0.84 : 1 },
           ]}
           accessibilityRole="button"
-          accessibilityLabel={posting ? t('studioEditor.publishingTextStory') : t('studioEditor.publishTextStory')}
-          testID="text-story-publish"
+          accessibilityLabel={posting
+            ? t(isBookChapter ? 'studioEditor.savingBookChapter' : 'studioEditor.publishingTextStory', { defaultValue: isBookChapter ? 'Saving chapter' : 'Publishing story' })
+            : t(isBookChapter ? 'studioEditor.saveBookChapter' : 'studioEditor.publishTextStory', { defaultValue: isBookChapter ? 'Save chapter' : 'Publish story' })}
+          testID={isBookChapter ? 'text-story-save-book-chapter' : 'text-story-publish'}
         >
           {posting
             ? <ActivityIndicator size="small" color={colors.primaryForeground} />
             : <Icon name="send" size={17} color={colors.primaryForeground} />}
           <Text style={[styles.publishText, { color: colors.primaryForeground, fontFamily: colors.fontFamily.bold }]}>
-            {posting ? t('studioEditor.publishingTextStory') : t('studioEditor.publishTextStory')}
+            {posting
+              ? t(isBookChapter ? 'studioEditor.savingBookChapter' : 'studioEditor.publishingTextStory', { defaultValue: isBookChapter ? 'Saving chapter' : 'Publishing story' })
+              : t(isBookChapter ? 'studioEditor.saveBookChapter' : 'studioEditor.publishTextStory', { defaultValue: isBookChapter ? 'Save chapter' : 'Publish story' })}
           </Text>
           {!posting && <Icon name="arrow-right" size={17} color={colors.primaryForeground} />}
         </Pressable>

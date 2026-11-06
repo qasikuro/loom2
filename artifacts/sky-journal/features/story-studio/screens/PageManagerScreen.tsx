@@ -23,6 +23,7 @@ import { useApiFetch } from '../utils/apiClient';
 import { DraftStore } from '../utils/draftStore';
 import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
 import { useTranslation } from 'react-i18next';
+import type { PanelOverlay } from '@/context/AppContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,8 @@ interface Panel {
   imageUri?:   string;
   bgPreset?:   string;
   bubbleText?: string;
+  overlays?:   PanelOverlay[];
+  textFormat?: 'rich';
 }
 
 interface Page {
@@ -53,10 +56,13 @@ interface ChapterDetail {
 
 function PageThumb({ page }: { page: Page }) {
   const first = page.panels.find(p => p.imageUri);
+  const firstRichText = page.panels.find(p => p.textFormat === 'rich' && p.text.trim());
   return (
     <View style={t.thumb}>
       {first?.imageUri
         ? <Image source={{ uri: first.imageUri }} style={t.thumbImg} contentFit="cover" />
+        : firstRichText
+          ? <View style={t.richThumb}><Text style={t.richThumbText} numberOfLines={7}>{firstRichText.text}</Text></View>
         : <View style={t.thumbEmpty}>
             <Icon name="image" size={20} color="rgba(140,120,180,0.25)" />
           </View>}
@@ -68,6 +74,8 @@ const t = StyleSheet.create({
   thumb:      { width: '100%', aspectRatio: 0.7, borderRadius: 8, overflow: 'hidden', backgroundColor: '#100D22' },
   thumbImg:   { width: '100%', height: '100%' },
   thumbEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  richThumb:  { flex: 1, padding: 8, justifyContent: 'center', backgroundColor: '#171326' },
+  richThumbText: { color: 'rgba(235,228,250,0.68)', fontSize: 8, lineHeight: 12 },
 });
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -192,6 +200,11 @@ export default function PageManagerScreen() {
   }
 
   const accent = '#8B70C8';
+  const hasNonRichContent = pages.some(page => page.panels.some(panel =>
+    !!(panel.bgPreset || panel.bubbleText?.trim() || panel.overlays?.length)
+    || (panel.textFormat !== 'rich' && !!(panel.text.trim() || panel.imageUri)),
+  ));
+  const canWriteRichText = !hasNonRichContent;
 
   if (loading) {
     return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message={tr('studioEditor.loadPages')} /></View>;
@@ -229,6 +242,52 @@ export default function PageManagerScreen() {
 
       {/* Page grid */}
        <ScrollView contentContainerStyle={[s.grid, { paddingBottom: (Platform.OS === 'web' ? 34 : insets.bottom) + 100, width: '100%', maxWidth: 800, alignSelf: 'center' }]}>
+        <TouchableOpacity
+          style={[
+            s.richTextCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              opacity: canWriteRichText ? 1 : 0.72,
+            },
+          ]}
+          disabled={!canWriteRichText}
+          onPress={() => {
+            Haptics.selectionAsync();
+            router.push({ pathname: '/text-story', params: { chapterId, bookId } } as never);
+          }}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canWriteRichText }}
+          accessibilityLabel={tr(
+            canWriteRichText ? 'studioEditor.writeRichTextChapter' : 'studioEditor.richTextNewChapter',
+            { defaultValue: canWriteRichText ? 'Write with rich text' : 'Use a new chapter for rich text' },
+          )}
+        >
+          <View style={[s.richTextIcon, { backgroundColor: colors.secondary }]}>
+            <Icon name="feather" size={18} color={colors.primary} />
+          </View>
+          <View style={s.richTextCopy}>
+            <Text style={[s.richTextTitle, { color: colors.foreground }]}>
+              {tr(
+                canWriteRichText ? 'studioEditor.writeRichTextChapter' : 'studioEditor.richTextNewChapter',
+                { defaultValue: canWriteRichText ? 'Write with rich text' : 'Use a new chapter for rich text' },
+              )}
+            </Text>
+            <Text style={[s.richTextDescription, { color: colors.mutedForeground }]}>
+              {tr(
+                canWriteRichText ? 'studioEditor.richTextChapterHint' : 'studioEditor.richTextMangaHint',
+                {
+                  defaultValue: canWriteRichText
+                    ? chapter?.status === 'published'
+                      ? 'Add paragraphs, headings, quotes, and images. Saving updates this published chapter immediately.'
+                      : 'Add paragraphs, headings, quotes, and images. Save as a draft, then review to publish.'
+                    : 'This chapter already has illustrated pages. They will stay unchanged; start a new chapter to write in rich text.',
+                },
+              )}
+            </Text>
+          </View>
+          {canWriteRichText && <Icon name="chevron-right" size={17} color={colors.mutedForeground} />}
+        </TouchableOpacity>
         {pages.map((page, idx) => (
           <View key={page.id} style={s.pageCell}>
             {/* Thumbnail */}
@@ -292,6 +351,11 @@ const s = StyleSheet.create({
   publishBtn:   { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(139,112,200,0.38)', backgroundColor: 'rgba(139,112,200,0.12)' },
   publishBtnTxt:{ color: '#8B70C8', fontSize: 13, fontWeight: '600' },
   grid:         { padding: GAP, flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
+  richTextCard: { width: '100%', minHeight: 84, borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  richTextIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  richTextCopy: { flex: 1, gap: 4 },
+  richTextTitle: { fontSize: 14, fontWeight: '700' },
+  richTextDescription: { fontSize: 11, lineHeight: 16 },
   pageCell:     { width: '30%', minWidth: 88, flexGrow: 1, gap: 5 },
   addCell:      { aspectRatio: 0.7, borderRadius: 8, borderWidth: 1.5, borderColor: 'rgba(139,112,200,0.25)', borderStyle: 'dashed', backgroundColor: 'rgba(139,112,200,0.05)', alignItems: 'center', justifyContent: 'center', gap: 6 },
   addTxt:       { fontSize: 11, fontWeight: '600' },
