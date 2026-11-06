@@ -176,7 +176,6 @@ export interface DiscoverPost {
   storySnippet:     string;
   imageUri?:        string;
   mood:             string;
-  authorMood?:      string | null;
   witnessedCount:   number;
   likeCount:        number;
   liked:            boolean;
@@ -205,8 +204,7 @@ export interface DiscoverPost {
   /** Title of the parent book (only present when bookId is set). */
   bookTitle?:       string;
   /** Distinguishes post kinds — 'story' (panels/pages) or 'video'. Defaults to 'story'. */
-  contentType?:     'story' | 'video' | 'outfit';
-  outfitTags?:      string[];
+  contentType?:     'story' | 'video';
   /** URI of the uploaded video file (video posts only). */
   videoUri?:        string | null;
   /** URI of the video thumbnail image (video posts only). */
@@ -330,7 +328,6 @@ export interface RawDiscoverApiItem {
   storySnippet?:    string;
   imageUri?:        string | null;
   mood?:            string;
-  authorMood?:      string | null;
   witnessedCount?:  number;
   likeCount?:       number;
   liked?:           boolean;
@@ -354,8 +351,7 @@ export interface RawDiscoverApiItem {
   bookId?:          string;
   /** Title of the parent book (only present when bookId is set). */
   bookTitle?:       string;
-  contentType?:     'story' | 'video' | 'outfit';
-  outfitTags?:      unknown;
+  contentType?:     'story' | 'video';
   videoUri?:        string | null;
   thumbnailUri?:    string | null;
   music?:           StoryMusic | null;
@@ -532,7 +528,6 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     storySnippet:     raw.storySnippet ?? '',
     imageUri:         resolveUri(raw.imageUri ?? undefined, apiBase),
     mood:             raw.mood ?? 'Hopeful',
-    authorMood:       raw.authorMood ?? null,
     witnessedCount:   raw.witnessedCount ?? 0,
     likeCount:        raw.likeCount ?? 0,
     liked:            raw.liked ?? false,
@@ -556,8 +551,7 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     pageLayoutKey:    raw.pageLayoutKey ?? undefined,
     bookId:           raw.bookId,
     bookTitle:        raw.bookTitle,
-    contentType:      raw.contentType === 'video' ? 'video' : raw.contentType === 'outfit' ? 'outfit' : 'story',
-    outfitTags:       Array.isArray(raw.outfitTags) ? raw.outfitTags.filter((tag): tag is string => typeof tag === 'string') : undefined,
+    contentType:      (raw.contentType === 'video' ? 'video' : 'story') as 'story' | 'video',
     // Video compositions are persisted as API-relative paths (for example
     // /api/videos/<id>.mp4). Resolve them just like story images so native
     // Expo playback receives an absolute URL outside the web proxy.

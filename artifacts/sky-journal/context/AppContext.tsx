@@ -549,13 +549,14 @@ function isValidJournalRecord(r: RawJournalEntryResponse): boolean {
 }
 
 function isValidDiscoverPost(r: RawDiscoverApiItem): boolean {
-  const hasRequiredFields =
+  // Recovery compatibility: the previous Reels UI must not consume outfit posts.
+  if ((r as { contentType?: string }).contentType === 'outfit') return false;
+  return (
     typeof r.id === 'string' && r.id.length > 0 &&
     typeof r.authorUserId === 'string' && r.authorUserId.length > 0 &&
-    typeof r.chapterTitle === 'string' && r.chapterTitle.trim().length > 0;
-  if (!hasRequiredFields) return false;
-  if (r.contentType === 'outfit') return true;
-  return Array.isArray(r.panels) && r.panels.every(p => p !== null && typeof p === 'object');
+    typeof r.chapterTitle === 'string' && r.chapterTitle.trim().length > 0 &&
+    Array.isArray(r.panels) && r.panels.every(p => p !== null && typeof p === 'object')
+  );
 }
 
 // ── Zod validation helper ─────────────────────────────────────────────────────
