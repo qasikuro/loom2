@@ -28,7 +28,7 @@ if (require.main === module) {
     const { values } = parseArgs({
       options: {
         message: { type: 'string' },
-        platform: { type: 'string', default: 'android' },
+        platform: { type: 'string', default: 'all' },
       },
       allowPositionals: false,
     });
