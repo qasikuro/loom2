@@ -968,6 +968,15 @@ export interface PushDeviceRegistration {
   platform?: PushDeviceRegistrationPlatform;
 }
 
+export type DiscoverPostContentType =
+  (typeof DiscoverPostContentType)[keyof typeof DiscoverPostContentType];
+
+export const DiscoverPostContentType = {
+  story: "story",
+  video: "video",
+  outfit: "outfit",
+} as const;
+
 export type DiscoverPostPanelsItem = { [key: string]: unknown };
 
 export interface DiscoverPost {
@@ -977,9 +986,16 @@ export interface DiscoverPost {
   authorUsername?: string | null;
   authorAvatarUri?: string | null;
   chapterTitle: string;
+  contentType?: DiscoverPostContentType;
+  bookId?: string;
+  bookTitle?: string;
+  outfitTags?: string[];
   description: string;
   storySnippet: string;
   imageUri?: string | null;
+  authorMood?: string | null;
+  videoUri?: string | null;
+  thumbnailUri?: string | null;
   mood: string;
   location: string;
   witnessedCount: number;

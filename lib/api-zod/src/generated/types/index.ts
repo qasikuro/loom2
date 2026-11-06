@@ -65,6 +65,7 @@ export * from "./createContentCommentBodyKindnessTag";
 export * from "./createGuideSessionInput";
 export * from "./deleteContentComment200";
 export * from "./discoverPost";
+export * from "./discoverPostContentType";
 export * from "./discoverPostPanelsItem";
 export * from "./featureFlags";
 export * from "./featureUsageControlInput";

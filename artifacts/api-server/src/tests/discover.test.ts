@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import { createTestApp, setTestUserId } from "./helpers/testApp";
-import { db, characterTable, storiesTable, followsTable } from "@workspace/db";
+import { db, characterTable, storiesTable, followsTable, outfitsTable } from "@workspace/db";
 
 const app = createTestApp();
 
@@ -30,6 +30,9 @@ let storyOldId:        string;
 let storyMoodMatchId:  string;
 let storyBannedId:     string;
 let storyHiddenId:     string;
+let outfitPublicId:    string;
+let outfitPrivateId:   string;
+let outfitCreatedThroughApiId: string | undefined;
 
 beforeAll(async () => {
   // Characters
@@ -114,9 +117,42 @@ beforeAll(async () => {
     isPublic: true, isHidden: false, date: makeDate(1), panels: [],
   }).returning({ id: storiesTable.id });
   storyHiddenId = s8.id;
+
+  const [publicOutfit] = await db.insert(outfitsTable).values({
+    userId: FRIEND,
+    name: "Friend outfit",
+    description: "A look for a moonlit story.",
+    story: "A soft outfit for a quiet evening.",
+    imageUri: "/api/images/friend-outfit.jpg",
+    tags: ["dreamy"],
+    isPublic: true,
+    visibility: "public",
+    isHidden: false,
+    date: makeDate(1),
+  }).returning({ id: outfitsTable.id });
+  outfitPublicId = publicOutfit.id;
+
+  const [privateOutfit] = await db.insert(outfitsTable).values({
+    userId: FRIEND,
+    name: "Private outfit",
+    description: "Only for the owner.",
+    story: "",
+    tags: [],
+    isPublic: false,
+    visibility: "private",
+    isHidden: false,
+    date: makeDate(1),
+  }).returning({ id: outfitsTable.id });
+  outfitPrivateId = privateOutfit.id;
 });
 
 afterAll(async () => {
+  const outfitIds = [outfitPublicId, outfitPrivateId, outfitCreatedThroughApiId].filter((id): id is string => !!id);
+  if (outfitIds.length > 0) {
+    const { inArray } = await import("drizzle-orm");
+    await db.delete(outfitsTable).where(inArray(outfitsTable.id, outfitIds));
+  }
+
   const storyIds = [storyFriendId, storyStrangerId, storyPrivateId, storyOwnId, videoOwnId, videoPrivateOwnId, storyOldId, storyMoodMatchId, storyBannedId, storyHiddenId]
     .filter(Boolean);
 
@@ -211,6 +247,66 @@ describe("GET /api/discover", () => {
     const ids = res.body.map((p: any) => p.id);
     expect(ids).toContain(storyFriendId);
     expect(ids).toContain(storyStrangerId);
+  });
+
+  it("includes public outfits in a separate content type and excludes private outfits", async () => {
+    setTestUserId(ME);
+    const res = await request(app).get("/api/discover");
+    expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const publicPost = res.body.find((post: any) => post.id === outfitPublicId);
+    expect(publicPost).toBeDefined();
+    expect(publicPost.contentType).toBe("outfit");
+    expect(publicPost.chapterTitle).toBe("Friend outfit");
+    expect(publicPost.outfitTags).toEqual(["dreamy"]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(res.body.some((post: any) => post.id === outfitPrivateId)).toBe(false);
+  });
+
+  it("publishes API-created public outfits to Reels immediately", async () => {
+    setTestUserId(ME);
+    const before = await request(app).get("/api/discover");
+    expect(before.status).toBe(200);
+
+    const created = await request(app).post("/api/outfits").send({
+      date: new Date().toISOString(),
+      name: "Fresh public look",
+      description: "A newly shared outfit.",
+      story: "Ready for the Reels outfits feed.",
+      tags: ["dreamy"],
+      isPublic: true,
+    });
+    expect(created.status).toBe(201);
+    const createdOutfitId = created.body.id as string;
+    outfitCreatedThroughApiId = createdOutfitId;
+
+    const { eq } = await import("drizzle-orm");
+    const [stored] = await db.select().from(outfitsTable)
+      .where(eq(outfitsTable.id, createdOutfitId));
+    expect(stored).toMatchObject({ isPublic: true, visibility: "public" });
+
+    const after = await request(app).get("/api/discover");
+    expect(after.status).toBe(200);
+    expect(after.body).toContainEqual(expect.objectContaining({
+      id: createdOutfitId,
+      contentType: "outfit",
+      chapterTitle: "Fresh public look",
+    }));
+  });
+
+  it("rechecks outfit visibility before returning a cached feed", async () => {
+    setTestUserId(ME);
+    const before = await request(app).get("/api/discover");
+    expect(before.body.map((post: { id: string }) => post.id)).toContain(outfitPublicId);
+
+    const { eq } = await import("drizzle-orm");
+    await db.update(outfitsTable)
+      .set({ isPublic: false, visibility: "private" })
+      .where(eq(outfitsTable.id, outfitPublicId));
+
+    const after = await request(app).get("/api/discover");
+    expect(after.status).toBe(200);
+    expect(after.body.map((post: { id: string }) => post.id)).not.toContain(outfitPublicId);
   });
 
   it("ranks followed-author stories above unfollowed-author stories", async () => {

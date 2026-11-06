@@ -34,7 +34,7 @@ interface Props {
   onComment: (post: DiscoverPost) => void;
   onLike: (id: string) => void;
   onSave: (id: string) => void;
-  onReport: (id: string) => void;
+  onReport: (id: string, targetType: 'story' | 'outfit') => void;
 }
 
 function ReelAction({ name, label, active, count, onPress, colors, reduceMotion, compact = false, haptics = true }: {
@@ -153,6 +153,7 @@ export const ReelCard = React.memo(function ReelCard({
   const { t } = useTranslation();
   const colors = useKindnessColors('dark');
   const isVideo = post.contentType === 'video' && !!post.videoUri;
+  const isOutfit = post.contentType === 'outfit';
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => { if (!playing) setPaused(false); }, [playing]);
@@ -226,7 +227,13 @@ export const ReelCard = React.memo(function ReelCard({
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.chapterPill} onPress={() => onOpen(post)} accessibilityLabel={t('reels.openChapter', { n: post.chapterNumber })}>
-          <Text style={styles.chapterText}>{isVideo ? t('reels.videoUpper') : t('reels.chapterShort', { n: post.chapterNumber })}</Text>
+          <Text style={styles.chapterText}>
+            {isVideo
+              ? t('reels.videoUpper')
+              : isOutfit
+                ? t('reels.outfitUpper', { defaultValue: 'OUTFIT' })
+                : t('reels.chapterShort', { n: post.chapterNumber })}
+          </Text>
           <Icon name="chevron-right" size={13} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -244,27 +251,30 @@ export const ReelCard = React.memo(function ReelCard({
             haptics={false}
           />
         )}
-        <ReelAction name="heart" label={t(post.liked ? 'reels.liked' : 'reels.like')} count={post.likeCount} active={post.liked} onPress={() => onLike(post.id)} colors={colors} reduceMotion={reduceMotion} />
-        <ReelAction name="message-circle" label={t('reels.comments', { defaultValue: 'Comment' })} onPress={() => onComment(post)} colors={colors} reduceMotion={reduceMotion} />
+        {!isOutfit && <ReelAction name="heart" label={t(post.liked ? 'reels.liked' : 'reels.like')} count={post.likeCount} active={post.liked} onPress={() => onLike(post.id)} colors={colors} reduceMotion={reduceMotion} />}
+        {!isOutfit && <ReelAction name="message-circle" label={t('reels.comments', { defaultValue: 'Comment' })} onPress={() => onComment(post)} colors={colors} reduceMotion={reduceMotion} />}
         <ReelAction name="share-2" label={t('reels.share')} onPress={() => onShare(post)} colors={colors} reduceMotion={reduceMotion} />
-        <ReelAction name="bookmark" label={t(post.saved ? 'reels.saved' : 'reels.save')} active={post.saved} onPress={() => onSave(post.id)} colors={colors} reduceMotion={reduceMotion} />
-        <ReelAction name="flag" label={t('reels.report')} onPress={() => onReport(post.id)} colors={colors} reduceMotion={reduceMotion} />
+        {!isOutfit && <ReelAction name="bookmark" label={t(post.saved ? 'reels.saved' : 'reels.save')} active={post.saved} onPress={() => onSave(post.id)} colors={colors} reduceMotion={reduceMotion} />}
+        <ReelAction name="flag" label={t('reels.report')} onPress={() => onReport(post.id, isOutfit ? 'outfit' : 'story')} colors={colors} reduceMotion={reduceMotion} />
       </View>
 
       <View style={styles.details} pointerEvents="box-none">
         <View style={styles.moodPill}>
-          <Icon name="star" size={12} color="#E9D7FF" />
-          <Text style={styles.moodText}>{post.vibe || post.mood || t('reels.story')}</Text>
+          <Icon name={isOutfit ? 'tag' : 'star'} size={12} color="#E9D7FF" />
+          <Text style={styles.moodText}>{isOutfit ? t('reels.outfitLabel', { defaultValue: 'Outfit' }) : post.vibe || post.mood || t('reels.story')}</Text>
         </View>
         <Text style={styles.title} numberOfLines={2}>{post.chapterTitle}</Text>
         <Text style={styles.byline} numberOfLines={1}>
           {post.authorHandle || post.authorName}
           {post.authorTitle ? `  ·  ${post.authorTitle}` : ''}
         </Text>
+        {isOutfit && !!post.description && (
+          <Text style={styles.outfitDescription} numberOfLines={2}>{post.description}</Text>
+        )}
         {!!post.authorBadges?.length && <BadgeTray badges={post.authorBadges} />}
         {!!post.bookTitle && <Text style={styles.bookTitle} numberOfLines={1}>{post.bookTitle}</Text>}
-        <TouchableOpacity style={styles.openLink} onPress={() => onOpen(post)} accessibilityRole="button" accessibilityLabel={t(isVideo ? 'reels.watchFull' : 'reels.readFull')}>
-          <Text style={styles.openText}>{t(isVideo ? 'reels.watchFull' : 'reels.readStory')}</Text>
+        <TouchableOpacity style={styles.openLink} onPress={() => onOpen(post)} accessibilityRole="button" accessibilityLabel={t(isVideo ? 'reels.watchFull' : isOutfit ? 'reels.viewOutfit' : 'reels.readFull', { defaultValue: isVideo ? 'Watch full video' : isOutfit ? 'View outfit' : 'Read story' })}>
+          <Text style={styles.openText}>{t(isVideo ? 'reels.watchFull' : isOutfit ? 'reels.viewOutfit' : 'reels.readStory', { defaultValue: isVideo ? 'Watch full video' : isOutfit ? 'View outfit' : 'Read story' })}</Text>
           <Icon name="arrow-right" size={15} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -299,6 +309,7 @@ const styles = StyleSheet.create({
   moodText: { color: '#E9D7FF', fontSize: 11, fontFamily: 'Satoshi-Bold' },
   title: { color: '#FFFFFF', fontSize: 26, lineHeight: 31, letterSpacing: -0.7, fontFamily: 'Satoshi-Black', textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 6 },
   byline: { color: 'rgba(244,236,255,0.85)', fontSize: 12, fontFamily: 'Satoshi-Medium', marginTop: 3 },
+  outfitDescription: { color: 'rgba(244,236,255,0.88)', fontSize: 12, lineHeight: 16, fontFamily: 'Satoshi-Medium', marginTop: 5 },
   bookTitle: { color: '#DECAFF', fontSize: 11, fontFamily: 'Satoshi-Medium', marginTop: 4 },
   openLink: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 13, paddingVertical: 4 },
   openText: { color: '#FFFFFF', fontSize: 13, fontFamily: 'Satoshi-Bold' },

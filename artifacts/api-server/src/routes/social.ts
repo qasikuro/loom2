@@ -1150,7 +1150,8 @@ router.get("/discover", requireAuth, async (req, res) => {
 
   const cached = cache.get<object[]>(cacheKey);
   if (cached) {
-    const cachedAuthorIds = [...new Set(cached
+    const cachedPosts = cached as Array<{ authorUserId?: unknown; id?: unknown; contentType?: unknown }>;
+    const cachedAuthorIds = [...new Set(cachedPosts
       .map(item => (item as { authorUserId?: unknown }).authorUserId)
       .filter((id): id is string => typeof id === "string" && id !== userId))];
     const visibleAuthors = cachedAuthorIds.length
@@ -1158,19 +1159,46 @@ router.get("/discover", requireAuth, async (req, res) => {
           .from(characterTable)
           .where(and(
             inArray(characterTable.userId, cachedAuthorIds),
+            eq(characterTable.isPublic, true),
             eq(characterTable.isBanned, false),
             eq(characterTable.isHidden, false),
           ))
       : [];
     const visibleAuthorIds = new Set([...visibleAuthors.map(author => author.userId), userId]);
+    const cachedOutfitIds = [...new Set(cachedPosts
+      .filter(item => item.contentType === "outfit")
+      .map(item => item.id)
+      .filter((id): id is string => typeof id === "string"))];
+    const visibleOutfits = cachedOutfitIds.length
+      ? await db.select({ id: outfitsTable.id })
+          .from(outfitsTable)
+          .innerJoin(characterTable, eq(characterTable.userId, outfitsTable.userId))
+          .where(and(
+            inArray(outfitsTable.id, cachedOutfitIds),
+            eq(outfitsTable.isPublic, true),
+            eq(outfitsTable.visibility, "public"),
+            eq(outfitsTable.isHidden, false),
+            eq(characterTable.isPublic, true),
+            eq(characterTable.isBanned, false),
+            eq(characterTable.isHidden, false),
+            sql`${outfitsTable.userId} NOT IN (
+              SELECT blocked_id FROM blocks WHERE blocker_id = ${userId}
+              UNION
+              SELECT blocker_id FROM blocks WHERE blocked_id = ${userId}
+            )`,
+          ))
+      : [];
+    const visibleOutfitIds = new Set(visibleOutfits.map(outfit => outfit.id));
     return sendDiscoverResponse(cached.filter(item => {
-      const authorId = (item as { authorUserId?: unknown }).authorUserId;
-      return typeof authorId === "string" && visibleAuthorIds.has(authorId);
+      const post = item as { authorUserId?: unknown; id?: unknown; contentType?: unknown };
+      return typeof post.authorUserId === "string"
+        && visibleAuthorIds.has(post.authorUserId)
+        && (post.contentType !== "outfit" || (typeof post.id === "string" && visibleOutfitIds.has(post.id)));
     }), "HIT");
   }
 
   try {
-    const [myCharRows, followingRows, stories, chapters] = await Promise.all([
+    const [myCharRows, followingRows, stories, chapters, outfitRows] = await Promise.all([
       db.select({ mood: characterTable.mood })
         .from(characterTable)
         .where(eq(characterTable.userId, userId))
@@ -1272,6 +1300,44 @@ router.get("/discover", requireAuth, async (req, res) => {
         )
         .orderBy(desc(chaptersTable.publishedAt))
         .limit(100),
+
+      // Public outfits share the Reels discovery feed, but remain a distinct
+      // content type so the client can keep them out of Stories and Videos.
+      db.select({
+        id: outfitsTable.id,
+        userId: outfitsTable.userId,
+        name: outfitsTable.name,
+        description: outfitsTable.description,
+        story: outfitsTable.story,
+        imageUri: outfitsTable.imageUri,
+        tags: outfitsTable.tags,
+        date: outfitsTable.date,
+        authorName: characterTable.name,
+        authorUsername: characterTable.username,
+        authorAvatarUri: characterTable.avatarUri,
+        authorMood: characterTable.mood,
+        authorTitle: constellationProgressTable.activeTitle,
+        authorIsFounder: characterTable.isFounder,
+        authorIsBetaTester: characterTable.isBetaTester,
+      })
+        .from(outfitsTable)
+        .innerJoin(characterTable, eq(characterTable.userId, outfitsTable.userId))
+        .leftJoin(constellationProgressTable, eq(constellationProgressTable.userId, outfitsTable.userId))
+        .where(and(
+          eq(outfitsTable.isPublic, true),
+          eq(outfitsTable.visibility, "public"),
+          eq(outfitsTable.isHidden, false),
+          eq(characterTable.isPublic, true),
+          eq(characterTable.isBanned, false),
+          eq(characterTable.isHidden, false),
+          sql`${outfitsTable.userId} NOT IN (
+            SELECT blocked_id FROM blocks WHERE blocker_id = ${userId}
+            UNION
+            SELECT blocker_id FROM blocks WHERE blocked_id = ${userId}
+          )`,
+        ))
+        .orderBy(desc(outfitsTable.date))
+        .limit(100),
     ]);
 
     const myMood       = myCharRows[0]?.mood ?? "Hopeful";
@@ -1279,7 +1345,14 @@ router.get("/discover", requireAuth, async (req, res) => {
     const now          = Date.now();
 
     // Score stories
-    type ScoredEntry = { kind: 'story' | 'chapter'; id: string; userId: string; score: number; isFollowing: boolean; data: typeof stories[0] | typeof chapters[0] };
+    type ScoredEntry = {
+      kind: 'story' | 'chapter' | 'outfit';
+      id: string;
+      userId: string;
+      score: number;
+      isFollowing: boolean;
+      data: typeof stories[0] | typeof chapters[0] | typeof outfitRows[0];
+    };
 
     const scoredStories: ScoredEntry[] = stories.map(row => {
       const isFollowing = followingSet.has(row.userId);
@@ -1303,9 +1376,22 @@ router.get("/discover", requireAuth, async (req, res) => {
       return { kind: 'chapter', id: row.id, userId: row.userId, score, isFollowing, data: row };
     });
 
-    const allScored = [...scoredStories, ...scoredChapters];
+    const scoredOutfits: ScoredEntry[] = outfitRows.map(row => {
+      const isFollowing = followingSet.has(row.userId);
+      const daysOld = (now - row.date.getTime()) / 86_400_000;
+      const recency = Math.max(0, 1 - daysOld / 30);
+      const score = (isFollowing ? 6 : 0) + recency;
+      return { kind: 'outfit', id: row.id, userId: row.userId, score, isFollowing, data: row };
+    });
+
+    const allScored = [...scoredStories, ...scoredChapters, ...scoredOutfits];
     allScored.sort((a, b) => b.score - a.score);
-    const top50 = allScored.slice(0, 50);
+    // Keep each Reels category browsable; popular story/video posts must not
+    // crowd every outfit out of the shared response.
+    const top50 = [
+      ...allScored.filter(entry => entry.kind !== 'outfit').slice(0, 50),
+      ...allScored.filter(entry => entry.kind === 'outfit').slice(0, 50),
+    ].sort((a, b) => b.score - a.score);
 
     // Fetch sticker counts (stories only) + author badges in bulk for the top 50
     const top50StoryIds = top50.filter(e => e.kind === 'story').map(e => e.id);
@@ -1419,7 +1505,7 @@ router.get("/discover", requireAuth, async (req, res) => {
           music:          row.music ?? null,
           isFollowing,
         };
-      } else {
+      } else if (kind === 'chapter') {
         // Book chapter
         const row = data as typeof chapters[0];
         const chapterPages = (row.pages ?? []) as BookChapterPage[];
@@ -1459,6 +1545,39 @@ router.get("/discover", requireAuth, async (req, res) => {
           panels:          cardPanels,
           bookId:          row.bookId,
           bookTitle:       row.bookTitle,
+          contentType:     'story',
+          isFollowing,
+        };
+      } else {
+        const row = data as typeof outfitRows[0];
+        const imageUri = safeDiscoverUri(row.imageUri);
+        const vibe = row.tags.find(tag => tag.startsWith('vibe:'))?.slice(5) ?? 'Outfit';
+        return {
+          id: row.id,
+          authorUserId: row.userId,
+          authorName: row.authorName,
+          authorUsername: row.authorUsername ?? null,
+          authorTitle: row.authorTitle ?? null,
+          authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
+          authorIsFounder: row.authorIsFounder ?? false,
+          authorIsBetaTester: row.authorIsBetaTester ?? false,
+          authorBadges: authorBadgesMap[row.userId] ?? [],
+          chapterTitle: row.name,
+          description: row.description ?? '',
+          storySnippet: row.story || row.description || '',
+          imageUri,
+          mood: vibe,
+          authorMood: row.authorMood ?? null,
+          location: '',
+          witnessedCount: 0,
+          savedCount: 0,
+          likeCount: 0,
+          liked: false,
+          stickerCount: 0,
+          date: row.date.toISOString(),
+          panels: [{ text: row.story || row.description || '', imageUri }],
+          outfitTags: row.tags,
+          contentType: 'outfit',
           isFollowing,
         };
       }

@@ -6,6 +6,7 @@ import { requireAuth, getUserId } from "../middleware/auth";
 import { MAX_AUDIUS_TRACK_DURATION_SECONDS } from "../services/audius";
 import { syncConstellation } from "../services/constellationService";
 import { assertOwnedMediaReferences, MediaOwnershipError, normalizeManagedMediaPath, normalizeMediaReference, withOwnerMediaUrls } from "../lib/mediaAccess";
+import * as cache from "../lib/cache";
 
 /** Strip device-local URIs that are invisible to other users. */
 function safeImageUri(uri: string | null | undefined): string | null {
@@ -88,6 +89,7 @@ router.post("/outfits", requireAuth, async (req, res) => {
       userId,
       date: new Date(date),
       ...rest,
+      visibility: rest.isPublic ? "public" : "private",
       music,
       imageUri: safeImageUri(normalizedImageUri),
     };
@@ -97,11 +99,19 @@ router.post("/outfits", requireAuth, async (req, res) => {
       .values(insertValues)
       .onConflictDoUpdate({
         target: outfitsTable.id,
-        set: { date: new Date(date), ...rest, music, imageUri: safeImageUri(normalizedImageUri) },
+        set: {
+          date: new Date(date),
+          ...rest,
+          visibility: rest.isPublic ? "public" : "private",
+          music,
+          imageUri: safeImageUri(normalizedImageUri),
+        },
         setWhere: eq(outfitsTable.userId, userId),
       })
       .returning();
     if (!created) return res.status(404).json({ error: "Not found" });
+
+    cache.invalidate("discover:");
 
     // Fan-out notifications to followers (fire & forget, non-blocking)
     if (rest.isPublic) {
@@ -192,6 +202,7 @@ router.patch("/outfits/:id", requireAuth, async (req, res) => {
       .where(and(eq(outfitsTable.id, outfitId), eq(outfitsTable.userId, userId)))
       .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
+    cache.invalidate("discover:");
     return res.json(withOwnerMediaUrls(serializeOutfit(updated), userId));
   } catch (err) {
     if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
@@ -207,6 +218,7 @@ router.delete("/outfits/:id", requireAuth, async (req, res) => {
     await db
       .delete(outfitsTable)
       .where(and(eq(outfitsTable.id, outfitId), eq(outfitsTable.userId, userId)));
+    cache.invalidate("discover:");
     return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Failed to delete outfit");

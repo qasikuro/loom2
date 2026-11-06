@@ -5,6 +5,7 @@
  * Sky Journal API
  * OpenAPI spec version: 0.2.0
  */
+import type { DiscoverPostContentType } from "./discoverPostContentType";
 import type { DiscoverPostPanelsItem } from "./discoverPostPanelsItem";
 
 export interface DiscoverPost {
@@ -14,9 +15,16 @@ export interface DiscoverPost {
   authorUsername?: string | null;
   authorAvatarUri?: string | null;
   chapterTitle: string;
+  contentType?: DiscoverPostContentType;
+  bookId?: string;
+  bookTitle?: string;
+  outfitTags?: string[];
   description: string;
   storySnippet: string;
   imageUri?: string | null;
+  authorMood?: string | null;
+  videoUri?: string | null;
+  thumbnailUri?: string | null;
   mood: string;
   location: string;
   witnessedCount: number;

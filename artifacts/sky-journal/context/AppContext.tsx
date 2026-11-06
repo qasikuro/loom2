@@ -549,12 +549,13 @@ function isValidJournalRecord(r: RawJournalEntryResponse): boolean {
 }
 
 function isValidDiscoverPost(r: RawDiscoverApiItem): boolean {
-  return (
+  const hasRequiredFields =
     typeof r.id === 'string' && r.id.length > 0 &&
     typeof r.authorUserId === 'string' && r.authorUserId.length > 0 &&
-    typeof r.chapterTitle === 'string' && r.chapterTitle.trim().length > 0 &&
-    Array.isArray(r.panels) && r.panels.every(p => p !== null && typeof p === 'object')
-  );
+    typeof r.chapterTitle === 'string' && r.chapterTitle.trim().length > 0;
+  if (!hasRequiredFields) return false;
+  if (r.contentType === 'outfit') return true;
+  return Array.isArray(r.panels) && r.panels.every(p => p !== null && typeof p === 'object');
 }
 
 // ── Zod validation helper ─────────────────────────────────────────────────────

@@ -3282,11 +3282,30 @@ components:
           nullable: true
         chapterTitle:
           type: string
+        contentType:
+          type: string
+          enum: [story, video, outfit]
+        bookId:
+          type: string
+        bookTitle:
+          type: string
+        outfitTags:
+          type: array
+          items: { type: string }
         description:
           type: string
         storySnippet:
           type: string
         imageUri:
+          type: string
+          nullable: true
+        authorMood:
+          type: string
+          nullable: true
+        videoUri:
+          type: string
+          nullable: true
+        thumbnailUri:
           type: string
           nullable: true
         mood:

@@ -66,11 +66,13 @@ vi.mock("../../lib/cache", () => {
 
 import socialRouter from "../../routes/social";
 import storiesRouter from "../../routes/stories";
+import outfitsRouter from "../../routes/outfits";
 
 export function createTestApp() {
   const app = express();
   app.use(express.json());
   app.use("/api", socialRouter);
   app.use("/api", storiesRouter);
+  app.use("/api", outfitsRouter);
   return app;
 }

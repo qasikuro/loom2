@@ -8,6 +8,7 @@ import { useApp, type DiscoverPost } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { UI } from '@/constants/uiTokens';
 import { getReelPlaybackWindow, isReelPlaybackAppActive } from '@/utils/reelPlayback';
+import { filterReelPosts, type ReelCategory } from '@/utils/reelFeed';
 import { activateReelDiagnostic, openReelDiagnosticMenu } from '@/utils/reelDiagnostics';
 import { useIsFocused } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -28,9 +29,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { shareContent } from '@/utils/shareContent';
 
-type ReelFilter = 'All' | 'Stories' | 'Videos';
-
-const FILTERS: ReelFilter[] = ['All', 'Stories', 'Videos'];
+const FILTERS: ReelCategory[] = ['Videos', 'Stories', 'Outfits'];
 
 export default function ReelsScreen() {
   const isFocused = useIsFocused();
@@ -51,13 +50,13 @@ export default function ReelsScreen() {
   } = useApp();
   const { open: openFriendsDrawer } = useFriendsDrawer();
 
-  const [filter, setFilter] = useState<ReelFilter>('All');
+  const [filter, setFilter] = useState<ReelCategory>('Videos');
   const [refreshing, setRefreshing] = useState(false);
   const [visiblePostId, setVisiblePostId] = useState<string | null>(null);
   const [readyPostId, setReadyPostId] = useState<string | null>(null);
   const [videosMuted, setVideosMuted] = useState(true);
   const [selectedVideoPost, setSelectedVideoPost] = useState<DiscoverPost | null>(null);
-  const [reportTargetId, setReportTargetId] = useState<string | null>(null);
+  const [reportTarget, setReportTarget] = useState<{ id: string; type: 'story' | 'outfit' } | null>(null);
   const [feedHeight, setFeedHeight] = useState(0);
   const [appActive, setAppActive] = useState(isReelPlaybackAppActive(AppState.currentState));
   const listRef = useRef<FlatList<DiscoverPost>>(null);
@@ -66,15 +65,7 @@ export default function ReelsScreen() {
   const topPad = Platform.OS === 'web' ? 54 : insets.top;
   const reelHeight = Math.max(420, feedHeight);
 
-  const reels = useMemo(() => {
-    if (filter === 'Stories') {
-      return discoverPosts.filter(post => post.contentType !== 'video');
-    }
-    if (filter === 'Videos') {
-      return discoverPosts.filter(post => post.contentType === 'video');
-    }
-    return discoverPosts;
-  }, [discoverPosts, filter]);
+  const reels = useMemo(() => filterReelPosts(discoverPosts, filter), [discoverPosts, filter]);
   const playbackEnabled = isFocused && appActive && !selectedVideoPost;
   const { activePostId, preparedIndices } = getReelPlaybackWindow(reels, visiblePostId, readyPostId, playbackEnabled);
   const activePostIdRef = useRef(activePostId);
@@ -133,13 +124,44 @@ export default function ReelsScreen() {
       setSelectedVideoPost(post);
       return;
     }
+    if (post.contentType === 'outfit') {
+      const outfit = {
+        id: post.id,
+        name: post.chapterTitle,
+        description: post.description ?? '',
+        story: post.storySnippet,
+        imageUri: post.imageUri ?? '',
+        tags: post.outfitTags ?? [],
+        date: post.date,
+      };
+      router.push({
+        pathname: '/user-outfit',
+        params: {
+          outfitId: post.id,
+          outfitName: outfit.name,
+          outfitDesc: outfit.description,
+          outfitStory: outfit.story,
+          outfitImage: outfit.imageUri,
+          outfitTags: JSON.stringify(outfit.tags),
+          outfitDate: outfit.date,
+          allOutfitsJson: JSON.stringify([outfit]),
+          authorUserId: post.authorUserId,
+          authorName: post.authorName,
+          authorHandle: post.authorHandle,
+          authorAvatarUri: post.authorAvatarUri ?? '',
+          authorIsSelf: post.authorUserId === viewerId ? 'true' : 'false',
+          authorMood: post.authorMood ?? '',
+        },
+      } as never);
+      return;
+    }
     if (post.bookId) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.push({ pathname: '/book-public', params: { bookId: post.bookId } } as any);
       return;
     }
     router.push({ pathname: '/story/[id]', params: { id: post.id, source: 'reels' } });
-  }, []);
+  }, [router, viewerId]);
 
   const openAuthor = useCallback((userId: string) => {
     router.push({ pathname: '/user/[userId]', params: { userId } } as never);
@@ -147,7 +169,9 @@ export default function ReelsScreen() {
   const toggleMuted = useCallback(() => setVideosMuted(muted => !muted), []);
 
   const sharePost = useCallback(async (post: DiscoverPost) => {
-    const path = post.bookId
+    const path = post.contentType === 'outfit'
+      ? `/user/${encodeURIComponent(post.authorUserId)}`
+      : post.bookId
       ? `/book-public?bookId=${encodeURIComponent(post.bookId)}`
       : `/story/${encodeURIComponent(post.id)}`;
     await shareContent({
@@ -178,7 +202,11 @@ export default function ReelsScreen() {
             onAuthorPress={openAuthor}
             onComment={post => router.push({
               pathname: '/content-comments',
-              params: { contentType: post.contentType, contentId: post.id, title: post.chapterTitle },
+              params: {
+                contentType: post.contentType === 'outfit' ? 'outfit' : post.contentType === 'video' ? 'video' : 'story',
+                contentId: post.id,
+                title: post.chapterTitle,
+              },
             } as never)}
             playing={playbackEnabled && item.id === activePostId && item.contentType === 'video'}
             prepareVideo={preparedIndices.includes(index)}
@@ -188,7 +216,7 @@ export default function ReelsScreen() {
             onShare={sharePost}
             onLike={toggleLikePost}
             onSave={toggleSavePost}
-            onReport={setReportTargetId}
+            onReport={(id, type) => setReportTarget({ id, type })}
           />
         )}
         ListEmptyComponent={
@@ -202,16 +230,22 @@ export default function ReelsScreen() {
             <View style={[styles.empty, { paddingTop: topPad + 170 }]}>
               <View style={styles.emptyIcon}>
                 <Icon
-                  name={filter === 'Videos' ? 'video' : 'star'}
+                  name={filter === 'Videos' ? 'video' : filter === 'Outfits' ? 'tag' : 'book-open'}
                   size={30}
                   color="rgba(190,160,255,0.70)"
                 />
               </View>
               <Text style={styles.emptyTitle}>
-                {t(filter === 'All' ? 'reels.emptyAll' : filter === 'Videos' ? 'reels.emptyVideos' : 'reels.emptyStories')}
+                {t(filter === 'Videos' ? 'reels.emptyVideos' : filter === 'Outfits' ? 'reels.emptyOutfits' : 'reels.emptyStories', {
+                  defaultValue: filter === 'Videos' ? 'No videos yet' : filter === 'Outfits' ? 'No outfits yet' : 'No stories yet',
+                })}
               </Text>
               <Text style={styles.emptyBody}>
-                {t('reels.emptyBody')}
+                {t(filter === 'Outfits' ? 'reels.emptyOutfitsBody' : 'reels.emptyBody', {
+                  defaultValue: filter === 'Outfits'
+                    ? 'Public looks from creators will appear here.'
+                    : 'Come back soon to discover something new.',
+                })}
               </Text>
               <TouchableOpacity
                 style={[styles.emptyButton, { backgroundColor: colors.primary }]}
@@ -300,11 +334,13 @@ export default function ReelsScreen() {
                   activeOpacity={0.76}
                 >
                   <Icon
-                    name={item === 'Videos' ? 'video' : item === 'Stories' ? 'book-open' : 'layers'}
+                    name={item === 'Videos' ? 'video' : item === 'Stories' ? 'book-open' : 'tag'}
                     size={12}
                     color={active ? '#D9C7FF' : 'rgba(205,192,235,0.48)'}
                   />
-                   <Text style={[styles.filterText, active && styles.filterTextActive]}>{t(`reels.filter${item}`)}</Text>
+                  <Text style={[styles.filterText, active && styles.filterTextActive]}>
+                    {t(`reels.filter${item}`, { defaultValue: item })}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -330,10 +366,10 @@ export default function ReelsScreen() {
       )}
 
       <ReportSheet
-        visible={!!reportTargetId}
-        targetType="story"
-        targetId={reportTargetId ?? ''}
-        onClose={() => setReportTargetId(null)}
+        visible={!!reportTarget}
+        targetType={reportTarget?.type ?? 'story'}
+        targetId={reportTarget?.id ?? ''}
+        onClose={() => setReportTarget(null)}
       />
       <DiscoverVideoPlayerModal
         post={isFocused ? selectedVideoPost : null}
