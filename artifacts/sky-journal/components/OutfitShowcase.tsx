@@ -257,9 +257,13 @@ export function OutfitShowcaseMotion({
   const cameraBeat = useRef(new Animated.Value(0)).current;
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const normalizedVibe = vibe?.toLowerCase() ?? '';
-  const hasEditorialCuts = cinematicCamera && normalizedVibe.length > 0;
+  const hasEditorialCuts = cinematicCamera;
   const cameraEnergy = VIBE_CAMERA_ENERGY[normalizedVibe] ?? 0.9;
   const cutStrength = VIBE_CUT_STRENGTH[normalizedVibe] ?? 0.72;
+  const quickCuts = normalizedVibe === 'energetic' || normalizedVibe === 'glitch';
+  const slowMood = ['dark', 'dreamy', 'romantic', 'cozy', 'emotional'].includes(normalizedVibe);
+  const frameHoldMs = slowMood ? 2200 : quickCuts ? 1650 : 1900;
+  const cutTransitionMs = quickCuts ? 330 : 520;
   const vibeAccent = normalizedVibe === 'happy' || normalizedVibe === 'cozy'
     ? colors.chart3
     : normalizedVibe === 'romantic' || normalizedVibe === 'cute'
@@ -280,9 +284,9 @@ export function OutfitShowcaseMotion({
   useEffect(() => {
     cycle.stopAnimation();
     cycle.setValue(0);
-    if (!style || !animate) return;
+    if ((!style && !cinematicCamera) || !animate) return;
 
-    const duration = style === 'dreamy' ? 3600 : 3200;
+    const duration = style === 'dreamy' ? 3600 : cinematicCamera ? 4200 : 3200;
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(cycle, {
         toValue: 1,
@@ -303,7 +307,7 @@ export function OutfitShowcaseMotion({
       cycle.stopAnimation();
       cycle.setValue(0);
     };
-  }, [animate, cycle, style, transition]);
+  }, [animate, cinematicCamera, cycle, style, transition]);
 
   useEffect(() => {
     entrance.stopAnimation();
@@ -336,15 +340,15 @@ export function OutfitShowcaseMotion({
         useNativeDriver: true,
       });
     const sequence = Animated.loop(Animated.sequence([
-      move(1, 900),
-      move(2, 180, Easing.out(Easing.cubic)),
-      move(3, 260, Easing.out(Easing.cubic)),
-      move(4, 650),
-      move(5, 1000),
-      move(6, 150, Easing.out(Easing.cubic)),
-      move(7, 300, Easing.out(Easing.cubic)),
-      move(8, 1100),
-      move(9, 800),
+      // Let each composition read as a separate slideshow frame before cutting.
+      Animated.delay(frameHoldMs),
+      move(1, cutTransitionMs),
+      Animated.delay(frameHoldMs),
+      move(2, cutTransitionMs * 0.7, Easing.out(Easing.cubic)),
+      Animated.delay(frameHoldMs),
+      move(3, cutTransitionMs),
+      Animated.delay(frameHoldMs),
+      move(4, cutTransitionMs),
     ]));
     sequence.start();
     return () => {
@@ -352,7 +356,7 @@ export function OutfitShowcaseMotion({
       cameraBeat.stopAnimation();
       cameraBeat.setValue(0);
     };
-  }, [animate, cameraBeat, cinematicCamera]);
+  }, [animate, cameraBeat, cinematicCamera, cutTransitionMs, frameHoldMs]);
 
   if (!style && !cinematicCamera) return <>{children}</>;
 
@@ -395,43 +399,43 @@ export function OutfitShowcaseMotion({
   const cameraScale = animate
     ? cinematicCamera
       ? cameraBeat.interpolate({
-        inputRange: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        outputRange: [1, 1 + 0.045 * cameraEnergy, 1 + 0.11 * cameraEnergy, 1 + 0.075 * cameraEnergy, 1 + 0.05 * cameraEnergy, 1 + 0.035 * cameraEnergy, 1 + 0.105 * cameraEnergy, 1 + 0.06 * cameraEnergy, 1 + 0.04 * cameraEnergy, 1],
+        inputRange: [0, 1, 2, 3, 4],
+        outputRange: [1, 1 + 0.14 * cameraEnergy, 1 + 0.035 * cameraEnergy, 1 + 0.15 * cameraEnergy, 1],
       })
       : cycle.interpolate({ inputRange: [0, 1], outputRange: cameraScaleRange })
     : 1;
   const cameraX = animate
     ? cinematicCamera
       ? cameraBeat.interpolate({
-        inputRange: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        outputRange: [0, -5 * cameraEnergy, -2 * cameraEnergy, 0, 2 * cameraEnergy, 8 * cameraEnergy, 11 * cameraEnergy, 6 * cameraEnergy, -8 * cameraEnergy, 0],
+        inputRange: [0, 1, 2, 3, 4],
+        outputRange: [0, -12 * cameraEnergy, 0, 13 * cameraEnergy, 0],
       })
       : cycle.interpolate({ inputRange: [0, 1], outputRange: cameraXRange })
     : 0;
   const cameraY = animate
     ? cinematicCamera
       ? cameraBeat.interpolate({
-        inputRange: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        outputRange: [0, -8 * cameraEnergy, -14 * cameraEnergy, -8 * cameraEnergy, -5 * cameraEnergy, 8 * cameraEnergy, 2 * cameraEnergy, -1 * cameraEnergy, -4 * cameraEnergy, 0],
+        inputRange: [0, 1, 2, 3, 4],
+        outputRange: [0, -8 * cameraEnergy, 0, -6 * cameraEnergy, 0],
       })
       : cycle.interpolate({ inputRange: [0, 1], outputRange: cameraYRange })
     : 0;
   const cameraRotation = animate && cinematicCamera
     ? cameraBeat.interpolate({
-      inputRange: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-      outputRange: ['0deg', `${-0.15 * cameraEnergy}deg`, `${0.25 * cameraEnergy}deg`, `${0.1 * cameraEnergy}deg`, '0deg', `${-0.2 * cameraEnergy}deg`, `${0.15 * cameraEnergy}deg`, '0deg', `${-0.12 * cameraEnergy}deg`, '0deg'],
+      inputRange: [0, 1, 2, 3, 4],
+      outputRange: ['0deg', `${-0.16 * cameraEnergy}deg`, '0deg', `${0.16 * cameraEnergy}deg`, '0deg'],
     })
     : '0deg';
   const focusPulse = animate && cinematicCamera
     ? cameraBeat.interpolate({
-      inputRange: [0, 1, 1.8, 2, 2.55, 3, 4, 5.8, 6, 6.45, 7, 8],
-      outputRange: [0, 0, 0, 0.42, 0.2, 0, 0, 0, 0.36, 0.16, 0, 0],
+      inputRange: [0, 0.82, 0.98, 1.12, 1.82, 1.98, 2.12, 2.82, 2.98, 3.12, 4],
+      outputRange: [0, 0, 0.24, 0, 0, 0.24, 0, 0, 0.24, 0, 0],
     })
     : 0;
   const beatFlash = animate && cinematicCamera
     ? cameraBeat.interpolate({
-      inputRange: [0, 1.85, 2, 2.18, 2.55, 5.85, 6, 6.16, 6.45, 9],
-      outputRange: [0, 0, 0.1 * cameraEnergy, 0.06 * cameraEnergy, 0, 0, 0.08 * cameraEnergy, 0.05 * cameraEnergy, 0, 0],
+      inputRange: [0, 0.86, 0.98, 1.12, 1.86, 1.98, 2.12, 2.86, 2.98, 3.12, 4],
+      outputRange: [0, 0, 0.075 * cameraEnergy, 0, 0, 0.075 * cameraEnergy, 0, 0, 0.075 * cameraEnergy, 0, 0],
     })
     : 0;
   const entryScale = transition === 'zoom' || transition === 'parallax'
@@ -464,14 +468,14 @@ export function OutfitShowcaseMotion({
     : null;
   const cutOpacity = hasEditorialCuts && animate
     ? cameraBeat.interpolate({
-      inputRange: [0, 1.7, 1.9, 2, 2.5, 2.78, 3, 5.7, 5.9, 6, 6.5, 6.78, 7, 9],
-      outputRange: [0, 0, 0.5 * cutStrength, cutStrength, 0.86 * cutStrength, 0.38 * cutStrength, 0, 0, 0.5 * cutStrength, cutStrength, 0.86 * cutStrength, 0.38 * cutStrength, 0, 0],
+      inputRange: [0, 1.68, 1.88, 2, 2.18, 2.4, 2.62, 4],
+      outputRange: [0, 0, 0.76 * cutStrength, cutStrength, cutStrength, 0.72 * cutStrength, 0, 0],
     })
     : 0;
   const colorGradeOpacity = animate && cinematicCamera
     ? cameraBeat.interpolate({
-      inputRange: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-      outputRange: [0.05, 0.11, 0.18, 0.12, 0.06, 0.1, 0.18, 0.12, 0.07, 0.05].map(value => value * tintEnergy),
+      inputRange: [0, 1, 2, 3, 4],
+      outputRange: [0.045, 0.16, 0.11, 0.2, 0.045].map(value => value * tintEnergy),
     })
     : 0;
 
@@ -542,16 +546,10 @@ export function OutfitShowcaseMotion({
           const panelWidth = stageSize.width / 3;
           const shiftAmount = panelWidth * (index === 1 ? -0.36 : 0.72);
           const panelShift = cameraBeat.interpolate({
-            inputRange: [0, 1.72, 1.9, 2, 2.5, 2.78, 3, 5.72, 5.9, 6, 6.5, 6.78, 7, 9],
+            inputRange: [0, 1.68, 1.88, 2, 2.18, 2.4, 2.62, 4],
             outputRange: [
               index === 0 ? -shiftAmount : shiftAmount,
               index === 0 ? -shiftAmount : shiftAmount,
-              index === 0 ? -shiftAmount * 0.45 : shiftAmount * 0.45,
-              0,
-              0,
-              index === 0 ? shiftAmount * 0.35 : -shiftAmount * 0.35,
-              index === 0 ? shiftAmount : -shiftAmount,
-              index === 0 ? shiftAmount : -shiftAmount,
               index === 0 ? -shiftAmount * 0.45 : shiftAmount * 0.45,
               0,
               0,
