@@ -176,6 +176,7 @@ export interface DiscoverPost {
   storySnippet:     string;
   imageUri?:        string;
   mood:             string;
+  authorMood?:      string | null;
   witnessedCount:   number;
   likeCount:        number;
   liked:            boolean;
@@ -204,7 +205,8 @@ export interface DiscoverPost {
   /** Title of the parent book (only present when bookId is set). */
   bookTitle?:       string;
   /** Distinguishes post kinds — 'story' (panels/pages) or 'video'. Defaults to 'story'. */
-  contentType?:     'story' | 'video';
+  contentType?:     'story' | 'video' | 'outfit';
+  outfitTags?:      string[];
   /** URI of the uploaded video file (video posts only). */
   videoUri?:        string | null;
   /** URI of the video thumbnail image (video posts only). */
@@ -328,6 +330,7 @@ export interface RawDiscoverApiItem {
   storySnippet?:    string;
   imageUri?:        string | null;
   mood?:            string;
+  authorMood?:      string | null;
   witnessedCount?:  number;
   likeCount?:       number;
   liked?:           boolean;
@@ -351,7 +354,8 @@ export interface RawDiscoverApiItem {
   bookId?:          string;
   /** Title of the parent book (only present when bookId is set). */
   bookTitle?:       string;
-  contentType?:     'story' | 'video';
+  contentType?:     'story' | 'video' | 'outfit';
+  outfitTags?:      unknown;
   videoUri?:        string | null;
   thumbnailUri?:    string | null;
   music?:           StoryMusic | null;
@@ -511,6 +515,19 @@ export function toAppOutfit(raw: RawOutfitResponse, apiBase?: string): Outfit {
 
 type RawDiscoverItem = Omit<DiscoverPost, 'saved' | 'isFollowing'>;
 
+export function isValidDiscoverPost(raw: RawDiscoverApiItem): boolean {
+  if (typeof raw.id !== 'string' || raw.id.trim().length === 0) return false;
+  if (raw.contentType === 'outfit') return true;
+  const hasPanels = Array.isArray(raw.panels)
+    && raw.panels.some(panel => panel !== null && typeof panel === 'object');
+  const hasImage = [raw.imageUri, raw.thumbnailUri].some(
+    uri => typeof uri === 'string' && uri.trim().length > 0,
+  );
+  const hasVideo = typeof raw.videoUri === 'string' && raw.videoUri.trim().length > 0;
+  const hasText = typeof raw.storySnippet === 'string' && raw.storySnippet.trim().length > 0;
+  return hasPanels || hasImage || hasVideo || hasText;
+}
+
 export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): RawDiscoverItem {
   return {
     id:               raw.id,
@@ -524,10 +541,11 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     authorIsFounder:     raw.authorIsFounder     ?? false,
     authorIsBetaTester:  raw.authorIsBetaTester  ?? false,
     authorBadges:        Array.isArray(raw.authorBadges) ? (raw.authorBadges as BadgeItem[]) : [],
-    chapterTitle:     (raw.chapterTitle ?? '').trim() || raw.bookTitle?.trim() || 'Story',
+    chapterTitle:     raw.chapterTitle?.trim() || raw.bookTitle?.trim() || (raw.contentType === 'outfit' ? 'Outfit' : 'Story'),
     storySnippet:     raw.storySnippet ?? '',
     imageUri:         resolveUri(raw.imageUri ?? undefined, apiBase),
     mood:             raw.mood ?? 'Hopeful',
+    authorMood:       raw.authorMood ?? null,
     witnessedCount:   raw.witnessedCount ?? 0,
     likeCount:        raw.likeCount ?? 0,
     liked:            raw.liked ?? false,
@@ -537,7 +555,9 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     date:             raw.date ?? raw.createdAt ?? new Date().toISOString(),
     chapterNumber:    raw.chapterNumber ?? 1,
     vibe:             raw.mood ?? 'Hopeful',
-    panels:           Array.isArray(raw.panels) ? raw.panels.filter(p => p !== null && typeof p === 'object').map(p => ({
+    panels:           Array.isArray(raw.panels) ? raw.panels.filter(
+      (panel): panel is NonNullable<typeof panel> => panel !== null && typeof panel === 'object',
+    ).map(p => ({
       text:     p.text     ?? '',
       textFormat: p.textFormat,
       articleBlock: p.articleBlock,
@@ -551,7 +571,8 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     pageLayoutKey:    raw.pageLayoutKey ?? undefined,
     bookId:           raw.bookId,
     bookTitle:        raw.bookTitle,
-    contentType:      (raw.contentType === 'video' ? 'video' : 'story') as 'story' | 'video',
+    contentType:      raw.contentType === 'video' ? 'video' : raw.contentType === 'outfit' ? 'outfit' : 'story',
+    outfitTags:       Array.isArray(raw.outfitTags) ? raw.outfitTags.filter((tag): tag is string => typeof tag === 'string') : undefined,
     // Video compositions are persisted as API-relative paths (for example
     // /api/videos/<id>.mp4). Resolve them just like story images so native
     // Expo playback receives an absolute URL outside the web proxy.

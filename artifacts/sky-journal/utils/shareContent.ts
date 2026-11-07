@@ -28,6 +28,46 @@ export function createStorigamDeepLink(path: string): string {
     : ExpoLinking.createURL(`/${normalizedPath}`);
 }
 
+export function createOutfitDetailSharePath(opts: {
+  id: string;
+  name: string;
+  description: string;
+  story: string;
+  imageUri?: string | null;
+  tags: string[];
+  date: string;
+  music?: StoryMusic | null;
+  authorUserId: string;
+  authorName: string;
+  authorHandle: string;
+  authorAvatarUri?: string | null;
+  authorMood?: string | null;
+}): string {
+  const params: Record<string, string> = {
+    outfitId: opts.id,
+    outfitName: opts.name,
+    outfitDesc: opts.description,
+    outfitStory: opts.story,
+    outfitImage: opts.imageUri ?? '',
+    outfitTags: JSON.stringify(opts.tags),
+    outfitDate: opts.date,
+    authorUserId: opts.authorUserId,
+    authorName: opts.authorName,
+    authorHandle: opts.authorHandle,
+    authorAvatarUri: opts.authorAvatarUri ?? '',
+    // A shared outfit is being viewed by someone other than its creator.
+    authorIsSelf: 'false',
+    authorMood: opts.authorMood ?? '',
+  };
+  if (opts.music) params.outfitMusic = JSON.stringify(opts.music);
+
+  const query = Object.entries(params)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&');
+  return `/user-outfit?${query}`;
+}
+
+
 function isCancelled(error: unknown): boolean {
   return !!error && typeof error === 'object' &&
     'name' in error && (error as { name?: string }).name === 'AbortError';

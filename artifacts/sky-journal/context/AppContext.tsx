@@ -550,16 +550,12 @@ function isValidJournalRecord(r: RawJournalEntryResponse): boolean {
 
 function isValidDiscoverPost(r: RawDiscoverApiItem): boolean {
   if (typeof r.id !== 'string' || r.id.trim().length === 0) return false;
-  if (r.contentType === 'video') {
-    return typeof r.videoUri === 'string' && r.videoUri.trim().length > 0;
-  }
+  if (r.contentType === 'outfit') return typeof r.imageUri === 'string' && r.imageUri.trim().length > 0;
+  if (r.contentType === 'video') return typeof r.videoUri === 'string' && r.videoUri.trim().length > 0;
   const hasImage = [r.imageUri, r.thumbnailUri].some(uri => typeof uri === 'string' && uri.trim().length > 0);
   const hasText = typeof r.storySnippet === 'string' && r.storySnippet.trim().length > 0;
-  const hasPanel = Array.isArray(r.panels) && r.panels.some(p => p !== null && typeof p === 'object' && (
-    (typeof p.text === 'string' && p.text.trim().length > 0) ||
-    (typeof p.imageUri === 'string' && p.imageUri.trim().length > 0)
-  ));
-  const hasPage = Array.isArray(r.pages) && r.pages.some(page => page !== null && typeof page === 'object');
+  const hasPanel = Array.isArray(r.panels) && r.panels.some(p => p !== null && typeof p === 'object');
+  const hasPage = Array.isArray(r.pages) && r.pages.some(page => page && Array.isArray(page.panels) && page.panels.some(p => p !== null && typeof p === 'object'));
   return hasImage || hasText || hasPanel || hasPage;
 }
 
