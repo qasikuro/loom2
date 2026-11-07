@@ -1,7 +1,7 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { OutfitShowcaseMotion } from '@/components/OutfitShowcase';
-import { VibeMotion, VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
+import { VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -483,19 +483,19 @@ export default function UserOutfitScreen() {
             ]}
           >
             {outfit?.imageUri ? (
-              <VibeMotion key={`${outfit.id ?? outfit.imageUri}:${vibe ?? ''}`} vibe={vibe ?? ''}>
-                <OutfitShowcaseMotion
-                  key={`${outfit.id ?? outfit.imageUri}:${presentation ?? 'original'}:${transition}`}
-                  style={presentation}
-                  transition={transition}
-                >
-                  <Image
-                    source={{ uri: outfit.imageUri }}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="contain"
-                  />
-                </OutfitShowcaseMotion>
-              </VibeMotion>
+              <OutfitShowcaseMotion
+                key={`${outfit.id ?? outfit.imageUri}:${presentation ?? 'original'}:${transition}`}
+                style={presentation}
+                transition={transition}
+                cinematicCamera
+                vibe={vibe}
+              >
+                <Image
+                  source={{ uri: outfit.imageUri }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="contain"
+                />
+              </OutfitShowcaseMotion>
             ) : (
               <LinearGradient
                 colors={darkBg}

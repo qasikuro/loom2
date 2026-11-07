@@ -8,7 +8,7 @@ import type {
 } from '@/utils/outfitShowcase';
 import { useColors as useDesignColors } from '@workspace/storigam-kindness/hooks/use-colors';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -17,10 +17,46 @@ import {
   Text,
   TouchableOpacity,
   View,
+  type ImageStyle,
+  type StyleProp,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 type ShowcaseChoice = OutfitShowcaseStyle | 'none';
+
+const VIBE_CAMERA_ENERGY: Record<string, number> = {
+  dark: 1.18,
+  mythical: 0.92,
+  dreamy: 0.62,
+  romantic: 0.66,
+  happy: 1.08,
+  ethereal: 0.72,
+  cozy: 0.58,
+  adventurous: 1.04,
+  energetic: 1.34,
+  cool: 0.9,
+  glitch: 1.28,
+  cute: 0.9,
+  emotional: 0.68,
+  magical: 0.95,
+};
+
+const VIBE_CUT_STRENGTH: Record<string, number> = {
+  dark: 1,
+  mythical: 0.78,
+  dreamy: 0.56,
+  romantic: 0.62,
+  happy: 0.82,
+  ethereal: 0.62,
+  cozy: 0.5,
+  adventurous: 0.8,
+  energetic: 1,
+  cool: 0.78,
+  glitch: 1,
+  cute: 0.7,
+  emotional: 0.58,
+  magical: 0.84,
+};
 
 export function OutfitShowcasePicker({
   value,
@@ -203,10 +239,14 @@ export function OutfitShowcasePicker({
 export function OutfitShowcaseMotion({
   style,
   transition = 'fade',
+  cinematicCamera = false,
+  vibe,
   children,
 }: {
   style: OutfitShowcaseStyle | null;
   transition?: OutfitShowcaseTransition;
+  cinematicCamera?: boolean;
+  vibe?: string | null;
   children: React.ReactNode;
 }) {
   const { isDark } = useTheme();
@@ -214,6 +254,28 @@ export function OutfitShowcaseMotion({
   const { animate } = useDecorativeMotion();
   const cycle = useRef(new Animated.Value(0)).current;
   const entrance = useRef(new Animated.Value(1)).current;
+  const cameraBeat = useRef(new Animated.Value(0)).current;
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const normalizedVibe = vibe?.toLowerCase() ?? '';
+  const hasEditorialCuts = cinematicCamera && normalizedVibe.length > 0;
+  const cameraEnergy = VIBE_CAMERA_ENERGY[normalizedVibe] ?? 0.9;
+  const cutStrength = VIBE_CUT_STRENGTH[normalizedVibe] ?? 0.72;
+  const vibeAccent = normalizedVibe === 'happy' || normalizedVibe === 'cozy'
+    ? colors.chart3
+    : normalizedVibe === 'romantic' || normalizedVibe === 'cute'
+      ? colors.chart2
+      : normalizedVibe === 'ethereal' || normalizedVibe === 'magical' || normalizedVibe === 'mythical'
+        ? colors.chart1
+        : normalizedVibe === 'adventurous' || normalizedVibe === 'cool'
+          ? colors.chart5
+          : normalizedVibe === 'dark' || normalizedVibe === 'glitch'
+            ? colors.chart4
+            : colors.chart1;
+  const tintEnergy = ['energetic', 'glitch', 'dark'].includes(normalizedVibe)
+    ? 1
+    : ['dreamy', 'romantic', 'cozy', 'emotional'].includes(normalizedVibe)
+      ? 0.48
+      : 0.7;
 
   useEffect(() => {
     cycle.stopAnimation();
@@ -261,7 +323,38 @@ export function OutfitShowcaseMotion({
     };
   }, [animate, entrance, style, transition]);
 
-  if (!style) return <>{children}</>;
+  useEffect(() => {
+    cameraBeat.stopAnimation();
+    cameraBeat.setValue(0);
+    if (!cinematicCamera || !animate) return;
+
+    const move = (toValue: number, duration: number, easing = Easing.inOut(Easing.cubic)) =>
+      Animated.timing(cameraBeat, {
+        toValue,
+        duration,
+        easing,
+        useNativeDriver: true,
+      });
+    const sequence = Animated.loop(Animated.sequence([
+      move(1, 900),
+      move(2, 180, Easing.out(Easing.cubic)),
+      move(3, 260, Easing.out(Easing.cubic)),
+      move(4, 650),
+      move(5, 1000),
+      move(6, 150, Easing.out(Easing.cubic)),
+      move(7, 300, Easing.out(Easing.cubic)),
+      move(8, 1100),
+      move(9, 800),
+    ]));
+    sequence.start();
+    return () => {
+      sequence.stop();
+      cameraBeat.stopAnimation();
+      cameraBeat.setValue(0);
+    };
+  }, [animate, cameraBeat, cinematicCamera]);
+
+  if (!style && !cinematicCamera) return <>{children}</>;
 
   const floatY = cycle.interpolate({
     inputRange: [0, 1],
@@ -300,13 +393,46 @@ export function OutfitShowcaseMotion({
     ? [7, -7]
     : transition === 'parallax' ? [-4, 4] : [0, 0];
   const cameraScale = animate
-    ? cycle.interpolate({ inputRange: [0, 1], outputRange: cameraScaleRange })
+    ? cinematicCamera
+      ? cameraBeat.interpolate({
+        inputRange: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        outputRange: [1, 1 + 0.045 * cameraEnergy, 1 + 0.11 * cameraEnergy, 1 + 0.075 * cameraEnergy, 1 + 0.05 * cameraEnergy, 1 + 0.035 * cameraEnergy, 1 + 0.105 * cameraEnergy, 1 + 0.06 * cameraEnergy, 1 + 0.04 * cameraEnergy, 1],
+      })
+      : cycle.interpolate({ inputRange: [0, 1], outputRange: cameraScaleRange })
     : 1;
   const cameraX = animate
-    ? cycle.interpolate({ inputRange: [0, 1], outputRange: cameraXRange })
+    ? cinematicCamera
+      ? cameraBeat.interpolate({
+        inputRange: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        outputRange: [0, -5 * cameraEnergy, -2 * cameraEnergy, 0, 2 * cameraEnergy, 8 * cameraEnergy, 11 * cameraEnergy, 6 * cameraEnergy, -8 * cameraEnergy, 0],
+      })
+      : cycle.interpolate({ inputRange: [0, 1], outputRange: cameraXRange })
     : 0;
   const cameraY = animate
-    ? cycle.interpolate({ inputRange: [0, 1], outputRange: cameraYRange })
+    ? cinematicCamera
+      ? cameraBeat.interpolate({
+        inputRange: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        outputRange: [0, -8 * cameraEnergy, -14 * cameraEnergy, -8 * cameraEnergy, -5 * cameraEnergy, 8 * cameraEnergy, 2 * cameraEnergy, -1 * cameraEnergy, -4 * cameraEnergy, 0],
+      })
+      : cycle.interpolate({ inputRange: [0, 1], outputRange: cameraYRange })
+    : 0;
+  const cameraRotation = animate && cinematicCamera
+    ? cameraBeat.interpolate({
+      inputRange: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      outputRange: ['0deg', `${-0.15 * cameraEnergy}deg`, `${0.25 * cameraEnergy}deg`, `${0.1 * cameraEnergy}deg`, '0deg', `${-0.2 * cameraEnergy}deg`, `${0.15 * cameraEnergy}deg`, '0deg', `${-0.12 * cameraEnergy}deg`, '0deg'],
+    })
+    : '0deg';
+  const focusPulse = animate && cinematicCamera
+    ? cameraBeat.interpolate({
+      inputRange: [0, 1, 1.8, 2, 2.55, 3, 4, 5.8, 6, 6.45, 7, 8],
+      outputRange: [0, 0, 0, 0.42, 0.2, 0, 0, 0, 0.36, 0.16, 0, 0],
+    })
+    : 0;
+  const beatFlash = animate && cinematicCamera
+    ? cameraBeat.interpolate({
+      inputRange: [0, 1.85, 2, 2.18, 2.55, 5.85, 6, 6.16, 6.45, 9],
+      outputRange: [0, 0, 0.1 * cameraEnergy, 0.06 * cameraEnergy, 0, 0, 0.08 * cameraEnergy, 0.05 * cameraEnergy, 0, 0],
+    })
     : 0;
   const entryScale = transition === 'zoom' || transition === 'parallax'
     ? entrance.interpolate({ inputRange: [0, 1], outputRange: [1.035, 1] })
@@ -323,10 +449,43 @@ export function OutfitShowcaseMotion({
   const lightSweepX = animate
     ? cycle.interpolate({ inputRange: [0, 1], outputRange: [-190, 190] })
     : 0;
-  const lightSweepOpacity = animate ? glowOpacity : 0.18;
+  const lightSweepOpacity = animate && style ? glowOpacity : cinematicCamera && animate ? 0.34 : 0.18;
+  const blurredChild = cinematicCamera && React.isValidElement(children)
+    ? React.cloneElement(
+      children as React.ReactElement<{ blurRadius?: number; style?: StyleProp<ImageStyle> }>,
+      {
+        blurRadius: 9,
+        style: [
+          (children as React.ReactElement<{ style?: StyleProp<ImageStyle> }>).props.style,
+          StyleSheet.absoluteFill,
+        ],
+      },
+    )
+    : null;
+  const cutOpacity = hasEditorialCuts && animate
+    ? cameraBeat.interpolate({
+      inputRange: [0, 1.7, 1.9, 2, 2.5, 2.78, 3, 5.7, 5.9, 6, 6.5, 6.78, 7, 9],
+      outputRange: [0, 0, 0.5 * cutStrength, cutStrength, 0.86 * cutStrength, 0.38 * cutStrength, 0, 0, 0.5 * cutStrength, cutStrength, 0.86 * cutStrength, 0.38 * cutStrength, 0, 0],
+    })
+    : 0;
+  const colorGradeOpacity = animate && cinematicCamera
+    ? cameraBeat.interpolate({
+      inputRange: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      outputRange: [0.05, 0.11, 0.18, 0.12, 0.06, 0.1, 0.18, 0.12, 0.07, 0.05].map(value => value * tintEnergy),
+    })
+    : 0;
 
   return (
-    <View style={[StyleSheet.absoluteFill, showcaseStyles.stage]} pointerEvents="box-none">
+    <View
+      style={[StyleSheet.absoluteFill, showcaseStyles.stage]}
+      pointerEvents="box-none"
+      onLayout={({ nativeEvent: { layout } }) => {
+        if (layout.width > 0 && layout.height > 0
+          && (layout.width !== stageSize.width || layout.height !== stageSize.height)) {
+          setStageSize({ width: layout.width, height: layout.height });
+        }
+      }}
+    >
       <Animated.View
         style={[
           StyleSheet.absoluteFill,
@@ -339,6 +498,7 @@ export function OutfitShowcaseMotion({
               { translateX: cameraX },
               { translateY: cameraY },
               { scale: cameraScale },
+              { rotate: cameraRotation },
               { scale: entryScale },
             ],
           },
@@ -346,7 +506,99 @@ export function OutfitShowcaseMotion({
         pointerEvents="none"
       >
         {children}
+        {blurredChild ? (
+          <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: focusPulse }]}>
+            {blurredChild}
+          </Animated.View>
+        ) : null}
       </Animated.View>
+      {cinematicCamera ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { opacity: beatFlash, backgroundColor: colors.foreground, zIndex: 2 },
+          ]}
+        />
+      ) : null}
+      {cinematicCamera ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { opacity: colorGradeOpacity, zIndex: 3 },
+          ]}
+        >
+          <LinearGradient
+            colors={[`${vibeAccent}00`, `${vibeAccent}70`, `${colors.background}10`]}
+            start={{ x: 0.08, y: 0.12 }}
+            end={{ x: 0.92, y: 0.88 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+      ) : null}
+      {hasEditorialCuts && stageSize.width > 0 && stageSize.height > 0 && React.isValidElement(children)
+        ? [0, 1, 2].map(index => {
+          const panelWidth = stageSize.width / 3;
+          const shiftAmount = panelWidth * (index === 1 ? -0.36 : 0.72);
+          const panelShift = cameraBeat.interpolate({
+            inputRange: [0, 1.72, 1.9, 2, 2.5, 2.78, 3, 5.72, 5.9, 6, 6.5, 6.78, 7, 9],
+            outputRange: [
+              index === 0 ? -shiftAmount : shiftAmount,
+              index === 0 ? -shiftAmount : shiftAmount,
+              index === 0 ? -shiftAmount * 0.45 : shiftAmount * 0.45,
+              0,
+              0,
+              index === 0 ? shiftAmount * 0.35 : -shiftAmount * 0.35,
+              index === 0 ? shiftAmount : -shiftAmount,
+              index === 0 ? shiftAmount : -shiftAmount,
+              index === 0 ? -shiftAmount * 0.45 : shiftAmount * 0.45,
+              0,
+              0,
+              index === 0 ? shiftAmount * 0.35 : -shiftAmount * 0.35,
+              index === 0 ? shiftAmount : -shiftAmount,
+              index === 0 ? shiftAmount : -shiftAmount,
+            ],
+          });
+          const framedImage = React.cloneElement(
+            children as React.ReactElement<{ style?: StyleProp<ImageStyle> }>,
+            {
+              style: {
+                position: 'absolute',
+                top: 0,
+                left: -index * panelWidth,
+                width: stageSize.width,
+                height: stageSize.height,
+              },
+            },
+          );
+          return (
+            <Animated.View
+              key={`editorial-frame-${index}`}
+              pointerEvents="none"
+              style={[
+                showcaseStyles.editorialPanel,
+                {
+                  left: panelWidth * index,
+                  width: panelWidth,
+                  opacity: cutOpacity,
+                  transform: [{ translateX: panelShift }],
+                },
+              ]}
+            >
+              {framedImage}
+              {index > 0 ? (
+                <Animated.View
+                  style={[
+                    showcaseStyles.editorialSeparator,
+                    { backgroundColor: vibeAccent, opacity: cutOpacity },
+                  ]}
+                />
+              ) : null}
+            </Animated.View>
+          );
+        })
+        : null}
 
       {style ? (
         <>
@@ -526,6 +778,8 @@ const pickerStyles = StyleSheet.create({
 
 const showcaseStyles = StyleSheet.create({
   stage: { overflow: 'hidden' },
+  editorialPanel: { position: 'absolute', top: 0, bottom: 0, overflow: 'hidden', zIndex: 4 },
+  editorialSeparator: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 2 },
   dreamyGlow: { position: 'absolute', width: '88%', height: '58%', borderRadius: 999, alignSelf: 'center', top: '19%' },
   dreamyOrbit: { position: 'absolute', top: '17%', left: '7%', right: '7%', height: '66%', borderWidth: 1, borderRadius: 999 },
   dreamyStar: { position: 'absolute', top: '23%', right: '12%' },
