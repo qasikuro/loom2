@@ -82,6 +82,8 @@ export function OutfitDetailModal({
                           key={`${outfit.id}:${presentation ?? 'original'}:${transition}`}
                           style={presentation}
                           transition={transition}
+                          cinematicCamera={!!presentation}
+                          vibe={vibe}
                         >
                           <Image
                             source={{ uri: outfit.imageUri }}

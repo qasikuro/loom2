@@ -1,4 +1,4 @@
-export const OUTFIT_SHOWCASE_STYLES = ['dreamy', 'holographic'] as const;
+export const OUTFIT_SHOWCASE_STYLES = ['dreamy', 'dark', 'mythical', 'magical', 'holographic'] as const;
 
 export type OutfitShowcaseStyle = (typeof OUTFIT_SHOWCASE_STYLES)[number];
 
@@ -10,12 +10,36 @@ const SHOWCASE_PREFIX = 'showcase:';
 const TRANSITION_PREFIX = 'showcase-transition:';
 const VIBE_PREFIX = 'vibe:';
 
+const VIBE_SHOWCASE: Record<string, OutfitShowcaseStyle> = {
+  romantic: 'dreamy',
+  happy: 'magical',
+  dark: 'dark',
+  mythical: 'mythical',
+  dreamy: 'dreamy',
+  ethereal: 'mythical',
+  cozy: 'dreamy',
+  adventurous: 'mythical',
+  magical: 'magical',
+  energetic: 'holographic',
+  cool: 'holographic',
+  glitch: 'holographic',
+  cute: 'magical',
+  emotional: 'dark',
+};
+
+export function showcaseForVibe(vibe: string | null | undefined): OutfitShowcaseStyle | null {
+  return vibe ? VIBE_SHOWCASE[vibe.toLowerCase()] ?? null : null;
+}
+
 export function getOutfitShowcase(tags: readonly string[] = []): OutfitShowcaseStyle | null {
-  const value = tags
-    .find(tag => tag.startsWith(SHOWCASE_PREFIX))
-    ?.slice(SHOWCASE_PREFIX.length)
-    .split(':', 1)[0];
-  return OUTFIT_SHOWCASE_STYLES.find(style => style === value) ?? null;
+  const saved = tags.find(tag => tag.startsWith(SHOWCASE_PREFIX));
+  if (saved) {
+    const value = saved.slice(SHOWCASE_PREFIX.length).split(':', 1)[0];
+    return OUTFIT_SHOWCASE_STYLES.find(style => style === value) ?? null;
+  }
+
+  const vibe = tags.find(tag => tag.startsWith(VIBE_PREFIX))?.slice(VIBE_PREFIX.length);
+  return showcaseForVibe(vibe);
 }
 
 export function getOutfitShowcaseTransition(
@@ -41,7 +65,7 @@ export function withOutfitShowcase(
   style: OutfitShowcaseStyle | null,
 ): string[] {
   const cleanTags = tags.filter(tag => !tag.startsWith(SHOWCASE_PREFIX));
-  return style ? [...cleanTags, `${SHOWCASE_PREFIX}${style}`] : cleanTags;
+  return [...cleanTags, `${SHOWCASE_PREFIX}${style ?? 'none'}`];
 }
 
 export function withOutfitShowcaseTransition(

@@ -487,7 +487,7 @@ export default function UserOutfitScreen() {
                 key={`${outfit.id ?? outfit.imageUri}:${presentation ?? 'original'}:${transition}`}
                 style={presentation}
                 transition={transition}
-                cinematicCamera
+                cinematicCamera={!!presentation}
                 vibe={vibe}
               >
                 <Image

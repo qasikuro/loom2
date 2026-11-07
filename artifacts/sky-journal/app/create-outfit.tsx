@@ -37,6 +37,7 @@ import { OutfitShowcasePicker } from '@/components/OutfitShowcase';
 import {
   getOutfitShowcase,
   getOutfitShowcaseTransition,
+  showcaseForVibe,
   visibleOutfitTags,
   withOutfitShowcase,
   withOutfitShowcaseTransition,
@@ -507,7 +508,10 @@ export default function CreateOutfitScreen() {
                   borderColor: !selectedVibe ? colors.tint : (isDark ? '#493D66' : colors.border),
                   borderWidth: !selectedVibe ? 2 : 1,
                 }]}
-                onPress={() => setSelectedVibe(null)}
+                onPress={() => {
+                  setSelectedVibe(null);
+                  setSelectedPresentation(null);
+                }}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: !selectedVibe }}
               >
@@ -528,6 +532,7 @@ export default function CreateOutfitScreen() {
                     onPress={() => {
                       Haptics.selectionAsync();
                       setSelectedVibe(v.id);
+                      setSelectedPresentation(showcaseForVibe(v.id));
                     }}
                     activeOpacity={0.75}
                     accessibilityRole="radio"
@@ -551,6 +556,7 @@ export default function CreateOutfitScreen() {
             <OutfitShowcasePicker
               value={selectedPresentation}
               transition={selectedTransition}
+              vibe={selectedVibe}
               imageUri={imageUri}
               title={name.trim()}
               onChange={setSelectedPresentation}

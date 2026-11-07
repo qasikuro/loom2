@@ -167,7 +167,10 @@ export const ReelCard = React.memo(function ReelCard({
       subscription.remove();
     };
   }, []);
-  const imageUri = isVideo ? post.thumbnailUri : (post.panels?.[0]?.imageUri ?? post.imageUri);
+  const panelImageUri = post.panels?.find(panel => typeof panel.imageUri === 'string' && panel.imageUri.trim().length > 0)?.imageUri?.trim();
+  const imageUri = isVideo
+    ? post.thumbnailUri?.trim() || undefined
+    : post.imageUri?.trim() || panelImageUri || post.thumbnailUri?.trim() || undefined;
   return (
     <View style={[styles.card, { height }]}>
       {imageUri ? (
@@ -215,7 +218,7 @@ export const ReelCard = React.memo(function ReelCard({
       />
 
       <View style={[styles.authorRow, { top: topInset + 102 }]}>
-        <TouchableOpacity onPress={() => onAuthorPress(post.authorUserId)} style={styles.authorTap} activeOpacity={0.78} accessibilityRole="button" accessibilityLabel={t('reels.viewProfile', { name: post.authorName })}>
+        <TouchableOpacity onPress={() => { if (post.authorUserId) onAuthorPress(post.authorUserId); }} style={styles.authorTap} activeOpacity={0.78} accessibilityRole="button" accessibilityLabel={t('reels.viewProfile', { name: post.authorName })}>
           <View style={styles.avatar}>
             {post.authorAvatarUri
               ? <Image source={{ uri: post.authorAvatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />

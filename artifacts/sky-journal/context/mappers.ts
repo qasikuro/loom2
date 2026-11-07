@@ -524,7 +524,7 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     authorIsFounder:     raw.authorIsFounder     ?? false,
     authorIsBetaTester:  raw.authorIsBetaTester  ?? false,
     authorBadges:        Array.isArray(raw.authorBadges) ? (raw.authorBadges as BadgeItem[]) : [],
-    chapterTitle:     raw.chapterTitle ?? '',
+    chapterTitle:     (raw.chapterTitle ?? '').trim() || raw.bookTitle?.trim() || 'Story',
     storySnippet:     raw.storySnippet ?? '',
     imageUri:         resolveUri(raw.imageUri ?? undefined, apiBase),
     mood:             raw.mood ?? 'Hopeful',
@@ -537,7 +537,7 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     date:             raw.date ?? raw.createdAt ?? new Date().toISOString(),
     chapterNumber:    raw.chapterNumber ?? 1,
     vibe:             raw.mood ?? 'Hopeful',
-    panels:           Array.isArray(raw.panels) ? raw.panels.map(p => ({
+    panels:           Array.isArray(raw.panels) ? raw.panels.filter(p => p !== null && typeof p === 'object').map(p => ({
       text:     p.text     ?? '',
       textFormat: p.textFormat,
       articleBlock: p.articleBlock,

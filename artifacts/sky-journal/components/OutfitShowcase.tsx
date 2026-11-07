@@ -61,6 +61,7 @@ const VIBE_CUT_STRENGTH: Record<string, number> = {
 export function OutfitShowcasePicker({
   value,
   transition,
+  vibe,
   imageUri,
   title,
   onChange,
@@ -68,6 +69,7 @@ export function OutfitShowcasePicker({
 }: {
   value: OutfitShowcaseStyle | null;
   transition: OutfitShowcaseTransition;
+  vibe?: string | null;
   imageUri?: string;
   title?: string;
   onChange: (style: OutfitShowcaseStyle | null) => void;
@@ -76,12 +78,15 @@ export function OutfitShowcasePicker({
   const { isDark } = useTheme();
   const colors = useDesignColors(isDark ? 'dark' : 'light');
   const { t } = useTranslation();
-  const choices: ShowcaseChoice[] = ['none', 'dreamy', 'holographic'];
+  const choices: ShowcaseChoice[] = ['none', 'dreamy', 'dark', 'mythical', 'magical', 'holographic'];
   const transitions: OutfitShowcaseTransition[] = ['fade', 'zoom', 'slide', 'pan', 'parallax'];
 
   const labels: Record<ShowcaseChoice, { title: string; description: string }> = {
     none: { title: t('outfitJournal.showcaseNone'), description: t('outfitJournal.showcaseNoneDescription') },
     dreamy: { title: t('outfitJournal.showcaseDreamy'), description: t('outfitJournal.showcaseDreamyDescription') },
+    dark: { title: t('outfitJournal.vibeDark'), description: t('outfitJournal.vibeDescDark') },
+    mythical: { title: t('outfitJournal.vibeMythical'), description: t('outfitJournal.vibeDescMythical') },
+    magical: { title: t('outfitJournal.vibeMagical'), description: t('outfitJournal.showcaseStyleHint') },
     holographic: { title: t('outfitJournal.showcaseHolographic'), description: t('outfitJournal.showcaseHolographicDescription') },
   };
 
@@ -105,7 +110,22 @@ export function OutfitShowcasePicker({
           const selected = choice === 'none' ? value === null : value === choice;
           const accent = choice === 'dreamy'
             ? colors.chart2
-            : choice === 'holographic' ? colors.chart4 : colors.primary;
+            : choice === 'dark' || choice === 'holographic'
+              ? colors.chart4
+              : choice === 'mythical'
+                ? colors.chart3
+                : choice === 'magical' ? colors.chart1 : colors.primary;
+          const previewPalette: [string, string, string] = choice === 'dreamy'
+            ? [colors.background, colors.chart2, colors.primary]
+            : choice === 'dark'
+              ? [colors.background, colors.chart4, colors.background]
+              : choice === 'mythical'
+                ? [colors.background, colors.chart3, colors.chart1]
+                : choice === 'magical'
+                  ? [colors.background, colors.chart1, colors.chart2]
+                  : choice === 'holographic'
+                    ? [colors.background, colors.chart1, colors.chart4]
+                    : [colors.background, colors.secondary, colors.muted];
           return (
             <TouchableOpacity
               key={choice}
@@ -126,17 +146,18 @@ export function OutfitShowcasePicker({
             >
               <View style={pickerStyles.preview}>
                 <LinearGradient
-                  colors={choice === 'holographic'
-                    ? [colors.background, colors.chart1, colors.chart4]
-                    : choice === 'dreamy'
-                      ? [colors.background, colors.chart2, colors.primary]
-                      : [colors.background, colors.secondary, colors.muted]}
+                  colors={previewPalette}
                   style={StyleSheet.absoluteFill}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 />
                 {imageUri ? (
-                  <OutfitShowcaseMotion style={choice === 'none' ? null : choice} transition={transition}>
+                  <OutfitShowcaseMotion
+                    style={choice === 'none' ? null : choice}
+                    transition={transition}
+                    cinematicCamera={choice !== 'none'}
+                    vibe={vibe}
+                  >
                     <Image
                       source={{ uri: imageUri }}
                       style={[StyleSheet.absoluteFill, { opacity: choice === 'none' ? 0.9 : 0.92 }]}
@@ -153,12 +174,11 @@ export function OutfitShowcasePicker({
                     style={[
                       pickerStyles.previewTitle,
                       choice === 'dreamy' && pickerStyles.dreamyPreviewTitle,
+                      (choice === 'dark' || choice === 'mythical') && pickerStyles.editorialPreviewTitle,
                       choice === 'holographic' && pickerStyles.holoPreviewTitle,
                       {
                         color: colors.foreground,
-                        textShadowColor: choice === 'dreamy'
-                          ? colors.chart2
-                          : choice === 'holographic' ? colors.chart4 : colors.background,
+                        textShadowColor: accent,
                       },
                     ]}
                   >
@@ -177,6 +197,25 @@ export function OutfitShowcasePicker({
                     <View style={[pickerStyles.holoBorder, { borderColor: `${colors.chart4}C0` }]} />
                     <View style={[pickerStyles.holoSquare, { borderColor: colors.accent }]} />
                     <View style={[pickerStyles.holoDiamond, { borderColor: colors.chart2 }]} />
+                  </>
+                ) : null}
+                {choice === 'dark' ? (
+                  <View style={[pickerStyles.darkMoon, { borderColor: `${accent}B0`, backgroundColor: `${colors.background}70` }]}>
+                    <Icon name="moon" size={13} color={accent} />
+                  </View>
+                ) : null}
+                {choice === 'mythical' ? (
+                  <>
+                    <View style={[pickerStyles.mythicalOrbit, { borderColor: `${accent}90` }]} />
+                    <Icon name="star" size={12} color={accent} style={pickerStyles.mythicalStar} />
+                    <Icon name="sparkles" size={13} color={colors.chart1} style={pickerStyles.mythicalSparkle} />
+                  </>
+                ) : null}
+                {choice === 'magical' ? (
+                  <>
+                    <Icon name="sparkles" size={14} color={accent} style={pickerStyles.magicalSparkle} />
+                    <View style={[pickerStyles.magicalParticle, { backgroundColor: colors.chart2 }]} />
+                    <View style={[pickerStyles.magicalParticleSmall, { backgroundColor: accent }]} />
                   </>
                 ) : null}
                 {selected ? (
@@ -275,6 +314,16 @@ export function OutfitShowcaseMotion({
           : normalizedVibe === 'dark' || normalizedVibe === 'glitch'
             ? colors.chart4
             : colors.chart1;
+  const styleAccent = style === 'dark'
+    ? colors.chart4
+    : style === 'mythical'
+      ? colors.chart3
+      : style === 'magical'
+        ? colors.chart1
+        : style === 'dreamy'
+          ? colors.chart2
+          : style === 'holographic' ? colors.chart4 : vibeAccent;
+  const effectAccent = styleAccent;
   const tintEnergy = ['energetic', 'glitch', 'dark'].includes(normalizedVibe)
     ? 1
     : ['dreamy', 'romantic', 'cozy', 'emotional'].includes(normalizedVibe)
@@ -286,7 +335,11 @@ export function OutfitShowcaseMotion({
     cycle.setValue(0);
     if ((!style && !cinematicCamera) || !animate) return;
 
-    const duration = style === 'dreamy' ? 3600 : cinematicCamera ? 4200 : 3200;
+    const duration = style === 'dark' ? 4600
+      : style === 'mythical' ? 3900
+        : style === 'magical' ? 3400
+          : style === 'dreamy' ? 3600
+            : cinematicCamera ? 4200 : 3200;
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(cycle, {
         toValue: 1,
@@ -362,23 +415,45 @@ export function OutfitShowcaseMotion({
 
   const floatY = cycle.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, style === 'dreamy' ? -5 : -2],
+    outputRange: [0, style === 'dreamy' || style === 'mythical' ? -5 : -2],
+  });
+  const floatYReverse = cycle.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, style === 'magical' ? 4 : 2],
   });
   const glowOpacity = cycle.interpolate({
     inputRange: [0, 1],
-    outputRange: style === 'dreamy' ? [0.18, 0.44] : [0.22, 0.54],
+    outputRange: style === 'dark' ? [0.13, 0.31]
+      : style === 'dreamy' ? [0.18, 0.44]
+        : style === 'mythical' ? [0.19, 0.46]
+          : style === 'magical' ? [0.24, 0.55] : [0.22, 0.54],
   });
   const imageTintOpacity = cycle.interpolate({
     inputRange: [0, 1],
-    outputRange: style === 'dreamy' ? [0.04, 0.11] : [0.07, 0.16],
+    outputRange: style === 'dark' ? [0.1, 0.2]
+      : style === 'dreamy' ? [0.04, 0.11]
+        : style === 'mythical' ? [0.06, 0.15]
+          : style === 'magical' ? [0.07, 0.17] : [0.07, 0.16],
   });
   const turn = cycle.interpolate({ inputRange: [0, 1], outputRange: ['-8deg', '8deg'] });
   const palette: [string, string, string] = style === 'dreamy'
     ? [colors.background, colors.chart2, colors.accent]
-    : [colors.background, colors.chart1, colors.chart4];
+    : style === 'dark'
+      ? [colors.background, colors.chart4, colors.background]
+      : style === 'mythical'
+        ? [colors.background, colors.chart3, colors.chart1]
+        : style === 'magical'
+          ? [colors.background, colors.chart1, colors.chart2]
+          : [colors.background, colors.chart1, colors.chart4];
   const alternatePalette: [string, string, string] = style === 'dreamy'
     ? [colors.background, colors.accent, colors.primary]
-    : [colors.background, colors.chart4, colors.chart2];
+    : style === 'dark'
+      ? [colors.background, colors.chart4, colors.chart5]
+      : style === 'mythical'
+        ? [colors.background, colors.chart1, colors.chart5]
+        : style === 'magical'
+          ? [colors.background, colors.chart2, colors.accent]
+          : [colors.background, colors.chart4, colors.chart2];
   const cameraScaleRange: [number, number] = transition === 'zoom'
     ? [1.015, 1.075]
     : transition === 'slide'
@@ -589,7 +664,7 @@ export function OutfitShowcaseMotion({
                 <Animated.View
                   style={[
                     showcaseStyles.editorialSeparator,
-                    { backgroundColor: vibeAccent, opacity: cutOpacity },
+                    { backgroundColor: effectAccent, opacity: cutOpacity },
                   ]}
                 />
               ) : null}
@@ -618,11 +693,23 @@ export function OutfitShowcaseMotion({
               end={{ x: 0.1, y: 1 }}
             />
           </Animated.View>
-        ) : (
+        ) : style === 'dreamy' ? (
           <Animated.View
             pointerEvents="none"
             style={[showcaseStyles.dreamyGlow, { backgroundColor: `${colors.chart2}38`, opacity: glowOpacity, zIndex: 0 }]}
           />
+        ) : (
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { opacity: glowOpacity, zIndex: 0 }]}
+          >
+            <LinearGradient
+              colors={[`${effectAccent}00`, `${effectAccent}30`, `${colors.background}20`]}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0.1, y: 0 }}
+              end={{ x: 0.9, y: 1 }}
+            />
+          </Animated.View>
         )}
 
         <Animated.View
@@ -653,9 +740,9 @@ export function OutfitShowcaseMotion({
           <LinearGradient
             colors={[
               `${colors.background}00`,
-              `${style === 'dreamy' ? colors.chart2 : colors.chart4}18`,
-              `${style === 'dreamy' ? colors.chart2 : colors.chart4}66`,
-              `${style === 'dreamy' ? colors.chart2 : colors.chart4}18`,
+              `${effectAccent}18`,
+              `${effectAccent}66`,
+              `${effectAccent}18`,
               `${colors.background}00`,
             ]}
             start={{ x: 0, y: 0 }}
@@ -665,81 +752,184 @@ export function OutfitShowcaseMotion({
         </Animated.View>
 
         {style === 'dreamy' ? (
-        <>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              showcaseStyles.dreamyOrbit,
-              {
-                borderColor: `${colors.accent}70`,
-                opacity: animate ? glowOpacity : 0.3,
-                shadowColor: colors.accent,
-                shadowOpacity: 0.38,
-                shadowRadius: 18,
-                elevation: 5,
+          <>
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.dreamyOrbit,
+                {
+                  borderColor: `${colors.accent}70`,
+                  opacity: animate ? glowOpacity : 0.3,
+                  shadowColor: colors.accent,
+                  shadowOpacity: 0.38,
+                  shadowRadius: 18,
+                  elevation: 5,
+                  zIndex: 3,
+                },
+                animate ? { transform: [{ translateY: floatY }] } : undefined,
+              ]}
+            />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.dreamyStar,
+                { opacity: animate ? glowOpacity : 0.3, zIndex: 3, transform: animate ? [{ rotate: turn }] : undefined },
+              ]}
+            >
+              <Icon name="sparkles" size={20} color={colors.accent} />
+            </Animated.View>
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.dreamyDot,
+                { backgroundColor: colors.chart2, opacity: animate ? glowOpacity : 0.25, zIndex: 3 },
+              ]}
+            />
+          </>
+        ) : style === 'dark' ? (
+          <>
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.darkMoon,
+                {
+                  borderColor: `${effectAccent}B0`,
+                  shadowColor: effectAccent,
+                  shadowOpacity: 0.3,
+                  shadowRadius: 14,
+                  opacity: animate ? glowOpacity : 0.25,
+                  zIndex: 3,
+                },
+                animate ? { transform: [{ rotate: turn }] } : undefined,
+              ]}
+            >
+              <Icon name="moon" size={17} color={effectAccent} />
+            </Animated.View>
+            <Animated.View
+              pointerEvents="none"
+              style={[showcaseStyles.darkMist, { opacity: animate ? imageTintOpacity : 0.08, zIndex: 3 }]}
+            >
+              <LinearGradient
+                colors={[`${colors.background}00`, `${colors.background}60`, `${effectAccent}18`]}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+            </Animated.View>
+          </>
+        ) : style === 'mythical' ? (
+          <>
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.mythicalOrbit,
+                {
+                  borderColor: `${effectAccent}90`,
+                  opacity: animate ? glowOpacity : 0.32,
+                  shadowColor: effectAccent,
+                  shadowOpacity: 0.32,
+                  shadowRadius: 12,
+                  zIndex: 3,
+                },
+                animate ? { transform: [{ rotate: turn }, { translateY: floatY }] } : undefined,
+              ]}
+            />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.mythicalStar,
+                { opacity: animate ? glowOpacity : 0.35, zIndex: 3, transform: animate ? [{ rotate: turn }] : undefined },
+              ]}
+            >
+              <Icon name="star" size={16} color={colors.chart1} />
+            </Animated.View>
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.mythicalSparkle,
+                { opacity: animate ? glowOpacity : 0.3, zIndex: 3, transform: animate ? [{ translateY: floatY }] : undefined },
+              ]}
+            >
+              <Icon name="sparkles" size={18} color={effectAccent} />
+            </Animated.View>
+            <Animated.View
+              pointerEvents="none"
+              style={[showcaseStyles.mythicalDust, { backgroundColor: colors.chart1, opacity: animate ? glowOpacity : 0.2 }]}
+            />
+          </>
+        ) : style === 'magical' ? (
+          <>
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.magicalBloom,
+                { backgroundColor: `${effectAccent}20`, opacity: animate ? glowOpacity : 0.2, zIndex: 1 },
+              ]}
+            />
+            {[
+              { position: showcaseStyles.magicalSparkleOne, color: colors.chart1, size: 17 },
+              { position: showcaseStyles.magicalSparkleTwo, color: colors.chart2, size: 13 },
+              { position: showcaseStyles.magicalSparkleThree, color: colors.accent, size: 11 },
+            ].map((particle, index) => (
+              <Animated.View
+                key={`magical-particle-${index}`}
+                pointerEvents="none"
+                style={[
+                  particle.position,
+                  {
+                    opacity: animate ? glowOpacity : 0.3,
                     zIndex: 3,
-              },
-              animate ? { transform: [{ translateY: floatY }] } : undefined,
-            ]}
-          />
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              showcaseStyles.dreamyStar,
-                  { opacity: animate ? glowOpacity : 0.3, zIndex: 3, transform: animate ? [{ rotate: turn }] : undefined },
-            ]}
-          >
-            <Icon name="sparkles" size={20} color={colors.accent} />
-          </Animated.View>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              showcaseStyles.dreamyDot,
-                  { backgroundColor: colors.chart2, opacity: animate ? glowOpacity : 0.25, zIndex: 3 },
-            ]}
-          />
-        </>
+                    transform: animate
+                      ? [{ rotate: turn }, { translateY: index % 2 === 0 ? floatY : floatYReverse }]
+                      : undefined,
+                  },
+                ]}
+              >
+                <Icon name="sparkles" size={particle.size} color={particle.color} />
+              </Animated.View>
+            ))}
+          </>
         ) : (
-        <>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              showcaseStyles.holoFrame,
-              {
-                borderColor: colors.chart4,
-                opacity: animate ? glowOpacity : 0.4,
-                shadowColor: colors.chart4,
-                shadowOpacity: 0.45,
-                shadowRadius: 18,
-                elevation: 5,
-                    zIndex: 3,
-              },
-            ]}
-          />
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              showcaseStyles.holoSquare,
-                  { borderColor: colors.accent, zIndex: 3 },
-              animate ? { transform: [{ rotate: turn }, { translateY: floatY }] } : undefined,
-            ]}
-          />
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              showcaseStyles.holoDiamond,
-                  { borderColor: colors.chart2, opacity: animate ? glowOpacity : 0.45, zIndex: 3 },
-              animate ? { transform: [{ rotate: turn }] } : undefined,
-            ]}
-          />
-          <LinearGradient
-            pointerEvents="none"
-            colors={[`${colors.chart4}00`, `${colors.chart4}30`, `${colors.chart2}00`]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[showcaseStyles.holoScanline, { zIndex: 3 }]}
-          />
-        </>
+          <>
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.holoFrame,
+                {
+                  borderColor: colors.chart4,
+                  opacity: animate ? glowOpacity : 0.4,
+                  shadowColor: colors.chart4,
+                  shadowOpacity: 0.45,
+                  shadowRadius: 18,
+                  elevation: 5,
+                  zIndex: 3,
+                },
+              ]}
+            />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.holoSquare,
+                { borderColor: colors.accent, zIndex: 3 },
+                animate ? { transform: [{ rotate: turn }, { translateY: floatY }] } : undefined,
+              ]}
+            />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                showcaseStyles.holoDiamond,
+                { borderColor: colors.chart2, opacity: animate ? glowOpacity : 0.45, zIndex: 3 },
+                animate ? { transform: [{ rotate: turn }] } : undefined,
+              ]}
+            />
+            <LinearGradient
+              pointerEvents="none"
+              colors={[`${colors.chart4}00`, `${colors.chart4}30`, `${colors.chart2}00`]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[showcaseStyles.holoScanline, { zIndex: 3 }]}
+            />
+          </>
         )}
         </>
       ) : null}
@@ -759,6 +949,7 @@ const pickerStyles = StyleSheet.create({
   choiceDescription: { fontSize: 9, lineHeight: 13, fontFamily: 'Satoshi-Regular', marginTop: 2, minHeight: 26 },
   previewTitle: { position: 'absolute', left: 9, right: 9, bottom: 7, fontSize: 10, fontFamily: 'Satoshi-Bold', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
   dreamyPreviewTitle: { fontStyle: 'italic', letterSpacing: 0.2 },
+  editorialPreviewTitle: { textTransform: 'uppercase', letterSpacing: 0.8 },
   holoPreviewTitle: { textTransform: 'uppercase', letterSpacing: 0.5 },
   check: { position: 'absolute', top: 6, right: 6, width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   transitionSection: { marginTop: 8 },
@@ -769,6 +960,13 @@ const pickerStyles = StyleSheet.create({
   dreamyGlow: { ...StyleSheet.absoluteFill, opacity: 0.32 },
   dreamySparkle: { position: 'absolute', top: 9, right: 24 },
   dreamyOrb: { position: 'absolute', left: 10, bottom: 9, width: 28, height: 28, borderWidth: 1, borderRadius: 14 },
+  darkMoon: { position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderWidth: 1, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  mythicalOrbit: { ...StyleSheet.absoluteFill, margin: 11, borderWidth: 1, borderRadius: 60 },
+  mythicalStar: { position: 'absolute', top: 10, right: 13 },
+  mythicalSparkle: { position: 'absolute', top: 11, left: 13 },
+  magicalSparkle: { position: 'absolute', top: 9, right: 12 },
+  magicalParticle: { position: 'absolute', width: 5, height: 5, borderRadius: 3, left: 18, bottom: 16 },
+  magicalParticleSmall: { position: 'absolute', width: 3, height: 3, borderRadius: 2, right: 24, bottom: 18 },
   holoBorder: { ...StyleSheet.absoluteFill, margin: 5, borderWidth: 1, borderRadius: 8 },
   holoSquare: { position: 'absolute', top: 9, left: 12, width: 14, height: 14, borderWidth: 1, transform: [{ rotate: '18deg' }] },
   holoDiamond: { position: 'absolute', right: 13, bottom: 12, width: 13, height: 13, borderWidth: 1, transform: [{ rotate: '45deg' }] },
@@ -782,6 +980,16 @@ const showcaseStyles = StyleSheet.create({
   dreamyOrbit: { position: 'absolute', top: '17%', left: '7%', right: '7%', height: '66%', borderWidth: 1, borderRadius: 999 },
   dreamyStar: { position: 'absolute', top: '23%', right: '12%' },
   dreamyDot: { position: 'absolute', top: '36%', left: '11%', width: 5, height: 5, borderRadius: 3 },
+  darkMoon: { position: 'absolute', top: '13%', right: '12%', width: 40, height: 40, borderWidth: 1, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  darkMist: { position: 'absolute', left: '-20%', right: '-20%', bottom: '-12%', height: '52%', borderRadius: 999 },
+  mythicalOrbit: { position: 'absolute', top: '12%', left: '8%', right: '8%', height: '72%', borderWidth: 1, borderRadius: 999 },
+  mythicalStar: { position: 'absolute', top: '20%', right: '13%' },
+  mythicalSparkle: { position: 'absolute', top: '34%', left: '12%' },
+  mythicalDust: { position: 'absolute', bottom: '27%', left: '23%', width: 4, height: 4, borderRadius: 2 },
+  magicalBloom: { position: 'absolute', top: '18%', width: '78%', height: '64%', borderRadius: 999, alignSelf: 'center' },
+  magicalSparkleOne: { position: 'absolute', top: '18%', right: '14%' },
+  magicalSparkleTwo: { position: 'absolute', bottom: '25%', left: '15%' },
+  magicalSparkleThree: { position: 'absolute', top: '41%', right: '23%' },
   holoFrame: { ...StyleSheet.absoluteFill, margin: 14, borderWidth: 1.5, borderRadius: 24 },
   holoSquare: { position: 'absolute', top: '21%', right: '12%', width: 20, height: 20, borderWidth: 1, borderRadius: 3 },
   holoDiamond: { position: 'absolute', bottom: '28%', left: '11%', width: 13, height: 13, borderWidth: 1, transform: [{ rotate: '45deg' }] },
